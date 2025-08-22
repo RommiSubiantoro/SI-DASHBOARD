@@ -5,20 +5,21 @@ export default function AdminDashboard() {
 
   // Data dummy untuk unit bisnis
   const [units, setUnits] = useState([
-    { id: 1, name: "Unit Bisnis A" },
-    { id: 2, name: "Unit Bisnis B" },
-    { id: 3, name: "Unit Bisnis C" },
-    { id: 4, name: "Unit Bisnis D" },
-    { id: 5, name: "Unit Bisnis E" },
-    { id: 6, name: "Unit Bisnis F" },
-    { id: 7, name: "Unit Bisnis G" },
-    { id: 8, name: "Unit Bisnis H" },
+    { id: 1, name: "Makassar Jaya Samudera" },
+    { id: 2, name: "Samudera Makassar Logistik" },
+    { id: 3, name: "Kendari Jaya Samudera" },
+    { id: 4, name: "Samudera Kendari Logistik" },
+    { id: 5, name: "Samudera Agenci Indonesia" },
+    { id: 6, name: "Samudera Perdana" },
+    { id: 7, name: "Masaji Kargosentra Tama" },
+    { id: 8, name: "Silkargo Inodnesia" },
   ]);
 
   const [users, setUsers] = useState([
     { id: 1, name: "Admin", role: "Super Admin" },
-    { id: 2, name: "Budi", role: "Editor" },
-    { id: 3, name: "Siti", role: "Viewer" },
+    { id: 2, name: "Budi", role: "user" },
+    { id: 3, name: "Siti", role: "supervisor" },
+    { id: 4, name: "Siti", role: "Manager" },
   ]);
 
   // Fungsi aksi
@@ -60,7 +61,7 @@ export default function AdminDashboard() {
         {activePage === "dashboard" && (
           <div>
             <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
-            <p>Selamat datang di dashboard admin 🎉</p>
+            <p>Selamat datang di dashboard admin </p>
           </div>
         )}
 
