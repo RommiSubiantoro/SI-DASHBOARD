@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import "./css/AdminDashboard.css"
 
 export default function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
