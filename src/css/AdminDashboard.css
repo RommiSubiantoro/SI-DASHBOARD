@@ -164,13 +164,13 @@ button.bg-red-600:hover {
 table {
   border-collapse: collapse;
   width: 100%;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(255, 13, 13, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border-radius: 0.5rem;
   overflow: hidden;
 }
 
 thead.bg-gray-800 {
-  background-color: #2d3748;
+  background-color: #ff0000;
 }
 
 th.p-2 {
