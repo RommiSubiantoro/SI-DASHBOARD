@@ -1,10 +1,5 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { db } from '../firebaseConfig'
-import { collection, getDocs } from 'firebase/firestore'
-import Select from 'react-select'
-import Skeleton from 'react-loading-skeleton';
-import 'react-loading-skeleton/dist/skeleton.css';
 
 const ManageUser = () => {
     const [users, setUsers] = useState([])
