@@ -3,8 +3,8 @@ import loginImage from "../assets/truck.png";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: 'Rommi',
+    password: '123'
   });
 
   return (
