@@ -18,6 +18,7 @@ const Login = () => {
               placeholder="Username"
               value={formData.username}
               onChange={(e) => setFormData({...formData, username: e.target.value})}
+              required
             />
             <input
               type="password"
@@ -25,6 +26,7 @@ const Login = () => {
               placeholder="Password"
               value={formData.password}
               onChange={(e) => setFormData({...formData, password: e.target.value})}
+              required
             />
             <button type="submit">Submit</button>
           </form>
