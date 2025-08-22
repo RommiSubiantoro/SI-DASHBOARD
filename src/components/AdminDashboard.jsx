@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import "./css/AdminDashboard.css"
+import "./AdminDashboard.css"; // Impor file CSS
 
-export default function AdminDashboard() {
+ function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
 
   // Data dummy untuk unit bisnis
@@ -149,4 +149,9 @@ export default function AdminDashboard() {
       </div>
     </div>
   );
+}
+
+
+export default function AdminDashboard() {
+  // ... kode komponen Anda yang sudah ada
 }
