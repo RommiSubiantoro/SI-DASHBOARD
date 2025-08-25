@@ -1,0 +1,262 @@
+/* Sidebar Container */
+.Sidebar {
+  width: 280px;
+  height: 100vh;
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+  padding: 30px 0;
+  position: fixed;
+  left: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 1000;
+  transition: all 0.3s ease;
+}
+
+.Sidebar:hover {
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Header Text */
+.text {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  text-align: center;
+  margin: 0 0 40px 0;
+  padding: 0 20px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  letter-spacing: 0.5px;
+}
+/* Home Konten*/
+.kontendash{
+   margin-left: 300px; /* Memberikan ruang untuk sidebar (280px + 20px) */
+    margin-right: 20px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding: 40px 50px;
+    background: linear-gradient(135deg, #ffc233 0%, #ffa938 100%);
+    border-radius: 20px;
+    box-shadow: 
+        0 10px 30px rgba(0, 0, 0, 0.1),
+        0 1px 8px rgba(0, 0, 0, 0.06);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    
+}
+
+.title {
+    font-size: 48px;
+    font-weight: 800;
+    color: #2c3e50;
+    margin: 0 0 15px 0;
+    text-shadow: 
+        0 2px 4px rgba(0, 0, 0, 0.1),
+        0 1px 2px rgba(0, 0, 0, 0.05);
+    background: linear-gradient(135deg, #ffffff 0%, 
+    #ffffff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    position: relative;
+    z-index: 1;
+    letter-spacing: -1px;
+    line-height: 1.2;
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    text-align: left; /* Menghilangkan text-align: right */
+}
+
+
+/* Base Button Styles */
+.home-unit,
+.button-unit,
+.Btn-manager {
+  width: 90%;
+  margin: 0 auto;
+  padding: 20px 20px;
+  border: none;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.home-unit::before,
+.button-unit::before,
+.Btn-manager::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.home-unit:hover::before,
+.button-unit:hover::before,
+.Btn-manager:hover::before {
+  left: 100%;
+}
+
+/* Home Button */
+.home-unit {
+  background: linear-gradient(135deg, #ff0000 0%, #fe0000 100%);
+  color: white;
+ 
+}
+
+.home-unit:hover {
+  background: linear-gradient(135deg, #f04343 0%, #ff0707 100%);
+  transform: translateX(10px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
+}
+
+.home-unit:active {
+  transform: translateX(8px) scale(0.98);
+}
+
+/* Unit Bisnis Button */
+.button-unit {
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  color: rgb(255, 255, 255);
+  
+}
+
+.button-unit:hover {
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  transform: translateX(10px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(250, 112, 154, 0.4);
+}
+
+.button-unit:active {
+  transform: translateX(8px) scale(0.98);
+}
+
+/* User Manager Button */
+.Btn-manager {
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  color: #ffffff;
+}
+
+.Btn-manager:hover {
+  background: linear-gradient(135deg, #ff0202 0%, #ff0000 100%);
+  transform: translateX(10px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(168, 237, 234, 0.4);
+}
+
+.Btn-manager:active {
+  transform: translateX(8px) scale(0.98);
+}
+
+/* Active State untuk buttons (optional) */
+.home-unit.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-left-color: #ffd700;
+}
+
+.button-unit.active {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-left-color: #ffd700;
+}
+
+.Btn-manager.active {
+  background: linear-gradient(135deg, #667eea 0%, #a24b4b 100%);
+  color: white;
+  border-left-color: #ffd700;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .Sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 20px 0;
+  }
+   .kontendash {
+        margin-left: 20px;
+        margin-right: 20px;
+        padding: 30px 25px;
+        border-radius: 15px;
+    }
+    
+    .title {
+        font-size: 36px;
+        margin-bottom: 12px;
+    }
+    
+    .kontendash p {
+        font-size: 16px;
+    }
+  
+  .home-unit,
+  .button-unit,
+  .Btn-manager {
+    width: 95%;
+    margin: 10px auto;
+  }
+  
+  .text {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+}
+
+/* Hover effect untuk seluruh sidebar */
+@media (min-width: 769px) {
+  .Sidebar:hover {
+    width: 300px;
+  }
+}
+
+/* Loading animation (optional) */
+@keyframes slideIn {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.Sidebar {
+  animation: slideIn 0.5s ease-out;
+}
+
+/* Focus states untuk accessibility */
+.home-unit:focus,
+.button-unit:focus,
+.Btn-manager:focus {
+  outline: 3px solid rgba(255, 255, 255, 0.5);
+  outline-offset: 2px;
+}
+
+/* Disabled state (jika diperlukan) */
+.home-unit:disabled,
+.button-unit:disabled,
+.Btn-manager:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.home-unit:disabled:hover,
+.button-unit:disabled:hover,
+.Btn-manager:disabled:hover {
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}

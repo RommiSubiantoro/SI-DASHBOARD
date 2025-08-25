@@ -22,7 +22,7 @@ body {
 }
 
 .bg-gray-800 {
-  background-color: #2d3748;
+  background-color: #ff0000;
 }
 
 .text-white {
@@ -39,7 +39,7 @@ body {
 
 /* Judul sidebar */
 .text-xl {
-  font-size: 1.25rem;
+  font-size: 3rem;
 }
 
 .font-bold {
@@ -63,7 +63,8 @@ button.block:hover {
 }
 
 .p-2 {
-  padding: 0.5rem;
+  padding: 2rem;
+  font-size: 20px;
 }
 
 .rounded {
@@ -76,16 +77,32 @@ button.block:hover {
 }
 
 .p-6 {
-  padding: 1.5rem;
-}
+  padding: 0;
+} 
 
+p {
+    font-size: 25px;
+    padding: 5px;
+    display: flex;
+    font-family: sans-serif;
+    color: red;
+    font-weight: bold;
+}
 .bg-gray-100 {
   background-color: #f7fafc;
 }
 
 /* Judul halaman */
 .text-2xl {
-  font-size: 1.5rem;
+  font-size: 5rem;
+  background-color: #cca000;
+  padding: 10px;
+  width: 100%;
+  border: none;
+  border-radius: 2px;
+  color: white;
+  font-weight: 700;
+
 }
 
 .mb-4 {
@@ -100,7 +117,11 @@ button.bg-red-600 {
   border: none;
   cursor: pointer;
   transition: opacity 0.3s;
-  font-weight: 600;
+  font-weight: 300;
+  font-size: 18px;
+  margin: 10px;
+  flex-direction: column;
+  flex: none;
 }
 
 button.bg-green-600:hover,
@@ -154,6 +175,7 @@ button.bg-red-600:hover {
 .flex.gap-2 {
   display: flex;
   gap: 0.5rem;
+  padding-bottom: 2px;
 }
 
 .mb-3 {
@@ -164,7 +186,7 @@ button.bg-red-600:hover {
 table {
   border-collapse: collapse;
   width: 100%;
-  box-shadow: 0 4px 6px -1px rgba(255, 13, 13, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(252, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border-radius: 0.5rem;
   overflow: hidden;
 }

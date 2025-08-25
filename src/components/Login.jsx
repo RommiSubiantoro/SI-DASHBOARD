@@ -3,8 +3,8 @@ import loginImage from "../assets/truck.png";
 
 const Login = () => {
   const [formData, setFormData] = useState({
-    username: 'Rommi',
-    password: '123'
+    username: '',
+    password: ''
   });
 
   return (
@@ -28,7 +28,7 @@ const Login = () => {
               onChange={(e) => setFormData({...formData, password: e.target.value})}
               required
             />
-            <button type="submit">Submit</button>
+            <button type="submit" href="src/components/AdminDashboard.jsx">Submit</button>
           </form>
         </div>
         

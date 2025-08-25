@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import "../css/AdminDashboard.css"
 
-export default function AdminDashboard() {
+function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
 
   // Data dummy untuk unit bisnis
@@ -24,6 +24,7 @@ export default function AdminDashboard() {
   ]);
 
   // Fungsi aksi
+    
   const handleDeleteUnit = (id) => {
     setUnits(units.filter((u) => u.id !== id));
   };
@@ -41,7 +42,7 @@ export default function AdminDashboard() {
           className="block w-full text-left hover:bg-gray-700 p-2 rounded"
           onClick={() => setActivePage("dashboard")}
         >
-          Dashboard
+          Home
         </button>
         <button
           className="block w-full text-left hover:bg-gray-700 p-2 rounded"
@@ -49,6 +50,7 @@ export default function AdminDashboard() {
         >
           Manage Unit Bisnis
         </button>
+        
         <button
           className="block w-full text-left hover:bg-gray-700 p-2 rounded"
           onClick={() => setActivePage("user")}
@@ -150,3 +152,4 @@ export default function AdminDashboard() {
     </div>
   );
 }
+export default AdminDashboard
