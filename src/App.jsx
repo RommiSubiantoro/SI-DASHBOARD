@@ -10,12 +10,11 @@ function App() {
         <>
             <Router>
                 <Routes>
-                    {/* <Route path="/" element={<Login />} /> */}
-                    <Route path="/" element={<AdminDashPage />} />
-                    {/* <Route path="/" element={<ManagerDashPage />} /> */}
-                    {/* <Route path="/" element={<SupervisorDashPage />} /> */}
-                 
-                       {/* <Route path="/" element={<UserDashPage />} />  */}
+                    <Route path="/" element={<Login />} />
+                    <Route path="/admin" element={<AdminDashPage />} />
+                    <Route path="/manager" element={<ManagerDashPage />} />
+                    <Route path="/supervisor" element={<SupervisorDashPage />} />
+                     <Route path="/user" element={<UserDashPage />} /> 
                 </Routes>
             </Router>
         </>

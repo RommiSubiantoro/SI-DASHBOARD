@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import SupervisorDashboard from '../components/SupervisorDashboard'
+import SupervisorDashboard from '../supervisor/SupervisorDashboard'
 
 const SupervisorDashPage = () => {
     useEffect(() => {

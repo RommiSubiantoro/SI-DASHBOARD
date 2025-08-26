@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import AdminDashboard from '../components/AdminDashboard'
+import AdminDashboard from '../admin/AdminDashboard'
 
 const AdminDashPage = () => {
     useEffect(() => {

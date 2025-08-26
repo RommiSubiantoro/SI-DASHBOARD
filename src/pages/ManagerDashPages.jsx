@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import ManagerDashboard from '../components/ManagerDashboard'
+import ManagerDashboard from '../manager/ManagerDashboard'
 
 const ManagerDashPage = () => {
     useEffect(() => {

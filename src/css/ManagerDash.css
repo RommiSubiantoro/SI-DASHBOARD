@@ -3,7 +3,6 @@
   width: 280px;
   height: 100vh;
   background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   padding: 30px 0;
   position: fixed;
   left: 0;
@@ -12,12 +11,8 @@
   flex-direction: column;
   gap: 20px;
   z-index: 1000;
-  transition: all 0.3s ease;
 }
 
-.Sidebar:hover {
-  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
-}
 
 /* Header Text */
 .text {
@@ -30,9 +25,10 @@
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
   letter-spacing: 0.5px;
 }
+
 /* Home Konten*/
 .kontendash{
-   margin-left: 300px; /* Memberikan ruang untuk sidebar (280px + 20px) */
+   margin-left: 300px; 
     margin-right: 20px;
     margin-top: 20px;
     margin-bottom: 20px;
@@ -68,7 +64,7 @@
     letter-spacing: -1px;
     line-height: 1.2;
     font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    text-align: left; /* Menghilangkan text-align: right */
+    text-align: left;
 }
 
 
@@ -84,11 +80,10 @@
   font-size: 16px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
   text-align: left;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  
 }
 
 .home-unit::before,
@@ -101,19 +96,15 @@
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-  transition: left 0.5s ease;
+ 
 }
 
-.home-unit:hover::before,
-.button-unit:hover::before,
-.Btn-manager:hover::before {
-  left: 100%;
-}
+
 
 /* Home Button */
 .home-unit {
   background: linear-gradient(135deg, #ff0000 0%, #fe0000 100%);
-  color: white;
+   color: rgb(255, 255, 255);
  
 }
 
@@ -137,7 +128,7 @@
 .button-unit:hover {
   background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
   transform: translateX(10px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(250, 112, 154, 0.4);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
 }
 
 .button-unit:active {
@@ -153,29 +144,14 @@
 .Btn-manager:hover {
   background: linear-gradient(135deg, #ff0202 0%, #ff0000 100%);
   transform: translateX(10px) scale(1.02);
-  box-shadow: 0 6px 20px rgba(168, 237, 234, 0.4);
+  box-shadow: 0 6px 20px rgba(79, 172, 254, 0.4);
 }
 
 .Btn-manager:active {
   transform: translateX(8px) scale(0.98);
 }
 
-/* Active State untuk buttons (optional) */
-.home-unit.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-left-color: #ffd700;
-}
 
-.button-unit.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-left-color: #ffd700;
-}
-
-.Btn-manager.active {
-  background: linear-gradient(135deg, #667eea 0%, #a24b4b 100%);
-  color: white;
-  border-left-color: #ffd700;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {
@@ -221,42 +197,8 @@
   }
 }
 
-/* Loading animation (optional) */
-@keyframes slideIn {
-  from {
-    transform: translateX(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
 
-.Sidebar {
-  animation: slideIn 0.5s ease-out;
-}
 
-/* Focus states untuk accessibility */
-.home-unit:focus,
-.button-unit:focus,
-.Btn-manager:focus {
-  outline: 3px solid rgba(255, 255, 255, 0.5);
-  outline-offset: 2px;
-}
 
-/* Disabled state (jika diperlukan) */
-.home-unit:disabled,
-.button-unit:disabled,
-.Btn-manager:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
 
-.home-unit:disabled:hover,
-.button-unit:disabled:hover,
-.Btn-manager:disabled:hover {
-  transform: none;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
+
