@@ -122,9 +122,9 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="container">
+    <div className="Container">
       {/* Sidebar */}
-      <div className="Siderbar">
+      <div className="sidebar">
         <h2 className="h1">Admin Panel</h2>
         <button
           className="button-1"

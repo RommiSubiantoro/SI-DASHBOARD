@@ -4,7 +4,7 @@ import Login from './pages/LoginPages';
 import AdminDashPage from './pages/AdminDashPages';
 import ManagerDashPage from './pages/ManagerDashPages';
 import SupervisorDashPage from './pages/SupervisorDashPages';
-import UserDashPage from './pages/UserDash.Pages';
+import UserDashPage from './pages/UserDashPages';
 function App() {
     return (
         <>
@@ -14,7 +14,7 @@ function App() {
                     <Route path="/admin" element={<AdminDashPage />} />
                     <Route path="/manager" element={<ManagerDashPage />} />
                     <Route path="/supervisor" element={<SupervisorDashPage />} />
-                     <Route path="/user" element={<UserDashPage />} /> 
+                    <Route path="/user" element={<UserDashPage />} /> 
                 </Routes>
             </Router>
         </>

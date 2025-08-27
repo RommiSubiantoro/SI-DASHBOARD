@@ -1,37 +1,42 @@
-/* Container utama */
+/* === Container utama === */
 .container {
   display: flex;
+  gap: 20px;
   min-height: 100vh;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-color: #f5f5f5;
+  background: white;
+  justify-content: center;
+  overflow-y: scroll;
 }
 
-/* Sidebar */
-.Siderbar {
-  width: 250px;
-  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+
+/* === Sidebar === */
+.sidebar {
+  width: 80%;
+  height: 100vh;
+  background-color: rgb(255, 0, 0);
   color: white;
   padding: 20px;
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
   position: fixed;
-  height: 100vh;
-  overflow-y: auto;
+  top: 0;
+  left: 0;
+  width: 250px;
 }
+
 
 .h1 {
   font-size: 1.5rem;
   font-weight: bold;
   margin-bottom: 30px;
   text-align: center;
-  border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+  border-bottom: 2px solid rgba(255, 255, 255, 0.636);
   padding-bottom: 15px;
 }
 
-/* Tombol sidebar */
+/* === Tombol sidebar === */
 .button-1 {
   display: block;
   width: 100%;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(255, 0, 0);
   color: white;
   border: none;
   padding: 12px 16px;
@@ -52,39 +57,58 @@
   transform: translateX(3px);
 }
 
-/* Konten utama */
+/* === Konten utama === */
 .Konten {
-  flex: 1;
   margin-left: 250px;
-  padding: 30px;
-  background-color: #f8f9fa;
-  min-height: 100vh;
+  margin-top: 20px;
+  padding: 20px;
+  background: #ffa11d;
+  border-radius: 2px;
+  flex: 1;
+  padding-bottom: 10px;
 }
 
-/* Judul halaman */
+/* === Judul halaman === */
+.judul,
+.judul-1 {
+  font-size: 40px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #ffffff 0%,
+      #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  text-align: left;
+
+}
+
 .judul {
   font-size: 2rem;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20px;
 }
 
 .judul-1 {
   font-size: 1.8rem;
-  font-weight: bold;
-  color: #333;
-  margin-bottom: 20px;
 }
 
-/* Container untuk tombol aksi */
+/* === Container untuk tombol aksi === */
 .isian {
-  display: flex;
+  display: fixed;
   gap: 15px;
   margin-bottom: 20px;
   align-items: center;
 }
 
-/* Tombol tambah */
+/* === Tombol tambah === */
 .button-2 {
   background: linear-gradient(135deg, #28a745, #20c997);
   color: white;
@@ -102,7 +126,7 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Tombol ekspor */
+/* === Tombol ekspor === */
 .button-3 {
   background: linear-gradient(135deg, #17a2b8, #138496);
   color: white;
@@ -120,7 +144,7 @@
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Tabel */
+/* === Tabel === */
 .tabel-3 {
   width: 100%;
   background: white;
@@ -158,11 +182,11 @@
   font-size: 14px;
 }
 
-.tabel-3 .border-b:last-child td {
+.tabel-3 tbody tr:last-child td {
   border-bottom: none;
 }
 
-/* Utilitas untuk text alignment dan spacing */
+/* === Utilitas untuk text alignment dan spacing === */
 .text-center {
   text-align: center;
 }
@@ -171,11 +195,11 @@
   padding: 8px;
 }
 
-.space-x-2 > * + * {
+.space-x-2>*+* {
   margin-left: 8px;
 }
 
-/* Tombol aksi dalam tabel */
+/* === Tombol aksi dalam tabel === */
 .bg-yellow-500 {
   background-color: #ffc107;
   color: #212529;
@@ -228,7 +252,7 @@
   transform: translateY(-1px);
 }
 
-/* Styling untuk halaman user */
+/* === Styling untuk halaman user === */
 .text-2xl {
   font-size: 1.5rem;
 }
@@ -261,7 +285,7 @@
   background-color: #343a40;
 }
 
-
+/* === Modal === */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -285,16 +309,18 @@
   animation: modalSlideIn 0.3s ease-out;
 }
 
+/* 
 @keyframes modalSlideIn {
   from {
     opacity: 0;
     transform: translateY(-50px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
-}
+} */
 
 .modal-content h2 {
   margin-bottom: 20px;
@@ -354,7 +380,7 @@
 }
 
 .btn-cancel {
-  background-color: #6c757d;
+  background-color: #0088ff;
   color: white;
   padding: 10px 20px;
   border: none;
@@ -368,65 +394,64 @@
   background-color: #545b62;
 }
 
-/* Responsive design */
+/* === Responsive design === */
 @media (max-width: 768px) {
-  .Siderbar {
+  .Sidebar {
     width: 200px;
   }
-  
+
   .Konten {
     margin-left: 200px;
     padding: 20px;
   }
-  
-  .judul, .judul-1 {
+
+  .judul,
+  .judul-1 {
     font-size: 1.5rem;
   }
 }
 
 @media (max-width: 576px) {
-  .Siderbar {
+  .Sidebar {
     width: 100%;
     height: auto;
-    position: fixed ;
+    position: fixed;
   }
-  
+
   .Konten {
     margin-left: 0;
     padding: 15px;
-    
-
   }
-  
+
   .container {
     flex-direction: column;
   }
-  
+
   .isian {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .tabel-3 {
     font-size: 12px;
   }
-  
+
   .thead th,
   .tabel-3 td {
     padding: 8px 5px;
   }
+
   .modal-content {
     width: 95%;
     padding: 20px;
   }
-  
+
   .modal-buttons {
     flex-direction: column;
   }
-  
+
   .btn-save,
   .btn-cancel {
     width: 100%;
   }
-
 }

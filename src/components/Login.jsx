@@ -6,6 +6,7 @@ import loginImage from "../assets/truck.png";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../css/login.css"
 
+
 const Login = () => {
   const navigate = useNavigate();
 
@@ -30,7 +31,7 @@ const Login = () => {
   };
 
   return (
-    <div className="container">
+    <div className="container-login">
       <div className="auth">
         <form onSubmit={handleSubmit}>
           <h1 className="login">Login</h1>
