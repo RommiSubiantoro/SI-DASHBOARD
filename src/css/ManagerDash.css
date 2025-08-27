@@ -1,0 +1,192 @@
+.container {
+  display: flex;
+  gap: 20px;
+  min-height: 100vh;
+  background: rgb(255, 255, 255);
+  justify-content: center;
+  overflow: hidden;
+}
+
+
+/* Sidebar Container */
+.Sidebar {
+  width: 80%;
+  height: 100vh;
+  background-color: rgb(255, 0, 0);
+  color: rgb(255, 3, 3);
+  padding: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 250px;
+}
+
+
+/* Header Text */
+.text {
+   font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 30px;
+  text-align: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.636);
+  padding-bottom: 15px;
+  color: white;
+}
+
+
+
+
+/* Home Konten*/
+.kontendash {
+  margin-left: 250px;
+  margin-top: 20px;
+  padding: 20px;
+  background: #ffa11d;
+  border-radius: 2px;
+  flex: 1;
+  padding-bottom: 10px;
+
+}
+
+.title {
+  font-size: 40px;
+  font-weight: 800;
+  color: #2c3e50;
+  margin: 0 0 15px 0;
+  text-shadow:
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+  background: linear-gradient(135deg, #ffffff 0%,
+      #ffffff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative;
+  z-index: 1;
+  letter-spacing: -1px;
+  line-height: 1.2;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  text-align: left;
+}
+
+
+/* Base Button Styles */
+.home-unit,
+.button-unit,
+.Btn-manager {
+   display: block;
+  width: 100%;
+  background: rgb(255, 0, 0);
+  color: white;
+  border: none;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s ease;
+  text-align: left;
+
+}
+
+/* .home-unit::before,
+.button-unit::before,
+.Btn-manager::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+ 
+} */
+
+
+
+/* Home Button */
+.home-unit {
+  background: linear-gradient(135deg, #ff0000 0%, #fe0000 100%);
+  color: rgb(255, 255, 255);
+
+}
+
+.home-unit:hover {
+   background: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
+.home-unit:active {
+  transform: translateX(3px);
+}
+
+/* Unit Bisnis Button */
+.button-unit {
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  color: rgb(255, 255, 255);
+
+}
+
+.button-unit:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
+.button-unit:active {
+  transform: translateX(3px);
+}
+
+/* User Manager Button */
+.Btn-manager {
+  background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+  color: #ffffff;
+}
+
+.Btn-manager:hover {
+    background: rgba(255, 255, 255, 0.2);
+  transform: translateX(5px);
+}
+
+.Btn-manager:active {
+ transform: translateX(3px);
+}
+
+
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .Sidebar {
+    width: 100%;
+    height: auto;
+    position: relative;
+    padding: 20px 0;
+  }
+
+  .kontendash {
+    margin-left: 20px;
+    margin-right: 20px;
+    padding: 30px 25px;
+    border-radius: 15px;
+  }
+
+  .title {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+
+  .kontendash p {
+    font-size: 16px;
+  }
+
+  .home-unit,
+  .button-unit,
+  .Btn-manager {
+    width: 95%;
+    margin: 10px auto;
+  }
+
+  .text {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+}
