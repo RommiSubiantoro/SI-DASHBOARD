@@ -1,87 +1,324 @@
-/* === Container utama === */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.login-cover {
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+}
+
 .container {
   display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh; 
-  background: #f0f4ff; /* default background */
-  padding: 20px;
-  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
-  position: relative;
+  width: 100%;
+  height: 100vh;
   overflow: hidden;
 }
 
-/* === Box form login === */
 .auth {
-  flex: 1;
-  max-width: 450px;
-  background: #fff;
-  padding: 40px;
-  border-radius: 12px;
-  box-shadow: 0 6px 20px rgba(0,0,0,0.2);
-  z-index: 2; /* supaya selalu di atas gambar */
+  flex:  350px; 
+  border-radius: 30px ;
+  padding: 40px 40px;
+  margin: 20px;
+  display: flex;
+  margin-top: 100px;
+  flex-direction: column;
+  justify-content: center;
+  background-color: #ff0000;
+  position: relative;
+  z-index: 3;
+  height: 400px;
+  width: 100%;
 }
 
 .auth h1.login {
   text-align: center;
-  margin-bottom: 30px;
-  font-size: 28px;
-  color: #333;
+  margin-bottom: 40px;
+  font-size: 32px;
+  color: #ffffff;
+  font-weight: 700;
+  position: relative;
+  z-index: 4;
 }
 
 .auth input {
   width: 100%;
-  padding: 12px 14px;
-  margin-bottom: 18px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  font-size: 15px;
+  padding:  16px 45px 16px 20px;
+  margin-bottom: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 15px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+  background: #ffffff;
+  color: #2d3748;
+}
+
+.auth span {
+  position: absolute;
+  right: 15px;
+  top: 25px;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #718096;
+  font-size: 18px;
+}
+
+
+.auth input:focus {
+  outline: none;
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.12);
+  background: #ffffff;
+  z-index: 5;
+}
+
+.auth input::placeholder {
+  color: #a0aec0;
 }
 
 .auth button {
-  width: 100%;
-  padding: 12px;
-  background: #4f46e5;
-  color: white;
+  width: 110px;
+  padding: 16px;
+  left: 190px;
+  background: white;
+  color: rgb(255, 0, 0);
   font-size: 16px;
+  font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: 15px;
   cursor: pointer;
-  transition: 0.3s;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+  position: relative;
+  z-index: 4;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .auth button:hover {
-  background: #4338ca;
+  background: aliceblue;
+  transform: translateY(-3px);
+  box-shadow: 0 10px 25px rgba(66, 65, 75, 0.3);
+  z-index: 5;
 }
 
-/* === Box gambar login (hanya tampil di desktop) === */
+.auth button:active {
+  transform: translateY(-1px);
+}
+
 .logo-login {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  padding: 20px;
+  flex: 1; 
+  position: relative;
+  height: 100vh;
+  background: url("src/assets/truck.png") no-repeat center center;
+  border-radius: none;
+  border: none;
+  background-size: cover;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.logo-login::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.1));
+  z-index: 2;
 }
 
 .logo-login img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 12px;
+  display: none; 
 }
 
-/* === Responsif: jika layar kecil, gambar jadi background === */
-@media (max-width: 768px) {
-  .container {
-    flex-direction: column;
-    background: url("loginImage.jpg") no-repeat center center;
+
+@media (max-width: 1920px) and (min-width: 768px) {
+  .auth {
+    flex: 0 0 500px;
+    padding: 50px 40px;
+  }
+  
+  .auth h1.login {
+    font-size: 28px;
+    margin-bottom: 35px;
+  }
+
+  .auth input {
+    padding: 14px 18px;
+    border-radius: 12px;
+  }
+
+  .auth button {
+    padding: 14px;
+    border-radius: 12px;
+    left: 310px;
+  }
+}
+
+@media (max-width: 1028px) {
+  .login-cover {
+    background: url("src/assets/truck.png") no-repeat center center;
     background-size: cover;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .login-cover::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1;
+  }
+
+  .container {
+    background: none;
+    box-shadow: none;
+    flex-direction: column;
+    z-index: 2;
+    height: auto;
+    justify-content: center;
+    align-items: center;
   }
 
   .logo-login {
-    display: none; /* sembunyikan gambar agar tidak dobel */
+    display: none;
   }
 
   .auth {
-    background: rgba(255, 255, 255, 0.9); /* semi transparan biar teks tetap jelas */
+    background: rgba(255, 0, 0, 0.98);
+    backdrop-filter: blur(15px);
+    border-radius: 25px;
+    padding: 40px 35px;
+    width: 100%;
+    max-width: 380px;
+    margin: 0 auto;
+    z-index: 3;
+    position: relative;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    flex: none;
+    height: auto;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .auth h1.login {
+    font-size: 28px;
+    margin-bottom: 30px;
+    color: #1a202c;
+  }
+
+  .auth input {
+    padding: 14px 18px;
+    font-size: 16px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.95);
+    border: 2px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .auth input:focus {
+    background: #ffffff;
+    border-color: #4f46e5;
+  }
+
+  .auth button {
+    padding: 16px;
+    font-size: 16px;
+    border-radius: 15px;
+    margin-top: 10px;
+    left: 170px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-cover {
+    padding: 15px;
+  }
+  
+  .auth {
+    padding: 35px 25px;
+    border-radius: 20px;
+    max-width: 340px;
+  }
+  
+  .auth h1.login {
+    font-size: 26px;
+    margin-bottom: 25px;
+  }
+  
+  .auth input {
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    border-radius: 12px;
+  }
+  
+  .auth button {
+    padding: 14px;
+    border-radius: 12px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 768px) {
+  .auth {
+    max-width: 420px;
+    padding: 45px 40px;
+    border-radius: 25px;
+  }
+  
+  .auth h1.login {
+    font-size: 30px;
+    margin-bottom: 35px;
+  }
+  
+  .auth input {
+    padding: 16px 20px;
+    margin-bottom: 20px;
+  }
+  
+  .auth button {
+    padding: 16px;
+    margin-top: 15px;
+  }
+}
+
+input:focus,
+button:focus,
+button:active {
+  z-index: 999 !important;
+}
+
+.auth {
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.1);
+}
+
+@media (min-width: 769px) {
+  .auth:hover {
+    box-shadow: 0 0 80px rgba(79, 70, 229, 0.15);
+    transition: box-shadow 0.3s ease;
+  }
+}
+
+@media (max-width: 400px) {
+  .auth h1.login {
+    font-size: 24px;
+  }
+  
+  .auth input,
+  .auth button {
+    font-size: 15px;
   }
 }

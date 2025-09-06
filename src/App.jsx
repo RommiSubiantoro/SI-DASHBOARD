@@ -5,6 +5,7 @@ import AdminDashPage from './pages/AdminDashPages';
 import ManagerDashPage from './pages/ManagerDashPages';
 import SupervisorDashPage from './pages/SupervisorDashPages';
 import UserDashPage from './pages/UserDashPages';
+import './App.css'; 
 function App() {
     return (
         <>

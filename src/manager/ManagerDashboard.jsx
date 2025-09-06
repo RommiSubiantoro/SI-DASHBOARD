@@ -1,8 +1,19 @@
 import React, { useState } from "react";
+import UserDashboard from "../user/UserDashboard";
+import { LogOut } from 'lucide-react';
 import '../css/ManagerDash.css';
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSimpleLogout = () => {
+  localStorage.clear();
+  sessionStorage.clear();
+  
+  alert('Berhasil logout!');
+  window.location.href= "/";
+};
 
   return (
     <div className='Container'>
@@ -19,7 +30,7 @@ function ManagerDashboard() {
           className="button-unit"
           onClick={() => setActivePage("unit")}
         >
-          Manage Unit Bisnis
+          Show Unit Bisnis
         </button>
 
         <button
@@ -28,25 +39,39 @@ function ManagerDashboard() {
         >
           Manage User
         </button>
+         <button
+                  onClick={handleSimpleLogout}
+                  disabled={isLoading}
+                  className="button-logout"
+                >
+                  {isLoading ? (
+                    <div className="loading-spinner"></div>
+                  ) : (
+                    <>
+                      <LogOut size={20} />
+                      Logout
+                    </>
+                  )}
+                </button>
       </div>
       {/* Konten */}
       <div className="kontendash">
         {activePage === "dashboard" && (
           <div>
-            <h1 className="title">Dashboard</h1>
-            <p>Selamat datang di dashboard admin </p>
+            <h1 className="text-2xl font-bold mb-4">Dashboard</h1>
+            <UserDashboard></UserDashboard>
           </div>
         )}
 
         {activePage === "unit" && (
           <div>
-            <h1 className="title">Manage Unit Bisnis</h1>
+            <h1 className="text-2xl font-bold mb-4">Manage Unit Bisnis</h1>
           </div>
         )}
 
         {activePage === "user" && (
           <div>
-            <h1 className="title">Akses User</h1>
+            <h1 className="text-2xl font-bold mb-4">Akses User</h1>
           </div>
         )}
 

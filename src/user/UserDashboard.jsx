@@ -140,13 +140,11 @@ const UserDashboard = () => {
   return (
     <div className="Container-usr">
       <div className="body">
-        {/* Header */}
         <div className="header">
           <h1 className="title-header">
             Selamat Datang Didashboard
           </h1>
           
-          {/* Unit Selector */}
           <div className="unit selector">
             {units.map((unit) => (
               <button
@@ -164,7 +162,6 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Controls */}
         <div className="control">
           <div className="control-1">
             <button
@@ -204,7 +201,6 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Stats Cards */}
         <div className="stats-cards">
           <div className="revenue-stats">
             <div className="body-text">
@@ -247,9 +243,7 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Charts */}
         <div className="body-charts">
-          {/* Line Chart */}
           <div className="line-chart">
             <h3 className="judul-line-chart">Revenue vs Target Trend</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -265,7 +259,6 @@ const UserDashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Bar Chart */}
           <div className="body-barchart">
             <h3 className="text-revenuevsepenses">Revenue vs Expenses</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -282,9 +275,7 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Pie Chart and Data Table */}
         <div className="body-piechat&table">
-          {/* Pie Chart */}
           <div className="body-piechart">
             <h3 className="judul-piechart">Financial Distribution</h3>
             <ResponsiveContainer width="100%" height={300}>
@@ -308,7 +299,6 @@ const UserDashboard = () => {
             </ResponsiveContainer>
           </div>
 
-          {/* Data Table */}
           <div className="body-datatable">
             <h3 className="text-datatable">Data Table - {selectedUnit}</h3>
             <div className="body-table">
@@ -338,7 +328,6 @@ const UserDashboard = () => {
           </div>
         </div>
 
-        {/* Add Data Modal */}
         {showAddModal && (
           <div className="container-addmodal">
             <div className="body-addmodal">
