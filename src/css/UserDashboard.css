@@ -1,55 +1,46 @@
-/* Reset dasar */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
+/* ===================== */
+/* Layout Utama */
+/* ===================== */
 .Container-usr {
-  padding: 16px;
-  font-family: Arial, sans-serif;
-  max-width: 1200px;
-  margin: 0 auto;
+  font-family: "Segoe UI", Arial, sans-serif;
+  padding-left: 280px ;
+  padding-right: 40px;
   color: #333;
+  background: #f8f9fc;
+  min-height: 100vh;
 }
 
-/* Header */
 .header {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
 }
 
 .title-header {
-  font-size: 2rem;
-  font-weight: bold;
-  color: #222;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2d3748;
 }
 
-.unit.selector {
+.unit-selector {
   display: flex;
-  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
 }
 
-.button-selector {
-  padding: 8px 16px;
-  border: 2px solid #4facfe;
-  background-color: transparent;
-  color: #4facfe;
-  border-radius: 6px;
+.dropdown-unit {
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e0;
+  font-size: 14px;
+  background: #fff;
   cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
 }
 
-.button-selector.select-unit1 {
-  background-color: #4facfe;
-  color: white;
-}
-
-/* Control area for buttons */
+/* ===================== */
+/* Control Buttons */
+/* ===================== */
 .control {
   margin-bottom: 20px;
 }
@@ -58,161 +49,125 @@
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  align-items: center;
 }
 
 .button-control,
 .button-excel,
 .button-pdf,
 .label-control {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 6px;
   padding: 8px 14px;
-  border-radius: 6px;
   border: none;
+  border-radius: 8px;
+  font-size: 14px;
   cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: white;
-  background-color: #4facfe;
-  transition: background-color 0.3s ease;
-  position: relative;
-  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.button-control:hover,
-.button-excel:hover,
-.button-pdf:hover,
-.label-control:hover {
-  background-color: #3a9be0;
+.button-control {
+  background: #4facfe;
+  color: #fff;
+}
+.button-control:hover {
+  background: #3182ce;
+}
+
+.button-excel {
+  background: #38a169;
+  color: #fff;
+}
+.button-excel:hover {
+  background: #2f855a;
+}
+
+.button-pdf {
+  background: #e53e3e;
+  color: #fff;
+}
+.button-pdf:hover {
+  background: #c53030;
 }
 
 .label-control {
-  background-color: #6c757d;
+  background: #805ad5;
+  color: #fff;
+  cursor: pointer;
 }
-
-.label-control input.hidden {
+.label-control input {
   display: none;
 }
+.label-control:hover {
+  background: #6b46c1;
+}
 
+/* ===================== */
 /* Stats Cards */
+/* ===================== */
 .stats-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   margin-bottom: 30px;
 }
 
-.revenue-stats,
-.stats-cards-2,
-.stats-card-profit,
-.stats-card-avg {
-  background: #4facfe;
-  color: white;
-  border-radius: 10px;
-  padding: 20px;
-  box-shadow: 0 4px 8px rgb(79 172 254 / 0.4);
+.stats-cards > div {
+  background: #fff;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+
+.body-text,
+.body-text-expenses,
+.stats-card-3,
+.stats-card-4 {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-}
-
-.stats-cards-2 {
-  background: #ff6b6b;
-  box-shadow: 0 4px 8px rgb(255 107 107 / 0.4);
-}
-
-.stats-card-profit {
-  background: #3ddb97;
-  box-shadow: 0 4px 8px rgb(61 219 151 / 0.4);
-}
-
-.stats-card-avg {
-  background: #ffa726;
-  box-shadow: 0 4px 8px rgb(255 167 38 / 0.4);
+  align-items: center;
 }
 
 .textstats-1,
 .text-expenses1,
 .text-profit-1,
 .text-avg-1 {
-  font-size: 1.1rem;
-  font-weight: 500;
-  margin-bottom: 4px;
+  font-size: 14px;
+  color: #718096;
 }
 
 .textstats-2,
 .text-expenses2,
 .text-profit-2,
 .text-avg-2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-
-/* Charts container */
-.body-charts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 30px;
-}
-
-.line-chart,
-.body-barchart {
-  flex: 1 1 100%;
-  max-width: 100%;
-  background: white;
-  padding: 16px;
-  border-radius: 10px;
-  box-shadow: 0 3px 6px rgb(0 0 0 / 0.1);
-}
-
-.judul-line-chart,
-.text-revenuevsepenses {
-  font-size: 1.2rem;
+  font-size: 20px;
   font-weight: 600;
-  margin-bottom: 12px;
-  color: #222;
+  margin-top: 4px;
 }
 
-/* Pie chart and data table */
-.body-piechat&table {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-  margin-bottom: 30px;
-}
-
-.body-piechart,
+/* ===================== */
+/* Data Table */
+/* ===================== */
 .body-datatable {
-  background: white;
-  border-radius: 10px;
-  padding: 16px;
-  box-shadow: 0 3px 6px rgb(0 0 0 / 0.1);
-  flex: 1 1 100%;
-  max-width: 100%;
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+  margin-bottom: 30px;
 }
 
-@media (min-width: 768px) {
-  .line-chart,
-  .body-barchart {
-    flex: 1 1 48%;
-    max-width: 48%;
-  }
-  .body-piechart,
-  .body-datatable {
-    flex: 1 1 48%;
-    max-width: 48%;
-  }
-}
-
-.judul-piechart,
-.text-datatable {
-  font-size: 1.2rem;
-  font-weight: 600;
-  color: #222;
+.filter-section {
   margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.text-datatable {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #2d3748;
 }
 
 .body-table {
@@ -222,133 +177,46 @@
 .table-datatable {
   width: 100%;
   border-collapse: collapse;
-}
-
-.table-datatable thead tr {
-  background-color: #4facfe;
-  color: white;
+  font-size: 14px;
 }
 
 .table-datatable th,
 .table-datatable td {
-  text-align: left;
-  padding: 10px 8px;
-  border: 1px solid #ddd;
-  white-space: nowrap;
-}
-
-.table-datatable tbody tr:nth-child(even) {
-  background-color: #f9f9f9;
-}
-
-.table-datatable tbody tr:hover {
-  background-color: #e1f0ff;
-}
-
-/* Modal Add Data */
-.container-addmodal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.body-addmodal {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  max-width: 400px;
-  width: 100%;
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
-}
-
-.judul-addmodal {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-bottom: 20px;
-  color: #222;
+  border: 1px solid #e2e8f0;
+  padding: 8px 10px;
   text-align: center;
 }
 
-.input-addmodal {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.input-modal1 {
-  padding: 10px 14px;
-  border-radius: 8px;
-  border: 1.5px solid #ccc;
-  font-size: 1rem;
-  transition: border-color 0.3s ease;
-}
-
-.input-modal1:focus {
-  border-color: #4facfe;
-  outline: none;
-}
-
-.body-button-addmodal {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.button-addmodal1 {
-  flex: 1;
-  background-color: #4facfe;
-  color: white;
+.table-datatable th {
+  background: #edf2f7;
   font-weight: 600;
-  border-radius: 8px;
-  padding: 10px;
-  border: none;
-  cursor: pointer;
-  transition: background-color 0.3s ease;
 }
 
-.button-addmodal1:hover {
-  background-color: #3a9be0;
+.table-datatable tr:nth-child(even) {
+  background: #f9fafb;
 }
 
-/* Responsive tweak for small devices */
-@media (max-width: 480px) {
-  .control-1 {
-    flex-direction: column;
-    align-items: stretch;
-  }
+.table-datatable tr:hover {
+  background: #ebf8ff;
+}
 
-  .button-control,
-  .button-excel,
-  .button-pdf,
-  .label-control {
-    width: 100%;
-    justify-content: center;
+/* ===================== */
+/* Responsiveness */
+/* ===================== */
+@media (max-width: 1024px) {
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
   }
+}
 
+@media (max-width: 640px) {
   .stats-cards {
     grid-template-columns: 1fr;
   }
 
-  .body-charts {
+  .header {
     flex-direction: column;
-  }
-
-  .body-piechat&table {
-    flex-direction: column;
-  }
-
-  .body-piechart,
-  .body-datatable {
-    max-width: 100%;
+    align-items: flex-start;
+    gap: 12px;
   }
 }

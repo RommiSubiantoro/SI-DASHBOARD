@@ -1,0 +1,151 @@
+.stats-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin: 20px 0;
+}
+
+/* Card umum */
+.stats-cards > div {
+  border-radius: 16px;
+  padding: 20px;
+  color: #fff; /* teks putih biar kontras */
+  display: flex;
+  align-items: center;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stats-cards > div:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.modal-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  width: 400px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-body {
+  margin: 15px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.close-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.button-cancel {
+  background: #ccc;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* Layout isi */
+.body-text,
+.body-text-expenses,
+.stats-card-3,
+.stats-card-4 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+}
+
+
+
+/* Typography */
+.stats-cards
+.textstats-1{
+    color: #fff;
+}
+.stats-cards
+.text-expenses1{
+    color: #fff;
+}
+.stats-cards
+.text-profit-1{
+    color: #fff;
+}
+.stats-cards
+.text-avg-1{
+    color: #fff;
+}
+
+.textstats-1,
+.text-expenses1,
+.text-profit-1,
+.text-avg-1 {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin: 0;
+
+}
+
+.textstats-2,
+.text-expenses2,
+.text-profit-2,
+.text-avg-2 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 5px 0 0 0;
+}
+
+
+/* Warna khusus tiap card */
+.revenue-stats {
+  background: linear-gradient(135deg, #3b82f6, #2563eb) !important; /* biru */
+}
+
+.stats-cards-2 {
+  background: linear-gradient(135deg, #ef4444, #dc2626) !important; /* merah */
+}
+
+.stats-card-profit {
+  background: linear-gradient(135deg, #10b981, #059669) !important; /* hijau */
+}
+
+.stats-card-avg {
+  background: linear-gradient(135deg, #f59e0b, #d97706) !important; /* oranye */
+}
+
+/* Icon */
+.stats-cards svg {
+  color: rgba(255, 255, 255, 0.9);
+}

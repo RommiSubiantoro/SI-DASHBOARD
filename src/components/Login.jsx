@@ -1,70 +1,106 @@
 import React, { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth, db } from "../firebase"; // Pastikan db diimpor dari file firebase.js
-import { collection, query, where, getDocs } from "firebase/firestore"; // Impor fungsi Firestore yang diperlukan
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import "../css/login.css";
 
 const Login = () => {
-  const navigate = useNavigate();
-
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
-
-  const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false); // State untuk menunjukkan proses login
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
 
-  const handleSubmit = async (e) => {
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError("Silakan masukkan email terlebih dahulu");
+      return;
+    }
+
+    setError("");
+    setSuccessMessage("");
+    setIsResetLoading(true);
+
+    try {
+      // Cek apakah email ada di Firestore
+      const emailQuery = query(collection(db, "users"), where("email", "==", email));
+      const emailSnapshot = await getDocs(emailQuery);
+
+      if (emailSnapshot.empty) {
+        setError("Email tidak terdaftar di sistem.");
+        setIsResetLoading(false);
+        return;
+      }
+
+      // Kirim email reset password via Firebase
+      await sendPasswordResetEmail(auth, email);
+      setSuccessMessage("Email reset kata sandi telah dikirim. Silakan periksa email Anda.");
+    } catch (err) {
+      if (err.code === "auth/invalid-email") {
+        setError("Format email tidak valid.");
+      } else {
+        setError("Terjadi kesalahan saat mengirim email reset. Silakan coba lagi.");
+      }
+    } finally {
+      setIsResetLoading(false);
+    }
+  };
+
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccessMessage("");
     setIsLoading(true);
 
     try {
-      // 1. Lakukan otentikasi dengan email dan sandi
-      const userCredential = await signInWithEmailAndPassword(auth, formData.email, formData.password);
-      const user = userCredential.user;
-      
-      // 2. Dapatkan data pengguna dari Firestore berdasarkan UID
-      const usersCollectionRef = collection(db, "users");
-      const q = query(usersCollectionRef, where("email", "==", user.email));
-      const querySnapshot = await getDocs(q);
+      // Login via Firebase Auth
+      await signInWithEmailAndPassword(auth, email, password);
 
-      if (querySnapshot.empty) {
-        // Jika tidak ada dokumen yang cocok, berarti data pengguna di Firestore tidak ada
-        // (opsional) Anda bisa menambahkan logika logout di sini
-        setError("Login gagal: Data pengguna tidak ditemukan.");
-        await auth.signOut(); // Pastikan untuk logout dari Firebase Auth jika data tidak ditemukan
+      // Ambil role dari Firestore
+      const emailQuery = query(collection(db, "users"), where("email", "==", email));
+      const emailSnapshot = await getDocs(emailQuery);
+
+      if (emailSnapshot.empty) {
+        setError("Email tidak ditemukan di sistem. Silakan hubungi admin.");
         setIsLoading(false);
         return;
       }
 
-      // 3. Dapatkan data role dari dokumen Firestore pertama yang cocok
-      const userData = querySnapshot.docs[0].data();
-      const userRole = userData.role;
+      const userDoc = emailSnapshot.docs[0];
+      const userData = userDoc.data();
+      const role = (userData.role || "").trim().toLowerCase();
 
-      // 4. Arahkan pengguna berdasarkan rolenya
-      if (userRole === "Super Admin") {
+      // Simpan data ke localStorage
+      localStorage.setItem("userUid", userDoc.id);
+      localStorage.setItem("userRole", role);
+
+      // Redirect sesuai role
+      if (role === 'super admin') {
         navigate("/admin");
-      } else if (userRole === "User") {
-        navigate("/user");
-      } else if (userRole === "Manager"){
-        navigate("manager");
-      } else if (userRole === "Supervisor")  {
+      } else if (role === 'manager') {
+        navigate("/manager");
+      } else if (role === 'supervisor') {
         navigate("/supervisor");
-      } else ("tidak ada data yang sesuai, silahkan hubungi admin")
-      
-    } catch (err) {
-      // Tangani kesalahan otentikasi dari Firebase
-      let errorMessage = "Login gagal: username atau sandi salah.";
-      console.error(err.code);
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
-        errorMessage = "Email atau sandi salah.";
+      } else if (role === 'user') {
+        navigate("/user");
+      } else {
+        setError("Role tidak dikenali. Hubungi Super Admin.");
       }
-      setError(errorMessage);
+    } catch (err) {
+      if (err.code === "auth/invalid-credential") {
+        setError("Email atau password salah.");
+      } else {
+        setError("Terjadi kesalahan. Silakan coba lagi.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +109,7 @@ const Login = () => {
   return (
     <div className="login-cover">
       <div className="auth">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleLogin}>
           <h1 className="login">Login</h1>
 
           {/* Input Email */}
@@ -81,44 +117,69 @@ const Login = () => {
             type="email"
             name="email"
             placeholder="Email"
-            value={formData.email}
-            onChange={(e) =>
-              setFormData({ ...formData, email: e.target.value })
-            }
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
             required
             disabled={isLoading}
           />
 
-          {/* Input Password dengan ikon mata */}
+          {/* Input Password */}
           <div style={{ position: "relative", width: "100%", top: "10px" }}>
             <input
               type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Password"
-              value={formData.password}
-              onChange={(e) =>
-                setFormData({ ...formData, password: e.target.value })
-              }
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} // perbaikan disini
               required
               disabled={isLoading}
             />
             <span
-              onClick={() => setShowPassword(!showPassword)}
-              style={{ position: "absolute", right: "10px", top: "50%", transform: "translateY(-50%)", cursor: "pointer", color: "black" }}
+              onClick={togglePasswordVisibility}
+              style={{
+                position: "absolute",
+                right: "10px",
+                top: "50%",
+                transform: "translateY(-50%)",
+                cursor: "pointer",
+                color: "black",
+              }}
             >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </span>
           </div>
 
-          {/* Error message */}
-          {error && <p style={{ color: "white", marginTop: "10px", marginBottom: "10px" }}>{error}</p>}
+          {/* Error Message */}
+          {error && (
+            <p style={{ color: "white", marginTop: "10px", marginBottom: "10px" }}>
+              {error}
+            </p>
+          )}
 
-          <button type="submit" disabled={isLoading}>
+          {/* Success Message */}
+          {successMessage && (
+            <p style={{ color: "lightgreen", marginTop: "10px", marginBottom: "10px" }}>
+              {successMessage}
+            </p>
+          )}
+
+          {/* Submit Button */}
+          <button className="submit-login"
+          type="submit" disabled={isLoading}>
             {isLoading ? "Loading..." : "Submit"}
+          </button>
+
+          {/* Reset Password Button */}
+          <button className="lupa-pass"
+            type="button"
+            onClick={handleResetPassword}
+            disabled={isResetLoading}
+            style={{ marginTop: "10px", }}
+          >
+            {isResetLoading ? "Mengirim..." : "Lupa Password?"}
           </button>
         </form>
       </div>
-
       <div className="logo-login"></div>
     </div>
   );

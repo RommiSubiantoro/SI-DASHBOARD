@@ -1,10 +1,4 @@
 /* === Container utama === */
-.admin {
-  gap: 2px;
-  background: white;
-  justify-content: center;
-
-}
 
 
 /* === Sidebar === */
@@ -15,7 +9,7 @@
   color: white;
   padding: 20px;
   position: fixed;
-  top: 0;
+  top: 0px;
   left: 0;
   width: 250px;
 }
@@ -113,11 +107,18 @@
 /* === Container untuk tombol aksi === */
 .isian {
   display: fixed;
-  gap: 15px;
+  gap: 25px;
   margin-bottom: 20px;
   align-items: center;
 }
-
+.title{
+  padding-block: 20px;
+  padding-top: 5px;
+}
+.title-user{
+  padding-block: 20px;
+  padding-top: 2px;
+}
 /* === Tombol tambah === */
 .button-2 {
   background: linear-gradient(135deg, #28a745, #20c997);
@@ -425,6 +426,16 @@
 .delete-button {
   background-color: #e74c3c;
 }
+.dashboard-content {
+  max-width: 1200px;   /* Biar konten tidak full ke kanan kiri */
+  margin: 0 auto;      /* Biar posisinya center */
+  padding: 20px;       /* Kasih jarak dalam */
+  background: #fff;    /* Tambah background putih biar rapih */
+  border-radius: 12px; /* Sudut rounded */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Bayangan halus */
+  transition: all 0.3s ease; /* Animasi halus kalau resize */
+}
+
 
 /* Responsive */
 @media (max-width: 768px) {

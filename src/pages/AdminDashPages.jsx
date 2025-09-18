@@ -9,6 +9,7 @@ const AdminDashPage = () => {
     return (
         <div>
             <AdminDashboard />
+
         </div>
     )
 }

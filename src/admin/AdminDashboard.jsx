@@ -1,19 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { LogOut } from 'lucide-react';
-import { 
-  collection, 
-  getDocs, 
-  addDoc, 
-  updateDoc, 
-  deleteDoc, 
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
   doc,
   onSnapshot
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
-import { db } from '../firebase'; 
-import "../css/AdminDashboard.css"
-import UserDashboard from '../user/UserDashboard';
-import Navbar from "..\components\Navbar";
+import { db } from '../firebase';
+
+// Import komponen yang sudah dipecah
+import Header from '../components/Header';
+import ControlButtons from '../components/ControlButtons';
+import StatsCards from '../components/StatsCards';
+import DataTable from '../components/DataTable';
+import Navbar from "../components/navbar";
+import Piechart from "../components/Piechart";
+
+// Import custom hooks yang sudah diupdate dengan Firebase
+import { useDataManagement } from '../hooks/useDataManagement';
+
+import "../css/AdminDashboard.css";
 
 function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -29,16 +39,47 @@ function AdminDashboard() {
   // State untuk form modal
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
+  const [selectedMonth, setSelectedMonth] = useState("All");
+  const [selectedYear, setSelectedYear] = useState("2025");
   const [editingUnit, setEditingUnit] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [unitForm, setUnitForm] = useState({ name: "" });
   const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "", unitBisnis: "" });
   const [isLoading, setIsLoading] = useState(false);
 
+  // Dashboard states
+  const [selectedUnit, setSelectedUnit] = useState("");
+
+  // Menggunakan Firebase-enabled custom hooks untuk dashboard data
+  const {
+    data,
+    isLoading: dataLoading,
+    calculateStats,
+    exportToExcel,
+    importFromExcelToFirebase
+  } = useDataManagement({
+    "Samudera Makassar Logistik": [],
+    "Makassar Jaya Samudera": [],
+    "Samudera Perdana": [],
+    "Masaji Kargosentra Utama": [],
+    "Kendari Jaya Samudera": [],
+    "Silkargo Indonesia": [],
+    "Samudera Agencies Indoensia": [],
+    "Samudera Kendari Logistik": []
+  });
+
   // Dapatkan instance autentikasi
   const auth = getAuth();
 
-  // Firebase functions untuk Units
+  // Units mapping untuk dashboard
+  const dashboardUnits = ["Samudera Makassar Logistik ", "Makassar Jaya Samudera", "Samudera Perdana", "Masaji Kargosentra Utama", "Kendari Jaya Samudera",
+    "Silkargo Indonesia", "Samudera Agencies Indonesia", "Samudera Kendari Logistik"];
+
+  // Data untuk dashboard
+  const currentData = data[selectedUnit] || [];
+  const stats = calculateStats(currentData);
+
+  // Firebase functions untuk Units (existing code)
   const fetchUnits = async () => {
     try {
       setLoadingUnits(true);
@@ -48,7 +89,7 @@ function AdminDashboard() {
         id: doc.id,
         ...doc.data()
       }));
-      
+
       if (unitsList.length === 0) {
         const defaultUnits = [
           { name: "Makassar Jaya Samudera" },
@@ -71,7 +112,7 @@ function AdminDashboard() {
         await fetchUnits();
         return;
       }
-      
+
       setUnits(unitsList);
     } catch (error) {
       console.error('Error fetching units:', error);
@@ -81,10 +122,10 @@ function AdminDashboard() {
     }
   };
 
-  // Real-time listener untuk units
+  // Real-time listeners (existing code)
   useEffect(() => {
     const unsubscribeUnits = onSnapshot(
-      collection(db, 'units'), 
+      collection(db, 'units'),
       (snapshot) => {
         const unitsList = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -101,10 +142,9 @@ function AdminDashboard() {
     return () => unsubscribeUnits();
   }, []);
 
-  // Real-time listener untuk users
   useEffect(() => {
     const unsubscribeUsers = onSnapshot(
-      collection(db, 'users'), 
+      collection(db, 'users'),
       (snapshot) => {
         const usersList = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -121,7 +161,7 @@ function AdminDashboard() {
     return () => unsubscribeUsers();
   }, []);
 
-  // Updated logout function to work with Firebase Auth
+  // Logout handler
   const handleLogout = async () => {
     try {
       setIsLoading(true);
@@ -138,12 +178,59 @@ function AdminDashboard() {
     }
   };
 
-  // Keep the simple logout for sidebar compatibility
-  const handleSimpleLogout = () => {
-    handleLogout();
+  // Dashboard handlers menggunakan komponen baru dengan Firebase
+  const handleExportExcel = () => {
+    exportToExcel(selectedUnit, currentData);
   };
 
-  // Functions untuk Unit Bisnis
+  const handleExportPDF = () => {
+    alert(`Admin exporting ${selectedUnit} data to PDF...`);
+  };
+
+  const handleImportData = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        const message = await importFromExcelToFirebase(selectedUnit, file);
+        alert("✅ " + message);
+        // Reset file input
+        event.target.value = '';
+      } catch (error) {
+        alert("❌ " + error);
+      }
+    }
+  };
+
+  // Fungsi untuk menghitung total stats dari semua unit
+  const calculateAllUnitsStats = () => {
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+    let totalAct2025 = 0;
+    let totalRecords = 0;
+    let totalTargets = 0;
+
+    Object.values(data).forEach(unitData => {
+      if (unitData && unitData.length > 0) {
+        const unitStats = calculateStats(unitData);
+        totalRevenue += unitStats.totalRevenue;
+        totalExpenses += unitStats.totalExpenses;
+        totalAct2025 += unitStats.totalAct2025;
+        totalRecords += unitData.length;
+        totalTargets += unitStats.avgTarget * unitData.length;
+      }
+    });
+
+    return {
+      totalRevenue,
+      totalExpenses,
+      totalAct2025,
+      avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0
+    };
+  };
+
+  const allUnitsStats = calculateAllUnitsStats();
+
+  // Unit management functions (existing code)
   const handleAddUnit = () => {
     setEditingUnit(null);
     setUnitForm({ name: "" });
@@ -193,9 +280,9 @@ function AdminDashboard() {
 
   const handleDeleteUnit = async (unitToDelete) => {
     const usersUsingUnit = users.filter(user => user.unitBisnis === unitToDelete.name);
-    
+
     if (usersUsingUnit.length > 0) {
-      alert(`Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya. Silakan pindahkan atau hapus user tersebut terlebih dahulu.`);
+      alert(`Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya.`);
       return;
     }
 
@@ -213,7 +300,7 @@ function AdminDashboard() {
     }
   };
 
-  // Functions untuk User (menggunakan Firebase)
+  // User management functions (existing code)
   const handleAddUser = () => {
     setEditingUser(null);
     setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: "" });
@@ -222,7 +309,7 @@ function AdminDashboard() {
 
   const handleEditUser = (user) => {
     setEditingUser(user);
-    setUserForm({ 
+    setUserForm({
       name: user.name,
       email: user.email || "",
       password: "",
@@ -234,7 +321,7 @@ function AdminDashboard() {
 
   const handleSaveUser = async () => {
     if (userForm.name.trim() === "" || userForm.role.trim() === "" || userForm.unitBisnis.trim() === "" || (!editingUser && (userForm.email.trim() === "" || userForm.password.trim() === ""))) {
-      alert("Semua field (Nama, Email, Password, Role, dan Unit Bisnis) harus diisi!");
+      alert("Semua field harus diisi!");
       return;
     }
 
@@ -297,15 +384,15 @@ function AdminDashboard() {
     }
   };
 
-  // Function untuk export data
+  // Export functions (existing code)
   const handleExportUnits = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,"
       + "No,Nama Unit,Jumlah User\n"
       + units.map((unit, index) => {
-          const userCount = users.filter(user => user.unitBisnis === unit.name).length;
-          return `${index + 1},"${unit.name}",${userCount}`;
-        }).join("\n");
-    
+        const userCount = users.filter(user => user.unitBisnis === unit.name).length;
+        return `${index + 1},"${unit.name}",${userCount}`;
+      }).join("\n");
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -316,12 +403,12 @@ function AdminDashboard() {
   };
 
   const handleExportUsers = () => {
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,"
       + "No,Nama,Email,Role,Unit Bisnis\n"
-      + users.map((user, index) => 
-          `${index + 1},"${user.name}","${user.email || '-'}","${user.role}","${user.unitBisnis || '-'}"`
-        ).join("\n");
-    
+      + users.map((user, index) =>
+        `${index + 1},"${user.name}","${user.email || '-'}","${user.role}","${user.unitBisnis || '-'}"`
+      ).join("\n");
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -333,10 +420,8 @@ function AdminDashboard() {
 
   return (
     <div className="admin">
-      {/* Add Navbar at the top */}
       <Navbar onLogout={handleLogout} />
-      
-      {/* Container untuk sidebar dan content */}
+
       <div className="admin-body">
         {/* Sidebar */}
         <div className="sidebar">
@@ -345,7 +430,7 @@ function AdminDashboard() {
             className={`button-1 ${activePage === "dashboard" ? "active" : ""}`}
             onClick={() => setActivePage("dashboard")}
           >
-            Home
+            Dashboard
           </button>
           <button
             className={`button-1 ${activePage === "unit" ? "active" : ""}`}
@@ -359,35 +444,80 @@ function AdminDashboard() {
           >
             Manage User
           </button>
-          <button
-            onClick={handleSimpleLogout}
-            disabled={isLoading}
-            className="button-logout"
-          >
-            {isLoading ? (
-              <div className="loading-spinner"></div>
-            ) : (
-              <>
-                <LogOut size={20} />
-                Logout
-              </>
-            )}
-          </button>
         </div>
 
         {/* Konten */}
         <div className="Konten">
           {activePage === "dashboard" && (
-            <div>
-              <h1>Dashboard</h1>
-              <p>Selamat datang di dashboard admin</p>
-              <UserDashboard></UserDashboard>
+            <div className="dashboard-content">
+              {/* Header menggunakan komponen baru */}
+              <Header
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                units={dashboardUnits}
+                title="Admin Dashboard"
+              />
+
+
+
+              {/* Loading indicator */}
+              {dataLoading && (
+                <div className="loading-container">
+                  <div className="loading-spinner"></div>
+                  <p>Loading real-time data...</p>
+                </div>
+              )}
+
+              {/* Stats overview untuk semua unit */}
+              <div className="admin-overview">
+                <h3>Overview Semua Unit</h3>
+                <StatsCards
+                  totalRevenue={allUnitsStats.totalRevenue}
+                  totalExpenses={allUnitsStats.totalExpenses}
+                  totalAct2025={allUnitsStats.totalAct2025}
+                  avgTarget={allUnitsStats.avgTarget}
+                  labels={{
+                    revenue: "Total Act 2024 (All Units)",
+                    expenses: "Total Budget (All Units)",
+                    act2025: "Total Act 2025 (All Units)",
+                    avgTarget: "VAR YTD (All Units)"
+                  }}
+                />
+              </div>
+
+              {/* Stats cards untuk unit terpilih */}
+              <div className="unit-specific-stats">
+                <h3>Detail Unit: {selectedUnit}</h3>
+                <StatsCards
+                  totalRevenue={stats.totalRevenue}
+                  totalExpenses={stats.totalExpenses}
+                  totalAct2025={stats.totalAct2025}
+                  avgTarget={stats.avgTarget}
+                  labels={{
+                    revenue: `Act 2024 ${selectedUnit}`,
+                    expenses: `Budget ${selectedUnit}`,
+                    act2025: `Act 2025 ${selectedUnit}`,
+                    avgTarget: `VAR YTD ${selectedUnit}`
+                  }}
+                />
+              </div>
+              {/* Pie Chart */}
+              <Piechart
+                data={currentData}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+              />
+
+
             </div>
           )}
 
+          {/* Unit Management Page - existing code */}
           {activePage === "unit" && (
-            <div>
-              <h1>Manage Unit Bisnis</h1>
+            <div className="unit-page">
+              <h1 className="title">Manage Unit Bisnis</h1>
               <div className="isian">
                 <button className="button-2" onClick={handleAddUnit} disabled={isLoading}>
                   + Tambah Unit
@@ -396,7 +526,7 @@ function AdminDashboard() {
                   Ekspor Data
                 </button>
               </div>
-              
+
               {loadingUnits ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
@@ -409,19 +539,32 @@ function AdminDashboard() {
                       <th>No</th>
                       <th>Nama Unit</th>
                       <th>Jumlah User</th>
+                      <th>Data Records</th>
                       <th>Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {units.length === 0 ? (
                       <tr>
-                        <td colSpan="4" className="text-center-placeholder">
+                        <td colSpan="6" className="text-center-placeholder">
                           Belum ada unit bisnis. Tambahkan unit bisnis pertama Anda!
                         </td>
                       </tr>
                     ) : (
                       units.map((unit, index) => {
                         const userCount = users.filter(user => user.unitBisnis === unit.name).length;
+                        const unitKey = Object.keys(data).find(key =>
+                          key === "Samudera Makassar Logistik" && unit.name.includes("Samudera Makassar Logistik") ||
+                          key === "Makassar Jaya Samudera" && unit.name.includes("Makassar Jaya Samudera") ||
+                          key === "Samudera Perdana" && unit.name.includes("Samudera Perdana") ||
+                          key === "Kendari Jaya Samudera" && unit.name.includes("Kendari Jaya Samudera") ||
+                          key === "Masaji Kargosentrs Utama" && unit.name.includes("Masaji Kargosentra Utama") ||
+                          key === "Samudera Agencies Indonesia" && unit.name.includes("Samudera Agencies Indonesia") ||
+                          key === "Silkargo Indonesia" && unit.name.includes("Silkargo Indonesia") ||
+                          key === "Samudera Kendari Logistik" && unit.name.includes("Samudera Kendari Logistik")
+                        );
+                        const recordCount = unitKey && data[unitKey] ? data[unitKey].length : 0;
+
                         return (
                           <tr key={unit.id}>
                             <td>{index + 1}</td>
@@ -429,6 +572,11 @@ function AdminDashboard() {
                             <td>
                               <span className={userCount > 0 ? "user-count-active" : "user-count-inactive"}>
                                 {userCount} user
+                              </span>
+                            </td>
+                            <td>
+                              <span className={recordCount > 0 ? "record-count-active" : "record-count-inactive"}>
+                                {recordCount} records
                               </span>
                             </td>
                             <td className="action-buttons">
@@ -457,9 +605,10 @@ function AdminDashboard() {
             </div>
           )}
 
+          {/* User Management Page - existing code */}
           {activePage === "user" && (
             <div>
-              <h1>Manage User</h1>
+              <h1 className="title-user">Manage User</h1>
               <div className="isian">
                 <button
                   onClick={handleAddUser}
@@ -472,13 +621,13 @@ function AdminDashboard() {
                   Ekspor Data
                 </button>
               </div>
-              
+
               {units.length === 0 && (
                 <div className="warning-box">
                   <strong>Peringatan:</strong> Anda perlu membuat unit bisnis terlebih dahulu sebelum menambahkan user.
                 </div>
               )}
-              
+
               {loadingUsers ? (
                 <div className="loading-container">
                   <div className="loading-spinner"></div>
@@ -500,7 +649,7 @@ function AdminDashboard() {
                   <tbody>
                     {users.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="text-center-placeholder">
+                        <td colSpan="8" className="text-center-placeholder">
                           Belum ada user. Tambahkan user pertama Anda!
                         </td>
                       </tr>
@@ -513,12 +662,11 @@ function AdminDashboard() {
                             <td>{user.name}</td>
                             <td>{user.email || '-'}</td>
                             <td>
-                              <span className={`role-badge ${
-                                user.role === 'Super Admin' ? 'super-admin' :
+                              <span className={`role-badge ${user.role === 'Super Admin' ? 'super-admin' :
                                 user.role === 'Manager' ? 'manager' :
-                                user.role === 'Supervisor' ? 'supervisor' :
-                                'user'
-                              }`}>
+                                  user.role === 'Supervisor' ? 'supervisor' :
+                                    'user'
+                                }`}>
                                 {user.role}
                               </span>
                             </td>
@@ -558,7 +706,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Modal untuk Unit Bisnis */}
+      {/* Modals - existing code with slight updates */}
       {showUnitModal && (
         <div className="modal-overlay" onClick={() => setShowUnitModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -577,8 +725,8 @@ function AdminDashboard() {
               <button onClick={handleSaveUnit} className="btn-save" disabled={isLoading}>
                 {isLoading ? 'Saving...' : (editingUnit ? "Update" : "Simpan")}
               </button>
-              <button 
-                onClick={() => setShowUnitModal(false)} 
+              <button
+                onClick={() => setShowUnitModal(false)}
                 className="btn-cancel"
                 disabled={isLoading}
               >
@@ -589,7 +737,6 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal untuk User */}
       {showUserModal && (
         <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
@@ -604,7 +751,6 @@ function AdminDashboard() {
                 disabled={isLoading}
               />
             </div>
-            {/* Field Email dan Password hanya tampil saat Tambah User */}
             {!editingUser && (
               <>
                 <div className="form-group">
@@ -662,8 +808,8 @@ function AdminDashboard() {
               <button onClick={handleSaveUser} className="btn-save" disabled={isLoading}>
                 {isLoading ? 'Saving...' : (editingUser ? "Update" : "Simpan")}
               </button>
-              <button 
-                onClick={() => setShowUserModal(false)} 
+              <button
+                onClick={() => setShowUserModal(false)}
                 className="btn-cancel"
                 disabled={isLoading}
               >
