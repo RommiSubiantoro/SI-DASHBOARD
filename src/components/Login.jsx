@@ -79,9 +79,15 @@ const Login = () => {
       const userData = userDoc.data();
       const role = (userData.role || "").trim().toLowerCase();
 
+      // Ambil unitBisnis
+      const units = Array.isArray(userData.unitBisnis)
+        ? userData.unitBisnis
+        : [userData.unitBisnis];
+
       // Simpan data ke localStorage
       localStorage.setItem("userUid", userDoc.id);
       localStorage.setItem("userRole", role);
+      localStorage.setItem("unitBisnis", JSON.stringify(units));
 
       // Redirect sesuai role
       if (role === 'super admin') {
@@ -165,7 +171,7 @@ const Login = () => {
 
           {/* Submit Button */}
           <button className="submit-login"
-          type="submit" disabled={isLoading}>
+            type="submit" disabled={isLoading}>
             {isLoading ? "Loading..." : "Submit"}
           </button>
 

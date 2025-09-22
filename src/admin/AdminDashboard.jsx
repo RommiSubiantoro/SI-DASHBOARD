@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import Select from "react-select";
+import { fetchSignInMethodsForEmail } from "firebase/auth";
 import { LogOut } from 'lucide-react';
 import {
   collection,
@@ -49,7 +51,7 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Dashboard states
-  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+  const [selectedUnit, setSelectedUnit] = useState([]);
 
   // Tambahkan state untuk search di AdminDashboard
   const [searchTerm, setSearchTerm] = useState("");
@@ -64,13 +66,17 @@ function AdminDashboard() {
 
       const matchesRole = roleFilter === "" || user.role === roleFilter;
 
-      const matchesUnit = unitFilter === "" || user.unitBisnis === unitFilter;
+      const matchesUnit = unitFilter === "" ||
+        (Array.isArray(user.unitBisnis)
+          ? user.unitBisnis.includes(unitFilter)
+          : user.unitBisnis === unitFilter);
 
       return matchesSearch && matchesRole && matchesUnit;
     });
   };
 
   const filteredUsers = getFilteredUsers();
+
 
   // Fungsi untuk reset filters
   const handleResetFilters = () => {
@@ -365,7 +371,7 @@ function AdminDashboard() {
   // User management functions (existing code)
   const handleAddUser = () => {
     setEditingUser(null);
-    setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: "" });
+    setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: [] });
     setShowUserModal(true);
   };
 
@@ -376,14 +382,19 @@ function AdminDashboard() {
       email: user.email || "",
       password: "",
       role: user.role,
-      unitBisnis: user.unitBisnis || ""
+      unitBisnis: user.unitBisnis || []
     });
     setShowUserModal(true);
   };
 
   const handleSaveUser = async () => {
-    if (userForm.name.trim() === "" || userForm.role.trim() === "" || userForm.unitBisnis.trim() === "" || (!editingUser && (userForm.email.trim() === "" || userForm.password.trim() === ""))) {
-      alert("Semua field harus diisi!");
+    if (
+      userForm.name.trim() === "" ||
+      userForm.role.trim() === "" ||
+      userForm.unitBisnis.length === 0 || // harus ada minimal 1 unit
+      (!editingUser && (userForm.email.trim() === "" || userForm.password.trim() === ""))
+    ) {
+      alert("Semua field harus diisi dan pilih minimal 1 unit bisnis!");
       return;
     }
 
@@ -391,45 +402,50 @@ function AdminDashboard() {
       setIsLoading(true);
 
       if (editingUser) {
-        const userRef = doc(db, 'users', editingUser.id);
+        const userRef = doc(db, "users", editingUser.id);
         const updateData = {
           name: userForm.name,
           role: userForm.role,
-          unitBisnis: userForm.unitBisnis,
-          updatedAt: new Date()
+          unitBisnis: userForm.unitBisnis, // simpan array
+          updatedAt: new Date(),
         };
         if (userForm.email.trim() !== "") {
           updateData.email = userForm.email;
         }
 
         await updateDoc(userRef, updateData);
-        alert('User berhasil diupdate!');
+        alert("User berhasil diupdate!");
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, userForm.email, userForm.password);
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          userForm.email,
+          userForm.password
+        );
         const uid = userCredential.user.uid;
 
-        await addDoc(collection(db, 'users'), {
-          uid: uid,
+        await addDoc(collection(db, "users"), {
+          uid,
           name: userForm.name,
           email: userForm.email,
           role: userForm.role,
-          unitBisnis: userForm.unitBisnis,
+          unitBisnis: userForm.unitBisnis, // simpan array
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
-        alert('User berhasil ditambahkan!');
+        alert("User berhasil ditambahkan!");
       }
 
       setShowUserModal(false);
-      setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: "" });
+      setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: [] });
       setEditingUser(null);
     } catch (error) {
-      console.error('Error saving user:', error);
+      console.error("Error saving user:", error);
       alert(`Error saving user: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   const handleDeleteUser = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus user ini?")) {
@@ -451,7 +467,10 @@ function AdminDashboard() {
     const csvContent = "data:text/csv;charset=utf-8,"
       + "No,Nama Unit,Jumlah User\n"
       + units.map((unit, index) => {
-        const userCount = users.filter(user => user.unitBisnis === unit.name).length;
+        const userCount = users.filter(user =>
+          Array.isArray(user.unitBisnis) && user.unitBisnis.includes(unit.name)
+        ).length;
+
         return `${index + 1},"${unit.name}",${userCount}`;
       }).join("\n");
 
@@ -468,7 +487,7 @@ function AdminDashboard() {
     const csvContent = "data:text/csv;charset=utf-8,"
       + "No,Nama,Email,Role,Unit Bisnis\n"
       + users.map((user, index) =>
-        `${index + 1},"${user.name}","${user.email || '-'}","${user.role}","${user.unitBisnis || '-'}"`
+        `${index + 1},"${user.name}","${user.email || '-'}","${user.role}","${Array.isArray(user.unitBisnis) ? user.unitBisnis.join("; ") : (user.unitBisnis || '-')}"`
       ).join("\n");
 
     const encodedUri = encodeURI(csvContent);
@@ -775,7 +794,7 @@ function AdminDashboard() {
                   onClick={handleExportUsers}
                   disabled={users.length === 0}
                 >
-                  Ekspor Data 
+                  Ekspor Data
                 </button>
               </div>
 
@@ -799,7 +818,6 @@ function AdminDashboard() {
                       <th>Email</th>
                       <th>Role</th>
                       <th>Unit Bisnis</th>
-                      <th>Status Unit</th>
                       <th>Aksi</th>
                     </tr>
                   </thead>
@@ -831,23 +849,17 @@ function AdminDashboard() {
                             </td>
                             <td>
                               <span className={`role-badge ${user.role === 'Super Admin' ? 'super-admin' :
-                                  user.role === 'Manager' ? 'manager' :
-                                    user.role === 'Supervisor' ? 'supervisor' : 'user'
+                                user.role === 'Manager' ? 'manager' :
+                                  user.role === 'Supervisor' ? 'supervisor' : 'user'
                                 } ${roleFilter === user.role ? 'filter-match' : ''}`}>
                                 {user.role}
                               </span>
                             </td>
                             <td>
                               <span className={unitFilter === user.unitBisnis ? "highlight-text" : ""}>
-                                {user.unitBisnis || '-'}
+                                {Array.isArray(user.unitBisnis) ? user.unitBisnis.join(", ") : (user.unitBisnis || "-")}
+
                               </span>
-                            </td>
-                            <td>
-                              {unitExists ? (
-                                <span className="unit-status-active">✓ Aktif</span>
-                              ) : (
-                                <span className="unit-status-inactive">⚠ Unit dihapus</span>
-                              )}
                             </td>
                             <td className="action-buttons">
                               <button
@@ -961,20 +973,18 @@ function AdminDashboard() {
               </select>
             </div>
             <div className="form-group">
-              <label>Unit Bisnis:</label>
-              <select
-                value={userForm.unitBisnis}
-                onChange={(e) => setUserForm({ ...userForm, unitBisnis: e.target.value })}
-                disabled={isLoading}
-              >
-                <option value="">Pilih Unit Bisnis</option>
-                {units.map((unit) => (
-                  <option key={unit.id} value={unit.name}>
-                    {unit.name}
-                  </option>
-                ))}
-              </select>
+              <label>Pilih Unit Bisnis:</label>
+              <Select
+                isMulti
+                options={units.map((unit) => ({ value: unit.name, label: unit.name }))}
+                value={userForm.unitBisnis.map((u) => ({ value: u, label: u }))}
+                onChange={(selected) =>
+                  setUserForm({ ...userForm, unitBisnis: selected.map((s) => s.value) })
+                }
+                isDisabled={isLoading}
+              />
             </div>
+
             <div className="modal-buttons">
               <button onClick={handleSaveUser} className="btn-save" disabled={isLoading}>
                 {isLoading ? 'Saving...' : (editingUser ? "Update" : "Simpan")}

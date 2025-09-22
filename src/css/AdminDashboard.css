@@ -221,7 +221,7 @@
 .tabel-3 td {
   padding: 12px 10px;
   border-bottom: 1px solid #e9ecef;
-  font-size: 14px;
+  font-size: 10px;
 }
 
 .tabel-3 tbody tr:last-child td {
@@ -371,13 +371,9 @@
   text-align: center;
 }
 
-.form-group {
-  margin-bottom: 20px;
-}
 
 .form-group label {
   display: block;
-  margin-bottom: 5px;
   font-weight: bold;
   color: #555;
 }
@@ -385,7 +381,7 @@
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 10px;
+  padding: 5px;
   border: 1px solid #ddd;
   border-radius: 5px;
   font-size: 1rem;
@@ -442,7 +438,7 @@
 
 .edit-button,
 .delete-button {
-  padding: 6px 12px;
+  padding: 6px 10px;
   border: none;
   border-radius: 4px;
   cursor: pointer;
@@ -647,7 +643,7 @@
   background-size: 100% 40%;
   background-repeat: no-repeat;
   background-position: 0 80%;
-  font-weight: 600;
+  font-weight: 400;
   color: #856404;
 }
 
@@ -655,6 +651,8 @@
   box-shadow: 0 0 0 2px #667eea;
   animation: filterMatchPulse 0.5s ease-out;
 }
+
+
 
 @keyframes filterMatchPulse {
   0% {
