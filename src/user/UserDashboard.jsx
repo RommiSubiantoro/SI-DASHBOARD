@@ -8,8 +8,8 @@ import ControlButtons from '../components/ControlButtons';
 import StatsCards from '../components/StatsCards';
 import DataTable from '../components/DataTable';
 import Piechart from '../components/Piechart';
+import Barchart from "../components/Barchart";
 import Navbar from "../components/navbar";
-
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement, useFormManagement } from '../hooks/useDataManagement';
@@ -18,8 +18,8 @@ import { useDataManagement, useFormManagement } from '../hooks/useDataManagement
 import "../css/UserDashboard.css";
 
 const UserDashboard = () => {
-  const [selectedUnit, setSelectedUnit] = useState("SML");
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+  const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -39,7 +39,7 @@ const UserDashboard = () => {
     "Masaji Kargosentra Utama": [],
     "Kendari Jaya Samudera": [],
     "Silkargo Indonesia": [],
-    "Samudera Agencies Indoensia": [],
+    "Samudera Agencies Indonesia": [],
     "Samudera Kendari Logistik": []
   });
 
@@ -60,7 +60,7 @@ const UserDashboard = () => {
     { key: "Kendari Jaya Samudera", label: "Kendari Jaya Samudera" },
     { key: "Silkargo Indonesia", label: "Silkargo Indonesia" },
     { key: "Samudera Agencies Indonesia", label: "Samudera Agencies Indonesia" },
-     { key: "Samudera Kendari Logistik", label: "Samudera Kendari Logistik" }
+    { key: "Samudera Kendari Logistik", label: "Samudera Kendari Logistik" }
   ];
 
   // Data untuk unit yang dipilih
@@ -96,17 +96,24 @@ const UserDashboard = () => {
     if (result.success) {
       resetForm();
       setShowAddModal(false);
-      alert('✅ ' + result.message);
+      console.log('Data added successfully:', result.message);
     } else {
-      alert('❌ ' + result.message);
+      console.error('Failed to add data:', result.message);
     }
   };
-
   const handleExportExcel = () => {
+    if (!selectedUnit) {
+      alert("⚠️ Silakan pilih Unit Bisnis terlebih dahulu sebelum export!");
+      return;
+    }
     exportToExcel(selectedUnit, currentData);
   };
 
   const handleExportPDF = () => {
+    if (!selectedUnit) {
+      alert("⚠️ Silakan pilih Unit Bisnis terlebih dahulu sebelum export PDF!");
+      return;
+    }
     alert(`Exporting ${selectedUnit} data to PDF...`);
   };
 
@@ -114,39 +121,33 @@ const UserDashboard = () => {
     const file = event.target.files[0];
     if (file) {
       try {
-        const message = await importFromExcelToFirebase(selectedUnit, file);
-        alert("✅ " + message);
-        // Reset file input
+        await importFromExcelToFirebase(selectedUnit, file);
+        // Silent success - tidak ada pesan
         event.target.value = '';
       } catch (error) {
-        alert("❌ " + error);
+        // Silent error - hanya console log
+        console.error("Import failed:", error);
       }
     }
   };
 
   return (
-
     <div>
       <Navbar onLogout={handleLogout} />
+
       {/* Sidebar */}
       <div className="sidebar">
         <h2 className="h1">User Panel</h2>
-        <button
-          className='button-1'
-        >
-          Dashboard
-        </button>
+        <button className='button-1'>Dashboard</button>
       </div>
 
       <div className="dashboard-layout">
-
         <div className="dashboard-content">
-          {/* isi utama UserDashboard yang sudah kamu buat */}
+          {/* isi utama UserDashboard */}
         </div>
       </div>
 
       <div className="Container-usr">
-
         <div className="body">
           {/* Header dengan unit selector */}
           <Header
@@ -166,14 +167,6 @@ const UserDashboard = () => {
             showImportButton={true}
             showExportButtons={true}
           />
-
-          {/* Loading indicator */}
-          {dataLoading && (
-            <div className="loading-container">
-              <div className="loading-spinner"></div>
-              <p>Loading data...</p>
-            </div>
-          )}
 
           {/* Stats cards */}
           <StatsCards
@@ -199,14 +192,20 @@ const UserDashboard = () => {
           />
         </div>
 
-        {/* Pie Chart */}
-        <Piechart
-          data={currentData}
-          selectedMonth={selectedMonth}
-          setSelectedMonth={setSelectedMonth}
-          selectedYear={selectedYear}
-          setSelectedYear={setSelectedYear}
-        />
+        <div className="charts-row">
+          <Piechart
+            data={currentData}
+            selectedMonth={selectedMonth}
+            setSelectedMonth={setSelectedMonth}
+            selectedYear={selectedYear}
+            setSelectedYear={setSelectedYear}
+          />
+          <Barchart
+            data={currentData}
+            selectedYear={selectedYear}
+          />
+        </div>
+
 
         {/* Add Data Modal */}
         {showAddModal && (

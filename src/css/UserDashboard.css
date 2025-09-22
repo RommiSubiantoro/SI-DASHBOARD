@@ -28,6 +28,20 @@
   align-items: center;
   gap: 10px;
 }
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 kolom sama besar */
+  gap: 20px; /* jarak antar chart */
+  margin-top: 20px;
+}
+
+.charts-row > div {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
 
 .dropdown-unit {
   padding: 6px 12px;

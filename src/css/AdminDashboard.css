@@ -39,6 +39,32 @@
   transition: all 0.3s ease;
   text-align: left;
 }
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* 2 kolom sama besar */
+  gap: 20px; /* jarak antar chart */
+  margin-top: 20px;
+}
+
+.charts-row > div {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.danger-button {
+  background-color: #dc2626;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.danger-button:hover {
+  background-color: #b91c1c;
+}
 
 .button-1:hover {
   background: rgba(255, 255, 255, 0.2);
@@ -59,7 +85,8 @@
   flex: 1;
   padding-bottom: 10px;
 }
-.button-logout{
+
+.button-logout {
   display: flex;
   padding: 10px;
   margin: 0;
@@ -111,14 +138,17 @@
   margin-bottom: 20px;
   align-items: center;
 }
-.title{
+
+.title {
   padding-block: 20px;
   padding-top: 5px;
 }
-.title-user{
+
+.title-user {
   padding-block: 20px;
   padding-top: 2px;
 }
+
 /* === Tombol tambah === */
 .button-2 {
   background: linear-gradient(135deg, #28a745, #20c997);
@@ -406,11 +436,12 @@
   background-color: #545b62;
 }
 
-.button-logout{
+.button-logout {
   cursor: pointer;
 }
 
-.edit-button, .delete-button {
+.edit-button,
+.delete-button {
   padding: 6px 12px;
   border: none;
   border-radius: 4px;
@@ -426,14 +457,336 @@
 .delete-button {
   background-color: #e74c3c;
 }
+
 .dashboard-content {
-  max-width: 1200px;   /* Biar konten tidak full ke kanan kiri */
-  margin: 0 auto;      /* Biar posisinya center */
-  padding: 20px;       /* Kasih jarak dalam */
-  background: #fff;    /* Tambah background putih biar rapih */
-  border-radius: 12px; /* Sudut rounded */
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* Bayangan halus */
-  transition: all 0.3s ease; /* Animasi halus kalau resize */
+  max-width: 1200px;
+  /* Biar konten tidak full ke kanan kiri */
+  margin: 0 auto;
+  /* Biar posisinya center */
+  padding: 20px;
+  /* Kasih jarak dalam */
+  background: #fff;
+  /* Tambah background putih biar rapih */
+  border-radius: 12px;
+  /* Sudut rounded */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  /* Bayangan halus */
+  transition: all 0.3s ease;
+  /* Animasi halus kalau resize */
+}
+/* Search Section Styles */
+.search-section {
+  background: #f8f9fa;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.search-controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+/* Search Input */
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 40px 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.search-input:not(:placeholder-shown) {
+  background: #f8f9ff;
+  border-color: #667eea;
+}
+
+.search-icon {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6c757d;
+  font-size: 16px;
+  pointer-events: none;
+}
+
+/* Filter Dropdowns */
+.filter-wrapper {
+  min-width: 150px;
+}
+
+.filter-select {
+  width: 100%;
+  padding: 12px 16px;
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-sizing: border-box;
+}
+
+.filter-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-select option {
+  padding: 8px;
+}
+
+/* Reset Button */
+.reset-filters-btn {
+  padding: 12px 20px;
+  background: #6c757d;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.reset-filters-btn:hover:not(:disabled) {
+  background: #5a6268;
+  transform: translateY(-2px);
+}
+
+.reset-filters-btn:disabled {
+  background: #dee2e6;
+  color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Search Info */
+.search-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #e9ecef;
+}
+
+.results-count {
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 500;
+}
+
+.active-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #667eea;
+  color: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.remove-filter {
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: bold;
+  padding: 0;
+  margin-left: 4px;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.remove-filter:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Highlight Styles */
+.highlight-text {
+  background: linear-gradient(120deg, #fff3cd 0%, #fff3cd 100%);
+  background-size: 100% 40%;
+  background-repeat: no-repeat;
+  background-position: 0 80%;
+  font-weight: 600;
+  color: #856404;
+}
+
+.role-badge.filter-match {
+  box-shadow: 0 0 0 2px #667eea;
+  animation: filterMatchPulse 0.5s ease-out;
+}
+
+@keyframes filterMatchPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Table Enhancements */
+.text-center-placeholder {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6c757d;
+  font-style: italic;
+  background: #f8f9fa;
+}
+
+/* Enhanced Role Badges */
+.role-badge {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.3s ease;
+}
+
+
+
+/* Update Export Button */
+.isian .button-3 {
+  background: #17a2b8;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.isian .button-3:hover:not(:disabled) {
+  background: #138496;
+  transform: translateY(-2px);
+}
+
+.isian .button-3:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+}
+
+/* Empty State Enhancement */
+.text-center-placeholder {
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+  border: 2px dashed #dee2e6;
+  border-radius: 12px;
+  position: relative;
+}
+
+.text-center-placeholder::before {
+  content: "👥";
+  font-size: 48px;
+  opacity: 0.3;
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.text-center-placeholder {
+  padding-top: 70px;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 768px) {
+  .search-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-input-wrapper {
+    min-width: auto;
+  }
+  
+  .filter-wrapper {
+    min-width: auto;
+  }
+  
+  .search-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .active-filters {
+    width: 100%;
+  }
+  
+  .isian {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .isian button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 576px) {
+  .search-section {
+    padding: 16px;
+    margin: 10px;
+  }
+  
+  .filter-tag {
+    font-size: 12px;
+    padding: 3px 8px;
+  }
+  
+  .remove-filter {
+    width: 16px;
+    height: 16px;
+    font-size: 14px;
+  }
 }
 
 

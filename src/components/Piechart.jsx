@@ -148,12 +148,12 @@ export default function Piechart({ data = [], selectedMonth = "All", setSelected
                 data={pieData}
                 cx="50%"
                 cy="50%"
-                outerRadius={120}
+                outerRadius={90}
                 dataKey="value"
                 nameKey="name"
                 labelLine={false}
                 label={({ name, percent }) => (
-                  selectedCategory === "All" ? `${name} ${(percent * 100).toFixed(0)}%` : null
+                  selectedCategory === "All" ? `${name} ${(percent * 80).toFixed(0)}%` : null
                 )}
               >
                 {pieData.map((entry, index) => (
@@ -163,9 +163,9 @@ export default function Piechart({ data = [], selectedMonth = "All", setSelected
 
               <Tooltip formatter={(val) => Number(val).toLocaleString()} />
 
-              {selectedCategory === "All" && (
+              {/* {selectedCategory === "All" && (
                 <Legend layout="vertical" align="right" verticalAlign="middle" />
-              )}
+              )} */}
             </PieChart>
           </ResponsiveContainer>
         </div>

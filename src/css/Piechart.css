@@ -1,26 +1,28 @@
 /* Container utama */
 .piechart-container {
   background: #ffffff;
-  border-radius: 1rem;
-  padding: 1.5rem;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+  border-radius: 0.75rem; /* lebih kecil */
+  padding: 1rem;         /* dikurangi */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
   font-family: 'Inter', sans-serif;
+  max-width: 500px;      /* batasi lebar */
+  margin: 0 auto;        /* center */
 }
 
 /* Judul */
 .piechart-container h3 {
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: #1f2937; /* abu gelap */
+  font-size: 1rem;  /* lebih kecil */
+  font-weight: 400;
+  margin-bottom: 0.75rem;
+  color: #1f2937;
 }
 
 /* Dropdown filter */
 .piechart-container select {
-  padding: 0.5rem 0.75rem;
+  padding: 0.3rem 0.6rem; /* lebih kecil */
   border: 1px solid #d1d5db;
-  border-radius: 0.5rem;
-  font-size: 0.9rem;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
   background-color: #f9fafb;
   color: #374151;
   transition: all 0.2s ease-in-out;
@@ -35,46 +37,39 @@
 
 /* Info detail */
 .piechart-info {
-  font-size: 0.9rem;
-  line-height: 1.5;
+  font-size: 0.1rem;   /* lebih kecil */
+  line-height: 1.4;
 }
 
 .piechart-info p {
-  margin: 0.25rem 0;
+  margin: 0.2rem 0;
 }
 
-/* Highlight angka */
 .piechart-info .highlight {
-  font-size: 1.1rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 400;
   color: #111827;
 }
 
 /* Tooltip (recharts override) */
-.recharts-tooltip-wrapper {
-  border-radius: 0.5rem !important;
-  overflow: hidden;
-}
-
 .recharts-default-tooltip {
-  background: #ffffff !important;
-  border: 1px solid #e5e7eb !important;
-  border-radius: 0.5rem !important;
-  padding: 0.5rem 0.75rem !important;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.05) !important;
-  color: #111827 !important;
-  font-size: 0.85rem !important;
+  font-size: 0.55rem !important; /* tooltip kecil */
+  padding: 0.3rem 0.5rem !important;
+  border-radius: 0.4rem !important;
 }
 
 /* Legend */
 .recharts-legend-item text {
-  font-size: 0.85rem;
-  fill: #374151;
+  font-size: 0.55rem !important; /* legend kecil */
 }
 
-/* Label di pie chart */
+/* kecilkan label di dalam/luar pie chart */
 .recharts-pie-label-text {
-  font-size: 0.8rem;
-  font-weight: 500;
-  fill: #111827;
+  font-size: 7px !important;   /* default biasanya 14px */
+  margin-left: 50px !important;
 }
+
+
+
+
+

@@ -19,6 +19,7 @@ import StatsCards from '../components/StatsCards';
 import DataTable from '../components/DataTable';
 import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
+import Barchart from "../components/Barchart";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from '../hooks/useDataManagement';
@@ -48,7 +49,35 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Dashboard states
-  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+
+  // Tambahkan state untuk search di AdminDashboard
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
+
+  const getFilteredUsers = () => {
+    return users.filter(user => {
+      const matchesSearch = searchTerm === "" ||
+        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      const matchesRole = roleFilter === "" || user.role === roleFilter;
+
+      const matchesUnit = unitFilter === "" || user.unitBisnis === unitFilter;
+
+      return matchesSearch && matchesRole && matchesUnit;
+    });
+  };
+
+  const filteredUsers = getFilteredUsers();
+
+  // Fungsi untuk reset filters
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("");
+    setUnitFilter("");
+  };
 
   // Menggunakan Firebase-enabled custom hooks untuk dashboard data
   const {
@@ -64,15 +93,16 @@ function AdminDashboard() {
     "Masaji Kargosentra Utama": [],
     "Kendari Jaya Samudera": [],
     "Silkargo Indonesia": [],
-    "Samudera Agencies Indoensia": [],
+    "Samudera Agencies Indonesia": [],
     "Samudera Kendari Logistik": []
+
   });
 
   // Dapatkan instance autentikasi
   const auth = getAuth();
 
   // Units mapping untuk dashboard
-  const dashboardUnits = ["Samudera Makassar Logistik ", "Makassar Jaya Samudera", "Samudera Perdana", "Masaji Kargosentra Utama", "Kendari Jaya Samudera",
+  const dashboardUnits = ["Samudera Makassar Logistik", "Makassar Jaya Samudera", "Samudera Perdana", "Masaji Kargosentra Utama", "Kendari Jaya Samudera",
     "Silkargo Indonesia", "Samudera Agencies Indonesia", "Samudera Kendari Logistik"];
 
   // Data untuk dashboard
@@ -92,15 +122,16 @@ function AdminDashboard() {
 
       if (unitsList.length === 0) {
         const defaultUnits = [
-          { name: "Makassar Jaya Samudera" },
           { name: "Samudera Makassar Logistik" },
+          { name: "Makassar Jaya Samudera" },
           { name: "Kendari Jaya Samudera" },
           { name: "Samudera Kendari Logistik" },
-          { name: "Samudera Agenci Indonesia" },
+          { name: "Samudera Agencies Indonesia" },
           { name: "Samudera Perdana" },
-          { name: "Masaji Kargosentra Tama" },
+          { name: "Masaji Kargosentra Utama" },
           { name: "Silkargo Indonesia" }
         ];
+
 
         for (const unit of defaultUnits) {
           await addDoc(collection(db, 'units'), {
@@ -300,6 +331,37 @@ function AdminDashboard() {
     }
   };
 
+  // Tambahkan setelah handleDeleteUnit
+  const handleDeleteAllRecords = async (unitName) => {
+    if (!unitName) {
+      alert("Unit bisnis tidak valid!");
+      return;
+    }
+
+    if (!window.confirm(`Yakin ingin menghapus semua records di ${unitName}?`)) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const recordsRef = collection(db, "unitData", unitName, "records");
+      const snapshot = await getDocs(recordsRef);
+
+      const deletePromises = snapshot.docs.map((record) =>
+        deleteDoc(doc(db, "unitData", unitName, "records", record.id))
+      );
+
+      await Promise.all(deletePromises);
+      console.log(`All records in "${unitName}" deleted successfully`);
+
+    } catch (error) {
+      console.error("Error deleting records:", error);
+      alert("❌ Gagal menghapus records: " + error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // User management functions (existing code)
   const handleAddUser = () => {
     setEditingUser(null);
@@ -458,16 +520,6 @@ function AdminDashboard() {
                 title="Admin Dashboard"
               />
 
-
-
-              {/* Loading indicator */}
-              {dataLoading && (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading real-time data...</p>
-                </div>
-              )}
-
               {/* Stats overview untuk semua unit */}
               <div className="admin-overview">
                 <h3>Overview Semua Unit</h3>
@@ -502,13 +554,19 @@ function AdminDashboard() {
                 />
               </div>
               {/* Pie Chart */}
-              <Piechart
-                data={currentData}
-                selectedMonth={selectedMonth}
-                setSelectedMonth={setSelectedMonth}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
-              />
+              <div className="charts-row">
+                <Piechart
+                  data={currentData}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  selectedYear={selectedYear}
+                  setSelectedYear={setSelectedYear}
+                />
+                <Barchart
+                  data={currentData}
+                  selectedYear={selectedYear}
+                />
+              </div>
 
 
             </div>
@@ -558,7 +616,7 @@ function AdminDashboard() {
                           key === "Makassar Jaya Samudera" && unit.name.includes("Makassar Jaya Samudera") ||
                           key === "Samudera Perdana" && unit.name.includes("Samudera Perdana") ||
                           key === "Kendari Jaya Samudera" && unit.name.includes("Kendari Jaya Samudera") ||
-                          key === "Masaji Kargosentrs Utama" && unit.name.includes("Masaji Kargosentra Utama") ||
+                          key === "Masaji Kargosentra Utama" && unit.name.includes("Masaji Kargosentra Utama") ||
                           key === "Samudera Agencies Indonesia" && unit.name.includes("Samudera Agencies Indonesia") ||
                           key === "Silkargo Indonesia" && unit.name.includes("Silkargo Indonesia") ||
                           key === "Samudera Kendari Logistik" && unit.name.includes("Samudera Kendari Logistik")
@@ -594,7 +652,15 @@ function AdminDashboard() {
                               >
                                 Delete
                               </button>
+                              <button
+                                onClick={() => handleDeleteAllRecords(unit.name)}
+                                className="danger-button"
+                                disabled={isLoading}
+                              >
+                                Hapus Records
+                              </button>
                             </td>
+
                           </tr>
                         );
                       })
@@ -608,7 +674,94 @@ function AdminDashboard() {
           {/* User Management Page - existing code */}
           {activePage === "user" && (
             <div>
-              <h1 className="title-user">Manage User</h1>
+
+              {/* Search and Filter Section */}
+              <div className="search-section">
+                <div className="search-controls">
+                  {/* Search Input */}
+                  <div className="search-input-wrapper">
+                    <input
+                      type="text"
+                      placeholder="Cari berdasarkan nama atau email..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="search-input"
+                    />
+                    <span className="search-icon">🔍</span>
+                  </div>
+
+                  {/* Role Filter */}
+                  <div className="filter-wrapper">
+                    <select
+                      value={roleFilter}
+                      onChange={(e) => setRoleFilter(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="">Semua Role</option>
+                      <option value="User">User</option>
+                      <option value="Supervisor">Supervisor</option>
+                      <option value="Manager">Manager</option>
+                      <option value="Super Admin">Super Admin</option>
+                    </select>
+                  </div>
+
+                  {/* Unit Filter */}
+                  <div className="filter-wrapper">
+                    <select
+                      value={unitFilter}
+                      onChange={(e) => setUnitFilter(e.target.value)}
+                      className="filter-select"
+                    >
+                      <option value="">Semua Unit</option>
+                      {units.map((unit) => (
+                        <option key={unit.id} value={unit.name}>
+                          {unit.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Reset Button */}
+                  <button
+                    onClick={handleResetFilters}
+                    className="reset-filters-btn"
+                    disabled={!searchTerm && !roleFilter && !unitFilter}
+                  >
+                    Reset Filter
+                  </button>
+                </div>
+
+                {/* Search Results Info */}
+                <div className="search-info">
+                  <span className="results-count">
+                    Menampilkan {filteredUsers.length} dari {users.length} user
+                  </span>
+                  {(searchTerm || roleFilter || unitFilter) && (
+                    <div className="active-filters">
+                      {searchTerm && (
+                        <span className="filter-tag">
+                          Pencarian: "{searchTerm}"
+                          <button onClick={() => setSearchTerm("")} className="remove-filter">×</button>
+                        </span>
+                      )}
+                      {roleFilter && (
+                        <span className="filter-tag">
+                          Role: {roleFilter}
+                          <button onClick={() => setRoleFilter("")} className="remove-filter">×</button>
+                        </span>
+                      )}
+                      {unitFilter && (
+                        <span className="filter-tag">
+                          Unit: {unitFilter}
+                          <button onClick={() => setUnitFilter("")} className="remove-filter">×</button>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
               <div className="isian">
                 <button
                   onClick={handleAddUser}
@@ -617,8 +770,12 @@ function AdminDashboard() {
                 >
                   + Tambah User
                 </button>
-                <button className="button-3" onClick={handleExportUsers} disabled={users.length === 0}>
-                  Ekspor Data
+                <button
+                  className="button-3"
+                  onClick={handleExportUsers}
+                  disabled={users.length === 0}
+                >
+                  Ekspor Data 
                 </button>
               </div>
 
@@ -647,30 +804,44 @@ function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {users.length === 0 ? (
+                    {filteredUsers.length === 0 ? (
                       <tr>
-                        <td colSpan="8" className="text-center-placeholder">
-                          Belum ada user. Tambahkan user pertama Anda!
+                        <td colSpan="7" className="text-center-placeholder">
+                          {users.length === 0
+                            ? "Belum ada user. Tambahkan user pertama Anda!"
+                            : "Tidak ada user yang sesuai dengan pencarian."
+                          }
                         </td>
                       </tr>
                     ) : (
-                      users.map((user, index) => {
+                      filteredUsers.map((user, index) => {
                         const unitExists = units.some(unit => unit.name === user.unitBisnis);
                         return (
                           <tr key={user.id}>
                             <td>{index + 1}</td>
-                            <td>{user.name}</td>
-                            <td>{user.email || '-'}</td>
+                            <td>
+                              <span className={searchTerm && user.name.toLowerCase().includes(searchTerm.toLowerCase()) ? "highlight-text" : ""}>
+                                {user.name}
+                              </span>
+                            </td>
+                            <td>
+                              <span className={searchTerm && user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()) ? "highlight-text" : ""}>
+                                {user.email || '-'}
+                              </span>
+                            </td>
                             <td>
                               <span className={`role-badge ${user.role === 'Super Admin' ? 'super-admin' :
-                                user.role === 'Manager' ? 'manager' :
-                                  user.role === 'Supervisor' ? 'supervisor' :
-                                    'user'
-                                }`}>
+                                  user.role === 'Manager' ? 'manager' :
+                                    user.role === 'Supervisor' ? 'supervisor' : 'user'
+                                } ${roleFilter === user.role ? 'filter-match' : ''}`}>
                                 {user.role}
                               </span>
                             </td>
-                            <td>{user.unitBisnis || '-'}</td>
+                            <td>
+                              <span className={unitFilter === user.unitBisnis ? "highlight-text" : ""}>
+                                {user.unitBisnis || '-'}
+                              </span>
+                            </td>
                             <td>
                               {unitExists ? (
                                 <span className="unit-status-active">✓ Aktif</span>
