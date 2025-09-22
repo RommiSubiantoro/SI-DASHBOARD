@@ -18,7 +18,7 @@ import { useDataManagement, useFormManagement } from '../hooks/useDataManagement
 import "../css/UserDashboard.css";
 
 const UserDashboard = () => {
-  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
