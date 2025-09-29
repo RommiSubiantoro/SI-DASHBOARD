@@ -184,6 +184,16 @@ const UserDashboard = () => {
               avgTarget: "Avg Target",
             }}
           />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Piechart
+              data={currentData}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+            />
+            <Barchart data={currentData} selectedYear={selectedYear} />
+          </div>
 
           <div className="bg-white p-6 rounded-xl shadow">
             <DataTable
@@ -195,16 +205,7 @@ const UserDashboard = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Piechart
-              data={currentData}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-            />
-            <Barchart data={currentData} selectedYear={selectedYear} />
-          </div>
+
         </main>
       </div>
 

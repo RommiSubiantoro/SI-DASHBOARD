@@ -313,7 +313,12 @@ function AdminDashboard() {
   };
 
   const handleDeleteUnit = async (unitToDelete) => {
-    const usersUsingUnit = users.filter(user => user.unitBisnis === unitToDelete.name);
+    const usersUsingUnit = users.filter(user =>
+      Array.isArray(user.unitBisnis)
+        ? user.unitBisnis.includes(unitToDelete.name)
+        : user.unitBisnis === unitToDelete.name
+    );
+
 
     if (usersUsingUnit.length > 0) {
       alert(`Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya.`);
@@ -603,24 +608,24 @@ function AdminDashboard() {
               </div>
 
               {/* Charts */}
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-  <ExporttableChart fileName="piechart">
-    <Piechart
-      data={currentData}
-      selectedMonth={selectedMonth}
-      setSelectedMonth={setSelectedMonth}
-      selectedYear={selectedYear}
-      setSelectedYear={setSelectedYear}
-    />
-  </ExporttableChart>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <ExporttableChart fileName="piechart">
+                  <Piechart
+                    data={currentData}
+                    selectedMonth={selectedMonth}
+                    setSelectedMonth={setSelectedMonth}
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                  />
+                </ExporttableChart>
 
-  <ExporttableChart fileName="barchart">
-    <Barchart
-      data={currentData}
-      selectedYear={selectedYear}
-    />
-  </ExporttableChart>
-</div>
+                <ExporttableChart fileName="barchart">
+                  <Barchart
+                    data={currentData}
+                    selectedYear={selectedYear}
+                  />
+                </ExporttableChart>
+              </div>
             </div>
           )}
 
@@ -909,9 +914,14 @@ function AdminDashboard() {
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-gray-700">
-                                <span className={unitFilter === user.unitBisnis ? "bg-yellow-200" : ""}>
+                                <span className={
+                                  Array.isArray(user.unitBisnis)
+                                    ? (user.unitBisnis.includes(unitFilter) ? "bg-yellow-200" : "")
+                                    : (unitFilter === user.unitBisnis ? "bg-yellow-200" : "")
+                                }>
                                   {Array.isArray(user.unitBisnis) ? user.unitBisnis.join(", ") : (user.unitBisnis || "-")}
                                 </span>
+
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex gap-2">

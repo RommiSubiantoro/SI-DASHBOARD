@@ -125,42 +125,79 @@ export default function Piechart({ data = [], selectedMonth = "All", setSelected
       </h3>
 
       {/* Kontrol filter */}
-      <div className="flex flex-wrap gap-3 mb-6 items-center">
-        <select
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          <option value="All">All</option>
-          {MONTHS.map((m) => (
-            <option key={m.key} value={m.label}>
-              {m.label}
-            </option>
-          ))}
-        </select>
+      <div className="mb-6">
+        {/* Bar filter */}
+        <div className="flex flex-wrap gap-3 mb-4 items-center">
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="All">All</option>
+            {MONTHS.map((m) => (
+              <option key={m.key} value={m.label}>
+                {m.label}
+              </option>
+            ))}
+          </select>
 
-        <select
-          value={selectedYear}
-          onChange={(e) => setSelectedYear(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          <option value="2024">2024</option>
-          <option value="2025">2025</option>
-        </select>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+          </select>
 
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          >
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Info Box */}
+        <div className="w-full lg:w-full bg-gray-50 p-4 rounded-lg border border-gray-200">
+          <div className="flex flex-wrap lg:flex-nowrap justify-between items-center">
+            {/* Bagian kiri */}
+            <div className="text-sm font-medium text-gray-700">
+              {selectedCategory !== "All" ? (
+                <>
+                  <p>
+                    {selectedCategory} (
+                    {normalizedMonth === "ALL" ? "All Months" : normalizedMonth}{" "}
+                    {selectedYear})
+                  </p>
+                  <p className="mt-2 text-lg font-semibold text-gray-900">
+                    {selectedPercent}% dari total
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p>Total kategori: {pieData.length}</p>
+                  <p className="mt-2">Total (abs): Rp {Number(totalValue).toLocaleString()}</p>
+                </>
+              )}
+            </div>
+
+            {/* Bagian kanan */}
+            {selectedCategory !== "All" && (
+              <p className="mt-2 lg:mt-0 text-gray-600 text-lg font-semibold">
+                Rp {Number(selectedValue).toLocaleString()}
+              </p>
+            )}
+          </div>
+        </div>
 
       </div>
+
 
       {/* Chart + Info */}
       <div className="flex flex-col lg:flex-row gap-6 items-start">
@@ -198,33 +235,6 @@ export default function Piechart({ data = [], selectedMonth = "All", setSelected
             </PieChart>
 
           </ResponsiveContainer>
-        </div>
-
-        {/* Info detail */}
-        <div className="w-full lg:w-1/4 bg-gray-50 p-4 rounded-lg border border-gray-200">
-          {selectedCategory !== "All" ? (
-            <div className="text-sm font-medium text-gray-700">
-              <p>
-                {selectedCategory} (
-                {normalizedMonth === "ALL" ? "All Months" : normalizedMonth}{" "}
-                {selectedYear})
-              </p>
-              <p className="mt-2 text-lg font-semibold text-gray-900">
-                {selectedPercent}% dari total
-              </p>
-              <p className="mt-1 text-gray-600">
-                Rp {Number(selectedValue).toLocaleString()}
-              </p>
-            </div>
-          ) : (
-            <div className="text-sm text-gray-600">
-              <p>Total kategori: {pieData.length}</p>
-              <p className="mt-2">
-                Total (abs): Rp {Number(totalValue).toLocaleString()}
-              </p>
-            </div>
-          )}
-
         </div>
         {/* Legend di luar */}
         <div className="w-full lg:w-1/4 flex flex-col gap-2">

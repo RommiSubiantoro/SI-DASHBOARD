@@ -91,17 +91,7 @@ const Navbar = ({ onLogout }) => {
     if (onLogout) onLogout();
   };
 
-  if (loading) {
-    return (
-      <nav className="navbar">
-        <div className="navbar-container">
-          <div className="navbar-logo"><h2 className="logo-text">Samudera Indonesia</h2></div>
-          <div className="navbar-loading">Loading...</div>
-        </div>
-      </nav>
-    );
-  }
-
+  
   return (
     <nav className="bg-black shadow-md ml-64">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
