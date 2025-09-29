@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
-import { fetchSignInMethodsForEmail } from "firebase/auth";
-import { LogOut } from 'lucide-react';
+
 import {
   collection,
   getDocs,
@@ -16,17 +15,15 @@ import { db } from '../firebase';
 
 // Import komponen yang sudah dipecah
 import Header from '../components/Header';
-import ControlButtons from '../components/ControlButtons';
 import StatsCards from '../components/StatsCards';
-import DataTable from '../components/DataTable';
 import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
+import ExporttableChart from "../components/ExporttableChart"
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from '../hooks/useDataManagement';
 
-import "../css/AdminDashboard.css";
 
 function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -51,7 +48,7 @@ function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
 
   // Dashboard states
-  const [selectedUnit, setSelectedUnit] = useState([]);
+  const [selectedUnit, setSelectedUnit] = useState("");
 
   // Tambahkan state untuk search di AdminDashboard
   const [searchTerm, setSearchTerm] = useState("");
@@ -500,48 +497,80 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="admin">
-      <Navbar onLogout={handleLogout} />
+    <div className="min-h-screen bg-gray-100">
 
-      <div className="admin-body">
+      <div className="flex  ">
         {/* Sidebar */}
-        <div className="sidebar">
-          <h2 className="h1">Admin Panel</h2>
-          <button
-            className={`button-1 ${activePage === "dashboard" ? "active" : ""}`}
-            onClick={() => setActivePage("dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className={`button-1 ${activePage === "unit" ? "active" : ""}`}
-            onClick={() => setActivePage("unit")}
-          >
-            Manage Unit Bisnis
-          </button>
-          <button
-            className={`button-1 ${activePage === "user" ? "active" : ""}`}
-            onClick={() => setActivePage("user")}
-          >
-            Manage User
-          </button>
+        <div className="w-64 fixed bg-red-500 shadow-lg border-r border-gray-100 min-h-screen flex flex-col justify-between ">
+          {/* Bagian atas */}
+          <div className="p-6">
+            <h2 className="text-2xl font-bold text-white mb-8 px-7">Admin Panel</h2>
+
+            <nav className="space-y-2">
+              <button
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "dashboard"
+                  ? "text-white bg-red-600 shadow-md"
+                  : "text-white hover:bg-red-400"
+                  }`}
+                onClick={() => setActivePage("dashboard")}
+              >
+                📊 Dashboard
+              </button>
+
+              <button
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "unit"
+                  ? "text-white bg-red-600 shadow-md"
+                  : "text-white hover:bg-red-400"
+                  }`}
+                onClick={() => setActivePage("unit")}
+              >
+                🏢 Manage Unit Bisnis
+              </button>
+
+              <button
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "user"
+                  ? "text-white bg-red-600 shadow-md"
+                  : "text-white hover:bg-red-400"
+                  }`}
+                onClick={() => setActivePage("user")}
+              >
+                👥 Manage User
+              </button>
+            </nav>
+          </div>
+
+          {/* Bagian bawah (footer sidebar) */}
+          <div className="p-6 border-t border-red-400">
+            <button
+              onClick={handleLogout}
+              className="w-full text-left px-4 py-3 rounded-lg font-medium text-sm text-white hover:bg-red-400 transition-all duration-200"
+            >
+              🚪 Logout
+            </button>
+          </div>
         </div>
 
-        {/* Konten */}
-        <div className="Konten">
+        {/* Main Content */}
+        <div className="flex-1 p-6 ml-64 ">
+          {/* Navbar */}
+          <div className="fixed top-0 left-0 w-full z-50">
+            <Navbar onLogout={handleLogout} />
+          </div>
+
+          {/* Dashboard Page */}
           {activePage === "dashboard" && (
-            <div className="dashboard-content">
-              {/* Header menggunakan komponen baru */}
+            <div className="space-y-6 pt-16">
+              {/* Header Component */}
               <Header
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
-                units={dashboardUnits}
+                units={units.map((unit) => unit.name)}
                 title="Admin Dashboard"
               />
 
               {/* Stats overview untuk semua unit */}
-              <div className="admin-overview">
-                <h3>Overview Semua Unit</h3>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Overview Semua Unit</h3>
                 <StatsCards
                   totalRevenue={allUnitsStats.totalRevenue}
                   totalExpenses={allUnitsStats.totalExpenses}
@@ -557,8 +586,8 @@ function AdminDashboard() {
               </div>
 
               {/* Stats cards untuk unit terpilih */}
-              <div className="unit-specific-stats">
-                <h3>Detail Unit: {selectedUnit}</h3>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Detail Unit: {selectedUnit}</h3>
                 <StatsCards
                   totalRevenue={stats.totalRevenue}
                   totalExpenses={stats.totalExpenses}
@@ -572,149 +601,153 @@ function AdminDashboard() {
                   }}
                 />
               </div>
-              {/* Pie Chart */}
-              <div className="charts-row">
-                <Piechart
-                  data={currentData}
-                  selectedMonth={selectedMonth}
-                  setSelectedMonth={setSelectedMonth}
-                  selectedYear={selectedYear}
-                  setSelectedYear={setSelectedYear}
-                />
-                <Barchart
-                  data={currentData}
-                  selectedYear={selectedYear}
-                />
-              </div>
 
+              {/* Charts */}
+             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <ExporttableChart fileName="piechart">
+    <Piechart
+      data={currentData}
+      selectedMonth={selectedMonth}
+      setSelectedMonth={setSelectedMonth}
+      selectedYear={selectedYear}
+      setSelectedYear={setSelectedYear}
+    />
+  </ExporttableChart>
 
+  <ExporttableChart fileName="barchart">
+    <Barchart
+      data={currentData}
+      selectedYear={selectedYear}
+    />
+  </ExporttableChart>
+</div>
             </div>
           )}
 
-          {/* Unit Management Page - existing code */}
+          {/* Unit Management Page */}
           {activePage === "unit" && (
-            <div className="unit-page">
-              <h1 className="title">Manage Unit Bisnis</h1>
-              <div className="isian">
-                <button className="button-2" onClick={handleAddUnit} disabled={isLoading}>
-                  + Tambah Unit
-                </button>
-                <button className="button-3" onClick={handleExportUnits}>
-                  Ekspor Data
-                </button>
-              </div>
+            <div className="space-y-6 min-h-screen mt-12">
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">Manage Unit Bisnis</h1>
 
-              {loadingUnits ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading units...</p>
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-3 mb-6">
+                  <button
+                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
+                    onClick={handleAddUnit}
+                    disabled={isLoading}
+                  >
+                    ➕ Tambah Unit
+                  </button>
+
                 </div>
-              ) : (
-                <table className="tabel-3">
-                  <thead className="thead">
-                    <tr>
-                      <th>No</th>
-                      <th>Nama Unit</th>
-                      <th>Jumlah User</th>
-                      <th>Data Records</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {units.length === 0 ? (
-                      <tr>
-                        <td colSpan="6" className="text-center-placeholder">
-                          Belum ada unit bisnis. Tambahkan unit bisnis pertama Anda!
-                        </td>
-                      </tr>
-                    ) : (
-                      units.map((unit, index) => {
-                        const userCount = users.filter(user => user.unitBisnis === unit.name).length;
-                        const unitKey = Object.keys(data).find(key =>
-                          key === "Samudera Makassar Logistik" && unit.name.includes("Samudera Makassar Logistik") ||
-                          key === "Makassar Jaya Samudera" && unit.name.includes("Makassar Jaya Samudera") ||
-                          key === "Samudera Perdana" && unit.name.includes("Samudera Perdana") ||
-                          key === "Kendari Jaya Samudera" && unit.name.includes("Kendari Jaya Samudera") ||
-                          key === "Masaji Kargosentra Utama" && unit.name.includes("Masaji Kargosentra Utama") ||
-                          key === "Samudera Agencies Indonesia" && unit.name.includes("Samudera Agencies Indonesia") ||
-                          key === "Silkargo Indonesia" && unit.name.includes("Silkargo Indonesia") ||
-                          key === "Samudera Kendari Logistik" && unit.name.includes("Samudera Kendari Logistik")
-                        );
-                        const recordCount = unitKey && data[unitKey] ? data[unitKey].length : 0;
 
-                        return (
-                          <tr key={unit.id}>
-                            <td>{index + 1}</td>
-                            <td>{unit.name}</td>
-                            <td>
-                              <span className={userCount > 0 ? "user-count-active" : "user-count-inactive"}>
-                                {userCount} user
-                              </span>
+                {/* Loading State */}
+                {loadingUnits ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                    <p className="text-sm">Loading units...</p>
+                  </div>
+                ) : (
+                  /* Table */
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">No</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama Unit</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Jumlah User</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {units.length === 0 ? (
+                          <tr>
+                            <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
+                              Belum ada unit bisnis. Tambahkan unit bisnis pertama Anda!
                             </td>
-                            <td>
-                              <span className={recordCount > 0 ? "record-count-active" : "record-count-inactive"}>
-                                {recordCount} records
-                              </span>
-                            </td>
-                            <td className="action-buttons">
-                              <button
-                                onClick={() => handleEditUnit(unit)}
-                                className="edit-button"
-                                disabled={isLoading}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUnit(unit)}
-                                className="delete-button"
-                                disabled={isLoading}
-                              >
-                                Delete
-                              </button>
-                              <button
-                                onClick={() => handleDeleteAllRecords(unit.name)}
-                                className="danger-button"
-                                disabled={isLoading}
-                              >
-                                Hapus Records
-                              </button>
-                            </td>
-
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              )}
+                        ) : (
+                          units.map((unit, index) => {
+                            const userCount = users.filter(user =>
+                              Array.isArray(user.unitBisnis) && user.unitBisnis.includes(unit.name)
+                            ).length;
+
+                            return (
+                              <tr key={unit.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-gray-900">{index + 1}</td>
+                                <td className="px-4 py-3 text-gray-900 font-medium">{unit.name}</td>
+                                <td className="px-4 py-3">
+                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${userCount > 0
+                                    ? "bg-green-100 text-green-800"
+                                    : "bg-gray-100 text-gray-800"
+                                    }`}>
+                                    {userCount} user
+                                  </span>
+                                </td>
+
+                                <td className="px-4 py-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleEditUnit(unit)}
+                                      className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
+                                      disabled={isLoading}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteUnit(unit)}
+                                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
+                                      disabled={isLoading}
+                                    >
+                                      Delete
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteAllRecords(unit.name)}
+                                      className="px-3 py-1 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
+                                      disabled={isLoading}
+                                    >
+                                      Hapus Records
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
-          {/* User Management Page - existing code */}
+          {/* User Management Page */}
           {activePage === "user" && (
-            <div>
+            <div className="space-y-6 min-h-screen mt-12">
 
               {/* Search and Filter Section */}
-              <div className="search-section">
-                <div className="search-controls">
-                  {/* Search Input */}
-                  <div className="search-input-wrapper">
-                    <input
-                      type="text"
-                      placeholder="Cari berdasarkan nama atau email..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="search-input"
-                    />
-                    <span className="search-icon">🔍</span>
-                  </div>
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-4 items-center">
+                    {/* Search Input */}
+                    <div className="relative flex-1 min-w-[200px]">
+                      <input
+                        type="text"
+                        placeholder="Cari berdasarkan nama atau email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                    </div>
 
-                  {/* Role Filter */}
-                  <div className="filter-wrapper">
+                    {/* Role Filter */}
                     <select
                       value={roleFilter}
                       onChange={(e) => setRoleFilter(e.target.value)}
-                      className="filter-select"
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
                       <option value="">Semua Role</option>
                       <option value="User">User</option>
@@ -722,14 +755,12 @@ function AdminDashboard() {
                       <option value="Manager">Manager</option>
                       <option value="Super Admin">Super Admin</option>
                     </select>
-                  </div>
 
-                  {/* Unit Filter */}
-                  <div className="filter-wrapper">
+                    {/* Unit Filter */}
                     <select
                       value={unitFilter}
                       onChange={(e) => setUnitFilter(e.target.value)}
-                      className="filter-select"
+                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
                     >
                       <option value="">Semua Unit</option>
                       {units.map((unit) => (
@@ -738,264 +769,318 @@ function AdminDashboard() {
                         </option>
                       ))}
                     </select>
+
+                    {/* Reset Button */}
+                    <button
+                      onClick={handleResetFilters}
+                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50"
+                      disabled={!searchTerm && !roleFilter && !unitFilter}
+                    >
+                      Reset Filter
+                    </button>
                   </div>
 
-                  {/* Reset Button */}
-                  <button
-                    onClick={handleResetFilters}
-                    className="reset-filters-btn"
-                    disabled={!searchTerm && !roleFilter && !unitFilter}
-                  >
-                    Reset Filter
-                  </button>
-                </div>
+                  {/* Search Results Info */}
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    <span className="text-gray-700 font-medium">
+                      Menampilkan {filteredUsers.length} dari {users.length} user
+                    </span>
 
-                {/* Search Results Info */}
-                <div className="search-info">
-                  <span className="results-count">
-                    Menampilkan {filteredUsers.length} dari {users.length} user
-                  </span>
-                  {(searchTerm || roleFilter || unitFilter) && (
-                    <div className="active-filters">
-                      {searchTerm && (
-                        <span className="filter-tag">
-                          Pencarian: "{searchTerm}"
-                          <button onClick={() => setSearchTerm("")} className="remove-filter">×</button>
-                        </span>
-                      )}
-                      {roleFilter && (
-                        <span className="filter-tag">
-                          Role: {roleFilter}
-                          <button onClick={() => setRoleFilter("")} className="remove-filter">×</button>
-                        </span>
-                      )}
-                      {unitFilter && (
-                        <span className="filter-tag">
-                          Unit: {unitFilter}
-                          <button onClick={() => setUnitFilter("")} className="remove-filter">×</button>
-                        </span>
-                      )}
-                    </div>
-                  )}
+                    {/* Active Filters */}
+                    {(searchTerm || roleFilter || unitFilter) && (
+                      <div className="flex flex-wrap gap-2">
+                        {searchTerm && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
+                            Pencarian: "{searchTerm}"
+                            <button
+                              onClick={() => setSearchTerm("")}
+                              className="text-blue-600 hover:text-blue-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                        {roleFilter && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
+                            Role: {roleFilter}
+                            <button
+                              onClick={() => setRoleFilter("")}
+                              className="text-green-600 hover:text-green-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                        {unitFilter && (
+                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
+                            Unit: {unitFilter}
+                            <button
+                              onClick={() => setUnitFilter("")}
+                              className="text-purple-600 hover:text-purple-800 font-bold"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
               {/* Action Buttons */}
-              <div className="isian">
+              <div className="flex flex-wrap gap-3">
                 <button
                   onClick={handleAddUser}
-                  className="button-2"
+                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
                   disabled={isLoading || units.length === 0}
                 >
-                  + Tambah User
+                  ➕ Tambah User
                 </button>
                 <button
-                  className="button-3"
+                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
                   onClick={handleExportUsers}
                   disabled={users.length === 0}
                 >
-                  Ekspor Data
+                  📊 Ekspor Data
                 </button>
               </div>
 
+              {/* Warning Box */}
               {units.length === 0 && (
-                <div className="warning-box">
-                  <strong>Peringatan:</strong> Anda perlu membuat unit bisnis terlebih dahulu sebelum menambahkan user.
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                  <div className="flex items-center gap-2 text-yellow-800">
+                    <span className="text-lg">⚠️</span>
+                    <strong>Peringatan:</strong> Anda perlu membuat unit bisnis terlebih dahulu sebelum menambahkan user.
+                  </div>
                 </div>
               )}
 
-              {loadingUsers ? (
-                <div className="loading-container">
-                  <div className="loading-spinner"></div>
-                  <p>Loading users...</p>
-                </div>
-              ) : (
-                <table className="tabel-3">
-                  <thead className="thead">
-                    <tr>
-                      <th>No</th>
-                      <th>Nama</th>
-                      <th>Email</th>
-                      <th>Role</th>
-                      <th>Unit Bisnis</th>
-                      <th>Aksi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredUsers.length === 0 ? (
-                      <tr>
-                        <td colSpan="7" className="text-center-placeholder">
-                          {users.length === 0
-                            ? "Belum ada user. Tambahkan user pertama Anda!"
-                            : "Tidak ada user yang sesuai dengan pencarian."
-                          }
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredUsers.map((user, index) => {
-                        const unitExists = units.some(unit => unit.name === user.unitBisnis);
-                        return (
-                          <tr key={user.id}>
-                            <td>{index + 1}</td>
-                            <td>
-                              <span className={searchTerm && user.name.toLowerCase().includes(searchTerm.toLowerCase()) ? "highlight-text" : ""}>
-                                {user.name}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={searchTerm && user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()) ? "highlight-text" : ""}>
-                                {user.email || '-'}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={`role-badge ${user.role === 'Super Admin' ? 'super-admin' :
-                                user.role === 'Manager' ? 'manager' :
-                                  user.role === 'Supervisor' ? 'supervisor' : 'user'
-                                } ${roleFilter === user.role ? 'filter-match' : ''}`}>
-                                {user.role}
-                              </span>
-                            </td>
-                            <td>
-                              <span className={unitFilter === user.unitBisnis ? "highlight-text" : ""}>
-                                {Array.isArray(user.unitBisnis) ? user.unitBisnis.join(", ") : (user.unitBisnis || "-")}
-
-                              </span>
-                            </td>
-                            <td className="action-buttons">
-                              <button
-                                onClick={() => handleEditUser(user)}
-                                className="edit-button"
-                                disabled={isLoading}
-                              >
-                                Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteUser(user.id)}
-                                className="delete-button"
-                                disabled={isLoading}
-                              >
-                                Delete
-                              </button>
+              {/* Users Table */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                {loadingUsers ? (
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
+                    <p className="text-sm">Loading users...</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="bg-gray-100 border-b border-gray-200">
+                        <tr>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">No</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Email</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Role</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Unit Bisnis</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {filteredUsers.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                              {users.length === 0
+                                ? "Belum ada user. Tambahkan user pertama Anda!"
+                                : "Tidak ada user yang sesuai dengan pencarian."
+                              }
                             </td>
                           </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
-              )}
+                        ) : (
+                          filteredUsers.map((user, index) => (
+                            <tr key={user.id} className="hover:bg-gray-50">
+                              <td className="px-4 py-3 text-gray-900">{index + 1}</td>
+                              <td className="px-4 py-3">
+                                <span className={searchTerm && user.name.toLowerCase().includes(searchTerm.toLowerCase()) ? "bg-yellow-200" : ""}>
+                                  {user.name}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">
+                                <span className={searchTerm && user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()) ? "bg-yellow-200" : ""}>
+                                  {user.email || '-'}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.role === 'Super Admin' ? 'bg-red-100 text-red-800' :
+                                  user.role === 'Manager' ? 'bg-purple-100 text-purple-800' :
+                                    user.role === 'Supervisor' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
+                                  } ${roleFilter === user.role ? 'ring-2 ring-blue-300' : ''}`}>
+                                  {user.role}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-700">
+                                <span className={unitFilter === user.unitBisnis ? "bg-yellow-200" : ""}>
+                                  {Array.isArray(user.unitBisnis) ? user.unitBisnis.join(", ") : (user.unitBisnis || "-")}
+                                </span>
+                              </td>
+                              <td className="px-4 py-3">
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => handleEditUser(user)}
+                                    className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
+                                    disabled={isLoading}
+                                  >
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={() => handleDeleteUser(user.id)}
+                                    className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
+                                    disabled={isLoading}
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modals - existing code with slight updates */}
+      {/* Modals */}
       {showUnitModal && (
-        <div className="modal-overlay" onClick={() => setShowUnitModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>{editingUnit ? "Edit Unit Bisnis" : "Tambah Unit Bisnis"}</h2>
-            <div className="form-group">
-              <label>Nama Unit:</label>
-              <input
-                type="text"
-                value={unitForm.name}
-                onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })}
-                placeholder="Masukkan nama unit bisnis"
-                disabled={isLoading}
-              />
-            </div>
-            <div className="modal-buttons">
-              <button onClick={handleSaveUnit} className="btn-save" disabled={isLoading}>
-                {isLoading ? 'Saving...' : (editingUnit ? "Update" : "Simpan")}
-              </button>
-              <button
-                onClick={() => setShowUnitModal(false)}
-                className="btn-cancel"
-                disabled={isLoading}
-              >
-                Batal
-              </button>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-4">
+                {editingUnit ? "Edit Unit Bisnis" : "Tambah Unit Bisnis"}
+              </h2>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Nama Unit:</label>
+                <input
+                  type="text"
+                  value={unitForm.name}
+                  onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })}
+                  placeholder="Masukkan nama unit bisnis"
+                  disabled={isLoading}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                />
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSaveUnit}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : (editingUnit ? "Update" : "Simpan")}
+                </button>
+                <button
+                  onClick={() => setShowUnitModal(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  Batal
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {showUserModal && (
-        <div className="modal-overlay" onClick={() => setShowUserModal(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <h2>{editingUser ? "Edit User" : "Tambah User"}</h2>
-            <div className="form-group">
-              <label>Nama:</label>
-              <input
-                type="text"
-                value={userForm.name}
-                onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
-                placeholder="Masukkan nama user"
-                disabled={isLoading}
-              />
-            </div>
-            {!editingUser && (
-              <>
-                <div className="form-group">
-                  <label>Email:</label>
-                  <input
-                    type="email"
-                    value={userForm.email}
-                    onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
-                    placeholder="Masukkan email"
-                    disabled={isLoading}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>Password:</label>
-                  <input
-                    type="password"
-                    value={userForm.password}
-                    onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
-                    placeholder="Masukkan password"
-                    disabled={isLoading}
-                  />
-                </div>
-              </>
-            )}
-            <div className="form-group">
-              <label>Role:</label>
-              <select
-                value={userForm.role}
-                onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
-                disabled={isLoading}
-              >
-                <option value="">Pilih Role</option>
-                <option value="User">User</option>
-                <option value="Supervisor">Supervisor</option>
-                <option value="Manager">Manager</option>
-                <option value="Super Admin">Super Admin</option>
-              </select>
-            </div>
-            <div className="form-group">
-              <label>Pilih Unit Bisnis:</label>
-              <Select
-                isMulti
-                options={units.map((unit) => ({ value: unit.name, label: unit.name }))}
-                value={userForm.unitBisnis.map((u) => ({ value: u, label: u }))}
-                onChange={(selected) =>
-                  setUserForm({ ...userForm, unitBisnis: selected.map((s) => s.value) })
-                }
-                isDisabled={isLoading}
-              />
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <h2 className="text-xl font-bold text-gray-800 mb-6">
+                {editingUser ? "Edit User" : "Tambah User"}
+              </h2>
 
-            <div className="modal-buttons">
-              <button onClick={handleSaveUser} className="btn-save" disabled={isLoading}>
-                {isLoading ? 'Saving...' : (editingUser ? "Update" : "Simpan")}
-              </button>
-              <button
-                onClick={() => setShowUserModal(false)}
-                className="btn-cancel"
-                disabled={isLoading}
-              >
-                Batal
-              </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama:</label>
+                  <input
+                    type="text"
+                    value={userForm.name}
+                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                    placeholder="Masukkan nama user"
+                    disabled={isLoading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  />
+                </div>
+
+                {!editingUser && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Email:</label>
+                      <input
+                        type="email"
+                        value={userForm.email}
+                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                        placeholder="Masukkan email"
+                        disabled={isLoading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Password:</label>
+                      <input
+                        type="password"
+                        value={userForm.password}
+                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                        placeholder="Masukkan password"
+                        disabled={isLoading}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                      />
+                    </div>
+                  </>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Role:</label>
+                  <select
+                    value={userForm.role}
+                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                    disabled={isLoading}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="">Pilih Role</option>
+                    <option value="User">User</option>
+                    <option value="Supervisor">Supervisor</option>
+                    <option value="Manager">Manager</option>
+                    <option value="Super Admin">Super Admin</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Pilih Unit Bisnis:</label>
+                  <Select
+                    isMulti
+                    options={units.map((unit) => ({ value: unit.name, label: unit.name }))}
+                    value={userForm.unitBisnis.map((u) => ({ value: u, label: u }))}
+                    onChange={(selected) =>
+                      setUserForm({ ...userForm, unitBisnis: selected.map((s) => s.value) })
+                    }
+                    isDisabled={isLoading}
+                    className="text-sm"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleSaveUser}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Saving...' : (editingUser ? "Update" : "Simpan")}
+                </button>
+                <button
+                  onClick={() => setShowUserModal(false)}
+                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
+                  disabled={isLoading}
+                >
+                  Batal
+                </button>
+              </div>
             </div>
           </div>
         </div>

@@ -18,7 +18,6 @@ import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import { useDataManagement } from '../hooks/useDataManagement';
 
-import "../css/AdminDashboard.css";
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
