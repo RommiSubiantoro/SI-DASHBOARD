@@ -608,24 +608,33 @@ function AdminDashboard() {
               </div>
 
               {/* Charts */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <ExporttableChart fileName="piechart">
-                  <Piechart
-                    data={currentData}
-                    selectedMonth={selectedMonth}
-                    setSelectedMonth={setSelectedMonth}
-                    selectedYear={selectedYear}
-                    setSelectedYear={setSelectedYear}
-                  />
-                </ExporttableChart>
+              <div className="w-full flex flex-col lg:flex-row gap-6">
+                <ExporttableChart
+                  currentData={currentData}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  selectedYear={selectedYear}
+                  setSelectedYear={setSelectedYear}
+                >
+                  <div className="w-full flex flex-col lg:flex-row gap-6">
+                    <div className="flex-1 p-2 shadow rounded-lg bg-white">
+                      <Piechart
+                        data={currentData}
+                        selectedMonth={selectedMonth}
+                        setSelectedMonth={setSelectedMonth}
+                        selectedYear={selectedYear}
+                        setSelectedYear={setSelectedYear}
+                      />
+                    </div>
 
-                <ExporttableChart fileName="barchart">
-                  <Barchart
-                    data={currentData}
-                    selectedYear={selectedYear}
-                  />
+                    <div className="flex-1 p-2 shadow rounded-lg bg-white">
+                      <Barchart data={currentData} selectedYear={selectedYear} />
+                    </div>
+                  </div>
                 </ExporttableChart>
               </div>
+
+
             </div>
           )}
 
