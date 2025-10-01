@@ -11,7 +11,7 @@ import {
     ResponsiveContainer,
     Cell,   // ✅ tambahkan ini biar <Cell> dikenali
 } from "recharts";
-import "../css/Barchart.css";
+
 
 const COLORS = ["#4facfe", "#ff6b6b", "#3ddb97", "#ffa726", "#8b5cf6", "#f59e0b", "#60a5fa", "#ef4444", "#10b981"];
 
@@ -94,14 +94,18 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
     ))];
 
     return (
-        <div className="barchart-container">
-            <h3>Bar Chart Per Bulan</h3>
+
+        <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+                Bar Chart Per Bulan
+            </h3>
 
             {/* Kontrol */}
-            <div className="barchart-controls flex flex-wrap gap-3 mb-4 items-center">
+            <div className="flex flex-wrap gap-3 mb-4 items-center justify-center sm:justify-start">
                 <select
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
                 >
                     <option value="2024">2024</option>
                     <option value="2025">2025</option>
@@ -110,6 +114,7 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
                 <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
                 >
                     {categories.map((c) => (
                         <option key={c} value={c}>
@@ -120,20 +125,26 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
             </div>
 
             {/* Chart */}
-            <div className="barchart-wrapper">
+            <div className="w-full h-80 bg-gray-50 rounded-lg p-4">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                        <CartesianGrid strokeDasharray="3 3" />
-                        <XAxis 
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
                             dataKey="month"
                             interval={0}
-                            tick={{ fontSize: 10 }}
+                            tick={{ fontSize: 10, fill: '#4b5563' }}
                             angle={-30}
                             textAnchor="end"
                         />
-
-                       <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip formatter={(val) => Number(val).toLocaleString()} />
+                        <YAxis tick={{ fontSize: 10, fill: '#4b5563' }} />
+                        <Tooltip
+                            formatter={(val) => Number(val).toLocaleString()}
+                            contentStyle={{
+                                backgroundColor: '#f9fafb',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px'
+                            }}
+                        />
                         <Legend wrapperStyle={{ fontSize: 10 }} />
                         <Bar dataKey="value">
                             {chartData.map((entry, index) => (

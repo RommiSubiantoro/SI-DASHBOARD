@@ -1,15 +1,15 @@
 import React from 'react';
 import { BarChart3, Target, TrendingUp } from 'lucide-react';
-import "../css/StatsCard.css";
 
-const StatsCards = ({ 
-  totalRevenue, 
-  totalExpenses, 
-  totalAct2025, 
+
+const StatsCards = ({
+  totalRevenue,
+  totalExpenses,
+  totalAct2025,
   avgTarget,
   labels = {
     revenue: "Total ACT 2024",
-    expenses: "Total BDGT 2025", 
+    expenses: "Total BDGT 2025",
     act2025: "Total ACT 2025",
     avgTarget: "Avg Target"
   }
@@ -19,47 +19,60 @@ const StatsCards = ({
   };
 
   return (
-    <div className="stats-cards">
-      <div className="revenue-stats">
-        <div className="body-text">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Revenue */}
+      <div className="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="textstats-1">{labels.revenue}</p>
-            <p className="textstats-2">Rp {formatCurrency(totalRevenue)}</p>
+            <p className="text-sm text-gray-500">{labels.revenue}</p>
+            <p className="text-xl font-semibold text-gray-800">
+              Rp {formatCurrency(totalRevenue)}
+            </p>
           </div>
-          <TrendingUp size={32} />
+          <TrendingUp className="text-green-500" size={32} />
         </div>
       </div>
-      
-      <div className="stats-cards-2">
-        <div className="body-text-expenses">
+
+      {/* Expenses */}
+      <div className="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-expenses1">{labels.expenses}</p>
-            <p className="text-expenses2">Rp {formatCurrency(totalExpenses)}</p>
+            <p className="text-sm text-gray-500">{labels.expenses}</p>
+            <p className="text-xl font-semibold text-gray-800">
+              Rp {formatCurrency(totalExpenses)}
+            </p>
           </div>
-          <BarChart3 size={32} />
+          <BarChart3 className="text-blue-500" size={32} />
         </div>
       </div>
-      
-      <div className="stats-card-profit">
-        <div className="stats-card-3">
+
+      {/* Act 2025 */}
+      <div className="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-profit-1">{labels.act2025}</p>
-            <p className="text-profit-2">Rp {formatCurrency(totalAct2025)}</p>
+            <p className="text-sm text-gray-500">{labels.act2025}</p>
+            <p className="text-xl font-semibold text-gray-800">
+              Rp {formatCurrency(totalAct2025)}
+            </p>
           </div>
-          <Target size={32} />
+          <Target className="text-red-500" size={32} />
         </div>
       </div>
-      
-      <div className="stats-card-avg">
-        <div className="stats-card-4">
+
+      {/* Average Target */}
+      <div className="bg-white p-6 rounded-xl shadow hover:shadow-md transition">
+        <div className="flex items-center justify-between">
           <div>
-            <p className="text-avg-1">{labels.avgTarget}</p>
-            <p className="text-avg-2">Rp {formatCurrency(avgTarget)}</p>
+            <p className="text-sm text-gray-500">{labels.avgTarget}</p>
+            <p className="text-xl font-semibold text-gray-800">
+              Rp {formatCurrency(avgTarget)}
+            </p>
           </div>
-          <TrendingUp size={32} />
+          <TrendingUp className="text-purple-500" size={32} />
         </div>
       </div>
     </div>
+
   );
 };
 

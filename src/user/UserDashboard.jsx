@@ -14,11 +14,9 @@ import Navbar from "../components/navbar";
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement, useFormManagement } from '../hooks/useDataManagement';
 
-// Import CSS
-import "../css/UserDashboard.css";
 
 const UserDashboard = () => {
-  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
@@ -116,6 +114,9 @@ const UserDashboard = () => {
     }
     alert(`Exporting ${selectedUnit} data to PDF...`);
   };
+  const [importFile, setImportFile] = useState(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importUnit, setImportUnit] = useState("");
 
   const handleImportData = async (event) => {
     const file = event.target.files[0];
@@ -132,43 +133,45 @@ const UserDashboard = () => {
   };
 
   return (
-    <div>
-      <Navbar onLogout={handleLogout} />
-
+    <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className="sidebar">
-        <h2 className="h1">User Panel</h2>
-        <button className='button-1'>Dashboard</button>
-      </div>
-
-      <div className="dashboard-layout">
-        <div className="dashboard-content">
-          {/* isi utama UserDashboard */}
+      <aside className="h-screen bg-red-500 border-r shadow-lg flex flex-col">
+        <div className="p-4 ">
+          <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">User Panel</h2>
         </div>
-      </div>
+        <nav className="flex-1 p-4 space-y-2">
+          <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
+            📊 Dashboard
+          </button>
+        </nav>
+      </aside>
 
-      <div className="Container-usr">
-        <div className="body">
-          {/* Header dengan unit selector */}
+      {/* Main content */}
+      <div className="flex flex-col h-screen overflow-auto">
+        {/* Navbar */}
+        <header className="fixed top-0 left-0 w-full z-50 ">
+          <Navbar onLogout={handleLogout} />
+        </header>
+
+        {/* Content */}
+        <main className="flex-1 p-6 space-y-6 pt-20">
           <Header
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
-            units={units.map(u => u.key)}
+            units={units.map((u) => u.key)}
             title="User Dashboard"
           />
 
-          {/* Control buttons */}
           <ControlButtons
             onAddData={handleAddData}
             onImportData={handleImportData}
             onExportExcel={handleExportExcel}
             onExportPDF={handleExportPDF}
-            showAddButton={true}
-            showImportButton={true}
-            showExportButtons={true}
+            showAddButton
+            showImportButton
+            showExportButtons
           />
 
-          {/* Stats cards */}
           <StatsCards
             totalRevenue={stats.totalRevenue}
             totalExpenses={stats.totalExpenses}
@@ -178,98 +181,127 @@ const UserDashboard = () => {
               revenue: "Total ACT 2024",
               expenses: "Total BDGT 2025",
               act2025: "Total ACT 2025",
-              avgTarget: "Avg Target"
+              avgTarget: "Avg Target",
             }}
           />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Piechart
+              data={currentData}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+            />
+            <Barchart data={currentData} selectedYear={selectedYear} />
+          </div>
 
-          {/* Data table */}
-          <DataTable
-            data={currentData}
-            title="Data Table"
-            showFilters={true}
-            showPagination={true}
-            rowsPerPage={25}
-          />
-        </div>
-
-        <div className="charts-row">
-          <Piechart
-            data={currentData}
-            selectedMonth={selectedMonth}
-            setSelectedMonth={setSelectedMonth}
-            selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
-          />
-          <Barchart
-            data={currentData}
-            selectedYear={selectedYear}
-          />
-        </div>
+          <div className="bg-white p-6 rounded-xl shadow">
+            <DataTable
+              data={currentData}
+              title="Data Table"
+              showFilters
+              showPagination
+              rowsPerPage={25}
+            />
+          </div>
 
 
-        {/* Add Data Modal */}
-        {showAddModal && (
-          <div className="modal-overlay">
-            <div className="modal">
-              <h3>Tambah Data Baru</h3>
-              <div className="form-group">
-                <label>Bulan:</label>
+        </main>
+      </div>
+
+
+
+      {/* Add Data Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">Tambah Data Baru</h3>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Bulan:</label>
                 <select
                   value={newRecord.month}
-                  onChange={(e) => updateField('month', e.target.value)}
+                  onChange={(e) => updateField("month", e.target.value)}
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Pilih Bulan</option>
-                  {["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"].map(month => (
-                    <option key={month} value={month}>{month}</option>
+                  {[
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec",
+                  ].map((month) => (
+                    <option key={month} value={month}>
+                      {month}
+                    </option>
                   ))}
                 </select>
               </div>
-              <div className="form-group">
-                <label>Revenue:</label>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Revenue:</label>
                 <input
                   type="number"
                   value={newRecord.revenue}
-                  onChange={(e) => updateField('revenue', e.target.value)}
+                  onChange={(e) => updateField("revenue", e.target.value)}
                   placeholder="Masukkan revenue"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="form-group">
-                <label>Expenses:</label>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Expenses:</label>
                 <input
                   type="number"
                   value={newRecord.expenses}
-                  onChange={(e) => updateField('expenses', e.target.value)}
+                  onChange={(e) => updateField("expenses", e.target.value)}
                   placeholder="Masukkan expenses"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="form-group">
-                <label>Target:</label>
+
+              <div>
+                <label className="block text-sm font-medium mb-1">Target:</label>
                 <input
                   type="number"
                   value={newRecord.target}
-                  onChange={(e) => updateField('target', e.target.value)}
+                  onChange={(e) => updateField("target", e.target.value)}
                   placeholder="Masukkan target"
+                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
                 />
               </div>
-              <div className="modal-actions">
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  disabled={dataLoading}
-                >
-                  Batal
-                </button>
-                <button
-                  onClick={handleSubmitData}
-                  disabled={dataLoading}
-                >
-                  {dataLoading ? 'Menyimpan...' : 'Simpan'}
-                </button>
-              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end space-x-3">
+              <button
+                onClick={() => setShowAddModal(false)}
+                disabled={dataLoading}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+              >
+                Batal
+              </button>
+              <button
+                onClick={handleSubmitData}
+                disabled={dataLoading}
+                className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
+              >
+                {dataLoading ? "Menyimpan..." : "Simpan"}
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
+
   );
 };
 

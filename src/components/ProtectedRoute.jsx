@@ -1,28 +1,18 @@
-// components/ProtectedRoute.jsx
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Navigate } from "react-router-dom";
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState(null);
+const ProtectedRoute = ({ allowedRoles, children }) => {
+  const isAuthenticated = localStorage.getItem("isAuthenticated") === "true";
+  const userRole = (localStorage.getItem("userRole") || "").toLowerCase();
+  const allowed = allowedRoles.map(r => r.toLowerCase());
 
-  useEffect(() => {
-    const role = localStorage.getItem("userRole");
-    setUserRole(role);
-    setLoading(false);
-  }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
+  if (!isAuthenticated) {
+    return <Navigate to="/" replace />;
   }
 
-  // if (!userRole) {
-  //   return <Navigate to="/" replace />;
-  // }
-
-  // if (!allowedRoles.includes(userRole)) {
-  //   return <Navigate to="/unauthorized" replace />;
-  // }
+  if (!allowed.includes(userRole)) {
+    return <Navigate to="/" replace />;
+  }
 
   return children;
 };

@@ -4,8 +4,7 @@ import { auth, db } from "../firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import Logo from "../assets/logo-smdr.png"
 import { useNavigate } from "react-router-dom";
-// Import CSS file baru
-import "../css/login.css";
+
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +63,8 @@ const Login = () => {
 
     try {
       // Login via Firebase Auth
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const currentUser = userCredential.user;
 
       // Ambil role dari Firestore
       const emailQuery = query(collection(db, "users"), where("email", "==", email));
@@ -78,25 +78,33 @@ const Login = () => {
 
       const userDoc = emailSnapshot.docs[0];
       const userData = userDoc.data();
-      const role = (userData.role || "").trim().toLowerCase();
 
-      // Simpan data ke localStorage
+      console.log("User Data:", userData);
+
+      // normalisasi role jadi lowercase
+      const role = (userData.role || "").trim().toLowerCase();
+      console.log("Role yang diambil:", role);
+
+      // Simpan ke localStorage
       localStorage.setItem("userUid", userDoc.id);
       localStorage.setItem("userRole", role);
+      localStorage.setItem("isAuthenticated", "true");
 
       // Redirect sesuai role
-      if (role === 'super admin') {
+      if (role === "super admin") {
         navigate("/admin");
-      } else if (role === 'manager') {
+      } else if (role === "manager") {
         navigate("/manager");
-      } else if (role === 'supervisor') {
+      } else if (role === "supervisor") {
         navigate("/supervisor");
-      } else if (role === 'user') {
+      } else if (role === "user") {
         navigate("/user");
       } else {
-        setError("Role tidak dikenali. Hubungi Super Admin.");
+        setError(`Role tidak dikenali: ${role}`);
       }
+
     } catch (err) {
+       console.error("Error saat login:", err);
       if (err.code === "auth/invalid-credential") {
         setError("Email atau password salah.");
       } else {
@@ -107,143 +115,124 @@ const Login = () => {
     }
   };
 
+
   return (
-    <div className="login-cover">
-      <div className="login-container">
-        {/* Form Section */}
-        <div className="auth">
-          <div className="auth-header">
-            <div className="auth-logo"></div>
-            <h1 className="login">Selamat Datang</h1>
-            <p className="auth-subtitle">Silakan masuk ke akun Anda</p>
-          </div>
+   <div className="min-h-screen flex items-center justify-center bg-gray-100">
+  <div className="w-full max-w-6xl bg-orange shadow-lg rounded-xl overflow-hidden grid grid-cols-1 md:grid-cols-2">
+    
+    {/* Form Section */}
+    <div className="p-8 flex flex-col justify-center bg-red-500">
+      <div className="text-center mb-6">
+        <div className="flex justify-center mb-4">
+          <img src={Logo} alt="Logo" className="w-16 h-16" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-800">Selamat Datang</h1>
+        <p className="text-gray-500">Silakan masuk ke akun Anda</p>
+      </div>
 
-          <form onSubmit={handleLogin}>
-            {/* Email Input */}
-            <div className="input-group">
-              <label htmlFor="email" className="input-label">Email</label>
-              <div className="input-wrapper">
-                <div className="input-icon"></div>
-                <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  placeholder="Masukkan email Anda"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            </div>
-
-            {/* Password Input */}
-            <div className="input-group">
-              <label htmlFor="password" className="input-label">Password</label>
-              <div className="input-wrapper">
-                <div className="input-icon password-icon"></div>
-                <input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  name="password"
-                  placeholder="Masukkan password Anda"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  className={`password-toggle ${showPassword ? 'hidden' : ''}`}
-                  onClick={togglePasswordVisibility}
-                  aria-label="Toggle password visibility"
-                ></button>
-              </div>
-            </div>
-
-            {/* Error Message */}
-            {error && (
-              <div className="message error">
-                {error}
-              </div>
-            )}
-
-            {/* Success Message */}
-            {successMessage && (
-              <div className="message success">
-                {successMessage}
-              </div>
-            )}
-
-            {/* Submit Button */}
-            <button
-              className="btn btn-primary"
-              type="submit"
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <>
-                  <div className="loading-spinner"></div>
-                  <span>Memproses...</span>
-                </>
-              ) : (
-                "Masuk"
-              )}
-            </button>
-
-            {/* Reset Password Button */}
-            <button
-              className="btn btn-secondary"
-              type="button"
-              onClick={handleResetPassword}
-              disabled={isResetLoading}
-            >
-              {isResetLoading ? (
-                <>
-                  <div className="loading-spinner"></div>
-                  <span>Mengirim...</span>
-                </>
-              ) : (
-                "Lupa Password?"
-              )}
-            </button>
-          </form>
+      <form onSubmit={handleLogin} className="space-y-5">
+        {/* Email */}
+        <div>
+          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1 ">
+            Email
+          </label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            placeholder="Masukkan email Anda"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+            disabled={isLoading}
+            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white disabled:bg-gray-800"
+          />
         </div>
 
-        {/* Hero Section */}
-        <div className="hero-section">
-          <div className="hero-content">
-            <div className="hero-logo"><div className="hero-logo">
-              <img src={Logo} alt="Logo" className="w-20 h-20" />
-            </div></div>
-            <h2 className="hero-title">Sistem Manajemen</h2>
-            <p className="hero-description">
-              Platform terpadu untuk mengelola operasional bisnis Anda dengan efisien dan modern
-            </p>
-
-            {/* Features Grid */}
-            <div className="hero-features">
-              <div className="hero-feature">
-                <div className="hero-feature-icon"></div>
-                <p className="hero-feature-text">Dashboard Analytics</p>
-              </div>
-              <div className="hero-feature">
-                <div className="hero-feature-icon"></div>
-                <p className="hero-feature-text">Real-time Monitoring</p>
-              </div>
-              <div className="hero-feature">
-                <div className="hero-feature-icon"></div>
-                <p className="hero-feature-text">Multi-role Access</p>
-              </div>
-              <div className="hero-feature">
-                <div className="hero-feature-icon"></div>
-                <p className="hero-feature-text">Secure Authentication</p>
-              </div>
-            </div>
+        {/* Password */}
+        <div>
+          <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            Password
+          </label>
+          <div className="relative">
+            <input
+              id="password"
+              type={showPassword ? "text" : "password"}
+              name="password"
+              placeholder="Masukkan password Anda"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white disabled:bg-gray-800"
+            />
+            <button
+              type="button"
+              onClick={togglePasswordVisibility}
+              className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+              aria-label="Toggle password visibility"
+            >
+              👁
+            </button>
           </div>
+        </div>
+
+        {/* Error Message */}
+        {error && <div className="text-red-500 text-sm">{error}</div>}
+
+        {/* Success Message */}
+        {successMessage && <div className="text-green-500 text-sm">{successMessage}</div>}
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={isLoading}
+          className="w-full flex justify-center items-center gap-2 bg-white text-black py-2 rounded-lg hover:bg-red-700 disabled:bg-gray-400"
+        >
+          {isLoading ? "Memproses..." : "Masuk"}
+        </button>
+
+        {/* Reset Password */}
+        <button
+          type="button"
+          onClick={handleResetPassword}
+          disabled={isResetLoading}
+          className="w-full flex justify-center items-center gap-2 bg-gray-200 text-gray-700 py-2 rounded-lg hover:bg-gray-300 disabled:bg-gray-300"
+        >
+          {isResetLoading ? "Mengirim..." : "Lupa Password?"}
+        </button>
+      </form>
+    </div>
+
+    {/* Hero Section */}
+    <div className="bg-blue-50 p-10 flex flex-col justify-center text-center">
+      <div className="flex justify-center mb-6">
+        <img src={Logo} alt="Logo" className="w-20 h-20" />
+      </div>
+      <h2 className="text-2xl font-bold text-blue-700 mb-2">Sistem Manajemen</h2>
+      <p className="text-gray-600 mb-8">
+        Platform terpadu untuk mengelola operasional bisnis Anda dengan efisien dan modern
+      </p>
+
+      {/* Features Grid */}
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white shadow p-4 rounded-lg">
+          <p className="font-medium">📊 Dashboard Analytics</p>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg">
+          <p className="font-medium">⏱ Real-time Monitoring</p>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg">
+          <p className="font-medium">👥 Multi-role Access</p>
+        </div>
+        <div className="bg-white shadow p-4 rounded-lg">
+          <p className="font-medium">🔒 Secure Authentication</p>
         </div>
       </div>
     </div>
+  </div>
+</div>
+
   );
 };
 
