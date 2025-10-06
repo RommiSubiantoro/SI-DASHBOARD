@@ -8,22 +8,26 @@ import {
   updateDoc,
   deleteDoc,
   doc,
-  onSnapshot
-} from 'firebase/firestore';
-import { createUserWithEmailAndPassword, getAuth, signOut } from 'firebase/auth';
-import { db } from '../firebase';
+  onSnapshot,
+} from "firebase/firestore";
+import {
+  createUserWithEmailAndPassword,
+  getAuth,
+  signOut,
+} from "firebase/auth";
+import { db, firebaseConfig } from "../firebase";
+import { initializeApp } from "firebase/app";
 
 // Import komponen yang sudah dipecah
-import Header from '../components/Header';
-import StatsCards from '../components/StatsCards';
+import Header from "../components/Header";
+import StatsCards from "../components/StatsCards";
 import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
-import ExporttableChart from "../components/ExporttableChart"
+import ExporttableChart from "../components/ExporttableChart";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
-import { useDataManagement } from '../hooks/useDataManagement';
-
+import { useDataManagement } from "../hooks/useDataManagement";
 
 function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -44,7 +48,13 @@ function AdminDashboard() {
   const [editingUnit, setEditingUnit] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [unitForm, setUnitForm] = useState({ name: "" });
-  const [userForm, setUserForm] = useState({ name: "", email: "", password: "", role: "", unitBisnis: "" });
+  const [userForm, setUserForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+    role: "",
+    unitBisnis: "",
+  });
   const [isLoading, setIsLoading] = useState(false);
 
   // Dashboard states
@@ -56,14 +66,17 @@ function AdminDashboard() {
   const [unitFilter, setUnitFilter] = useState("");
 
   const getFilteredUsers = () => {
-    return users.filter(user => {
-      const matchesSearch = searchTerm === "" ||
+    return users.filter((user) => {
+      const matchesSearch =
+        searchTerm === "" ||
         user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+        (user.email &&
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()));
 
       const matchesRole = roleFilter === "" || user.role === roleFilter;
 
-      const matchesUnit = unitFilter === "" ||
+      const matchesUnit =
+        unitFilter === "" ||
         (Array.isArray(user.unitBisnis)
           ? user.unitBisnis.includes(unitFilter)
           : user.unitBisnis === unitFilter);
@@ -73,7 +86,6 @@ function AdminDashboard() {
   };
 
   const filteredUsers = getFilteredUsers();
-
 
   // Fungsi untuk reset filters
   const handleResetFilters = () => {
@@ -88,7 +100,7 @@ function AdminDashboard() {
     isLoading: dataLoading,
     calculateStats,
     exportToExcel,
-    importFromExcelToFirebase
+    importFromExcelToFirebase,
   } = useDataManagement({
     "Samudera Makassar Logistik": [],
     "Makassar Jaya Samudera": [],
@@ -97,16 +109,23 @@ function AdminDashboard() {
     "Kendari Jaya Samudera": [],
     "Silkargo Indonesia": [],
     "Samudera Agencies Indonesia": [],
-    "Samudera Kendari Logistik": []
-
+    "Samudera Kendari Logistik": [],
   });
 
   // Dapatkan instance autentikasi
   const auth = getAuth();
 
   // Units mapping untuk dashboard
-  const dashboardUnits = ["Samudera Makassar Logistik", "Makassar Jaya Samudera", "Samudera Perdana", "Masaji Kargosentra Utama", "Kendari Jaya Samudera",
-    "Silkargo Indonesia", "Samudera Agencies Indonesia", "Samudera Kendari Logistik"];
+  const dashboardUnits = [
+    "Samudera Makassar Logistik",
+    "Makassar Jaya Samudera",
+    "Samudera Perdana",
+    "Masaji Kargosentra Utama",
+    "Kendari Jaya Samudera",
+    "Silkargo Indonesia",
+    "Samudera Agencies Indonesia",
+    "Samudera Kendari Logistik",
+  ];
 
   // Data untuk dashboard
   const currentData = data[selectedUnit] || [];
@@ -116,11 +135,11 @@ function AdminDashboard() {
   const fetchUnits = async () => {
     try {
       setLoadingUnits(true);
-      const unitsCollection = collection(db, 'units');
+      const unitsCollection = collection(db, "units");
       const unitsSnapshot = await getDocs(unitsCollection);
-      const unitsList = unitsSnapshot.docs.map(doc => ({
+      const unitsList = unitsSnapshot.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
+        ...doc.data(),
       }));
 
       if (unitsList.length === 0) {
@@ -132,15 +151,14 @@ function AdminDashboard() {
           { name: "Samudera Agencies Indonesia" },
           { name: "Samudera Perdana" },
           { name: "Masaji Kargosentra Utama" },
-          { name: "Silkargo Indonesia" }
+          { name: "Silkargo Indonesia" },
         ];
 
-
         for (const unit of defaultUnits) {
-          await addDoc(collection(db, 'units'), {
+          await addDoc(collection(db, "units"), {
             ...unit,
             createdAt: new Date(),
-            updatedAt: new Date()
+            updatedAt: new Date(),
           });
         }
         await fetchUnits();
@@ -149,8 +167,8 @@ function AdminDashboard() {
 
       setUnits(unitsList);
     } catch (error) {
-      console.error('Error fetching units:', error);
-      alert('Error loading units from database');
+      console.error("Error fetching units:", error);
+      alert("Error loading units from database");
     } finally {
       setLoadingUnits(false);
     }
@@ -159,17 +177,17 @@ function AdminDashboard() {
   // Real-time listeners (existing code)
   useEffect(() => {
     const unsubscribeUnits = onSnapshot(
-      collection(db, 'units'),
+      collection(db, "units"),
       (snapshot) => {
-        const unitsList = snapshot.docs.map(doc => ({
+        const unitsList = snapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
         setUnits(unitsList);
         setLoadingUnits(false);
       },
       (error) => {
-        console.error('Error listening to units:', error);
+        console.error("Error listening to units:", error);
         setLoadingUnits(false);
       }
     );
@@ -178,17 +196,17 @@ function AdminDashboard() {
 
   useEffect(() => {
     const unsubscribeUsers = onSnapshot(
-      collection(db, 'users'),
+      collection(db, "users"),
       (snapshot) => {
-        const usersList = snapshot.docs.map(doc => ({
+        const usersList = snapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data()
+          ...doc.data(),
         }));
         setUsers(usersList);
         setLoadingUsers(false);
       },
       (error) => {
-        console.error('Error listening to users:', error);
+        console.error("Error listening to users:", error);
         setLoadingUsers(false);
       }
     );
@@ -202,11 +220,11 @@ function AdminDashboard() {
       await signOut(auth);
       localStorage.clear();
       sessionStorage.clear();
-      alert('Berhasil logout!');
+      alert("Berhasil logout!");
       window.location.href = "/";
     } catch (error) {
-      console.error('Error during logout:', error);
-      alert('Error during logout: ' + error.message);
+      console.error("Error during logout:", error);
+      alert("Error during logout: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -228,7 +246,7 @@ function AdminDashboard() {
         const message = await importFromExcelToFirebase(selectedUnit, file);
         alert("✅ " + message);
         // Reset file input
-        event.target.value = '';
+        event.target.value = "";
       } catch (error) {
         alert("❌ " + error);
       }
@@ -243,7 +261,7 @@ function AdminDashboard() {
     let totalRecords = 0;
     let totalTargets = 0;
 
-    Object.values(data).forEach(unitData => {
+    Object.values(data).forEach((unitData) => {
       if (unitData && unitData.length > 0) {
         const unitStats = calculateStats(unitData);
         totalRevenue += unitStats.totalRevenue;
@@ -258,7 +276,7 @@ function AdminDashboard() {
       totalRevenue,
       totalExpenses,
       totalAct2025,
-      avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0
+      avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
     };
   };
 
@@ -287,52 +305,57 @@ function AdminDashboard() {
       setIsLoading(true);
 
       if (editingUnit) {
-        const unitRef = doc(db, 'units', editingUnit.id);
+        const unitRef = doc(db, "units", editingUnit.id);
         await updateDoc(unitRef, {
           name: unitForm.name,
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
-        alert('Unit bisnis berhasil diupdate!');
+        alert("Unit bisnis berhasil diupdate!");
       } else {
-        await addDoc(collection(db, 'units'), {
+        await addDoc(collection(db, "units"), {
           name: unitForm.name,
           createdAt: new Date(),
-          updatedAt: new Date()
+          updatedAt: new Date(),
         });
-        alert('Unit bisnis berhasil ditambahkan!');
+        alert("Unit bisnis berhasil ditambahkan!");
       }
       setShowUnitModal(false);
       setUnitForm({ name: "" });
       setEditingUnit(null);
     } catch (error) {
-      console.error('Error saving unit:', error);
-      alert('Error saving unit to database');
+      console.error("Error saving unit:", error);
+      alert("Error saving unit to database");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteUnit = async (unitToDelete) => {
-    const usersUsingUnit = users.filter(user =>
+    const usersUsingUnit = users.filter((user) =>
       Array.isArray(user.unitBisnis)
         ? user.unitBisnis.includes(unitToDelete.name)
         : user.unitBisnis === unitToDelete.name
     );
 
-
     if (usersUsingUnit.length > 0) {
-      alert(`Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya.`);
+      alert(
+        `Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya.`
+      );
       return;
     }
 
-    if (window.confirm(`Apakah Anda yakin ingin menghapus unit "${unitToDelete.name}"?`)) {
+    if (
+      window.confirm(
+        `Apakah Anda yakin ingin menghapus unit "${unitToDelete.name}"?`
+      )
+    ) {
       try {
         setIsLoading(true);
-        await deleteDoc(doc(db, 'units', unitToDelete.id));
-        alert('Unit bisnis berhasil dihapus!');
+        await deleteDoc(doc(db, "units", unitToDelete.id));
+        alert("Unit bisnis berhasil dihapus!");
       } catch (error) {
-        console.error('Error deleting unit:', error);
-        alert('Error deleting unit from database');
+        console.error("Error deleting unit:", error);
+        alert("Error deleting unit from database");
       } finally {
         setIsLoading(false);
       }
@@ -346,7 +369,9 @@ function AdminDashboard() {
       return;
     }
 
-    if (!window.confirm(`Yakin ingin menghapus semua records di ${unitName}?`)) {
+    if (
+      !window.confirm(`Yakin ingin menghapus semua records di ${unitName}?`)
+    ) {
       return;
     }
 
@@ -361,7 +386,6 @@ function AdminDashboard() {
 
       await Promise.all(deletePromises);
       console.log(`All records in "${unitName}" deleted successfully`);
-
     } catch (error) {
       console.error("Error deleting records:", error);
       alert("❌ Gagal menghapus records: " + error.message);
@@ -370,21 +394,14 @@ function AdminDashboard() {
     }
   };
 
-  // User management functions (existing code)
   const handleAddUser = () => {
     setEditingUser(null);
-    setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: [] });
-    setShowUserModal(true);
-  };
-
-  const handleEditUser = (user) => {
-    setEditingUser(user);
     setUserForm({
-      name: user.name,
-      email: user.email || "",
+      name: "",
+      email: "",
       password: "",
-      role: user.role,
-      unitBisnis: user.unitBisnis || []
+      role: "",
+      unitBisnis: [],
     });
     setShowUserModal(true);
   };
@@ -393,8 +410,9 @@ function AdminDashboard() {
     if (
       userForm.name.trim() === "" ||
       userForm.role.trim() === "" ||
-      userForm.unitBisnis.length === 0 || // harus ada minimal 1 unit
-      (!editingUser && (userForm.email.trim() === "" || userForm.password.trim() === ""))
+      userForm.unitBisnis.length === 0 ||
+      (!editingUser &&
+        (userForm.email.trim() === "" || userForm.password.trim() === ""))
     ) {
       alert("Semua field harus diisi dan pilih minimal 1 unit bisnis!");
       return;
@@ -404,25 +422,26 @@ function AdminDashboard() {
       setIsLoading(true);
 
       if (editingUser) {
+        // Update user lama
         const userRef = doc(db, "users", editingUser.id);
-        const updateData = {
+        await updateDoc(userRef, {
           name: userForm.name,
           role: userForm.role,
-          unitBisnis: userForm.unitBisnis, // simpan array
+          unitBisnis: userForm.unitBisnis,
           updatedAt: new Date(),
-        };
-        if (userForm.email.trim() !== "") {
-          updateData.email = userForm.email;
-        }
-
-        await updateDoc(userRef, updateData);
+        });
         alert("User berhasil diupdate!");
       } else {
+        // ✅ Gunakan secondaryAuth supaya admin tidak logout
+        const appSecondary = initializeApp(firebaseConfig, "Secondary");
+        const secondaryAuth = getAuth(appSecondary);
+
         const userCredential = await createUserWithEmailAndPassword(
-          auth,
+          secondaryAuth,
           userForm.email,
           userForm.password
         );
+
         const uid = userCredential.user.uid;
 
         await addDoc(collection(db, "users"), {
@@ -430,15 +449,24 @@ function AdminDashboard() {
           name: userForm.name,
           email: userForm.email,
           role: userForm.role,
-          unitBisnis: userForm.unitBisnis, // simpan array
+          unitBisnis: userForm.unitBisnis,
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-        alert("User berhasil ditambahkan!");
+
+        await secondaryAuth.signOut(); // logout dari auth kedua agar admin tetap login
+        alert("✅ User baru berhasil ditambahkan tanpa logout admin!");
       }
 
+      // Reset form dan modal
       setShowUserModal(false);
-      setUserForm({ name: "", email: "", password: "", role: "", unitBisnis: [] });
+      setUserForm({
+        name: "",
+        email: "",
+        password: "",
+        role: "",
+        unitBisnis: [],
+      });
       setEditingUser(null);
     } catch (error) {
       console.error("Error saving user:", error);
@@ -448,16 +476,15 @@ function AdminDashboard() {
     }
   };
 
-
   const handleDeleteUser = async (id) => {
     if (window.confirm("Apakah Anda yakin ingin menghapus user ini?")) {
       try {
         setIsLoading(true);
-        await deleteDoc(doc(db, 'users', id));
-        alert('User berhasil dihapus!');
+        await deleteDoc(doc(db, "users", id));
+        alert("User berhasil dihapus!");
       } catch (error) {
-        console.error('Error deleting user:', error);
-        alert('Error deleting user from database');
+        console.error("Error deleting user:", error);
+        alert("Error deleting user from database");
       } finally {
         setIsLoading(false);
       }
@@ -466,15 +493,20 @@ function AdminDashboard() {
 
   // Export functions (existing code)
   const handleExportUnits = () => {
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "No,Nama Unit,Jumlah User\n"
-      + units.map((unit, index) => {
-        const userCount = users.filter(user =>
-          Array.isArray(user.unitBisnis) && user.unitBisnis.includes(unit.name)
-        ).length;
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "No,Nama Unit,Jumlah User\n" +
+      units
+        .map((unit, index) => {
+          const userCount = users.filter(
+            (user) =>
+              Array.isArray(user.unitBisnis) &&
+              user.unitBisnis.includes(unit.name)
+          ).length;
 
-        return `${index + 1},"${unit.name}",${userCount}`;
-      }).join("\n");
+          return `${index + 1},"${unit.name}",${userCount}`;
+        })
+        .join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -486,11 +518,21 @@ function AdminDashboard() {
   };
 
   const handleExportUsers = () => {
-    const csvContent = "data:text/csv;charset=utf-8,"
-      + "No,Nama,Email,Role,Unit Bisnis\n"
-      + users.map((user, index) =>
-        `${index + 1},"${user.name}","${user.email || '-'}","${user.role}","${Array.isArray(user.unitBisnis) ? user.unitBisnis.join("; ") : (user.unitBisnis || '-')}"`
-      ).join("\n");
+    const csvContent =
+      "data:text/csv;charset=utf-8," +
+      "No,Nama,Email,Role,Unit Bisnis\n" +
+      users
+        .map(
+          (user, index) =>
+            `${index + 1},"${user.name}","${user.email || "-"}","${
+              user.role
+            }","${
+              Array.isArray(user.unitBisnis)
+                ? user.unitBisnis.join("; ")
+                : user.unitBisnis || "-"
+            }"`
+        )
+        .join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -503,40 +545,44 @@ function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-
       <div className="flex  ">
         {/* Sidebar */}
         <div className="w-64 fixed bg-red-500 shadow-lg border-r border-gray-100 min-h-screen flex flex-col justify-between ">
           {/* Bagian atas */}
           <div className="p-6">
-            <h2 className="text-2xl font-bold text-white mb-8 px-7">Admin Panel</h2>
+            <h2 className="text-2xl font-bold text-white mb-8 px-7">
+              Admin Panel
+            </h2>
 
             <nav className="space-y-2">
               <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "dashboard"
-                  ? "text-white bg-red-600 shadow-md"
-                  : "text-white hover:bg-red-400"
-                  }`}
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  activePage === "dashboard"
+                    ? "text-white bg-red-600 shadow-md"
+                    : "text-white hover:bg-red-400"
+                }`}
                 onClick={() => setActivePage("dashboard")}
               >
                 📊 Dashboard
               </button>
 
               <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "unit"
-                  ? "text-white bg-red-600 shadow-md"
-                  : "text-white hover:bg-red-400"
-                  }`}
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  activePage === "unit"
+                    ? "text-white bg-red-600 shadow-md"
+                    : "text-white hover:bg-red-400"
+                }`}
                 onClick={() => setActivePage("unit")}
               >
                 🏢 Manage Unit Bisnis
               </button>
 
               <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${activePage === "user"
-                  ? "text-white bg-red-600 shadow-md"
-                  : "text-white hover:bg-red-400"
-                  }`}
+                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+                  activePage === "user"
+                    ? "text-white bg-red-600 shadow-md"
+                    : "text-white hover:bg-red-400"
+                }`}
                 onClick={() => setActivePage("user")}
               >
                 👥 Manage User
@@ -575,7 +621,9 @@ function AdminDashboard() {
 
               {/* Stats overview untuk semua unit */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Overview Semua Unit</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                  Overview Semua Unit
+                </h3>
                 <StatsCards
                   totalRevenue={allUnitsStats.totalRevenue}
                   totalExpenses={allUnitsStats.totalExpenses}
@@ -585,14 +633,16 @@ function AdminDashboard() {
                     revenue: "Total Act 2024 (All Units)",
                     expenses: "Total Budget (All Units)",
                     act2025: "Total Act 2025 (All Units)",
-                    avgTarget: "VAR YTD (All Units)"
+                    avgTarget: "VAR YTD (All Units)",
                   }}
                 />
               </div>
 
               {/* Stats cards untuk unit terpilih */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Detail Unit: {selectedUnit}</h3>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">
+                  Detail Unit: {selectedUnit}
+                </h3>
                 <StatsCards
                   totalRevenue={stats.totalRevenue}
                   totalExpenses={stats.totalExpenses}
@@ -602,7 +652,7 @@ function AdminDashboard() {
                     revenue: `Act 2024 ${selectedUnit}`,
                     expenses: `Budget ${selectedUnit}`,
                     act2025: `Act 2025 ${selectedUnit}`,
-                    avgTarget: `VAR YTD ${selectedUnit}`
+                    avgTarget: `VAR YTD ${selectedUnit}`,
                   }}
                 />
               </div>
@@ -628,13 +678,14 @@ function AdminDashboard() {
                     </div>
 
                     <div className="flex-1 p-2 shadow rounded-lg bg-white">
-                      <Barchart data={currentData} selectedYear={selectedYear} />
+                      <Barchart
+                        data={currentData}
+                        selectedYear={selectedYear}
+                      />
                     </div>
                   </div>
                 </ExporttableChart>
               </div>
-
-
             </div>
           )}
 
@@ -642,7 +693,9 @@ function AdminDashboard() {
           {activePage === "unit" && (
             <div className="space-y-6 min-h-screen mt-12">
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">Manage Unit Bisnis</h1>
+                <h1 className="text-2xl font-bold text-gray-800 mb-6">
+                  Manage Unit Bisnis
+                </h1>
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-3 mb-6">
@@ -653,7 +706,6 @@ function AdminDashboard() {
                   >
                     ➕ Tambah Unit
                   </button>
-
                 </div>
 
                 {/* Loading State */}
@@ -668,34 +720,55 @@ function AdminDashboard() {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-100 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">No</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama Unit</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Jumlah User</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            No
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Nama Unit
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Jumlah User
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Aksi
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {units.length === 0 ? (
                           <tr>
-                            <td colSpan="5" className="px-4 py-8 text-center text-gray-500">
-                              Belum ada unit bisnis. Tambahkan unit bisnis pertama Anda!
+                            <td
+                              colSpan="5"
+                              className="px-4 py-8 text-center text-gray-500"
+                            >
+                              Belum ada unit bisnis. Tambahkan unit bisnis
+                              pertama Anda!
                             </td>
                           </tr>
                         ) : (
                           units.map((unit, index) => {
-                            const userCount = users.filter(user =>
-                              Array.isArray(user.unitBisnis) && user.unitBisnis.includes(unit.name)
+                            const userCount = users.filter(
+                              (user) =>
+                                Array.isArray(user.unitBisnis) &&
+                                user.unitBisnis.includes(unit.name)
                             ).length;
 
                             return (
                               <tr key={unit.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-gray-900">{index + 1}</td>
-                                <td className="px-4 py-3 text-gray-900 font-medium">{unit.name}</td>
+                                <td className="px-4 py-3 text-gray-900">
+                                  {index + 1}
+                                </td>
+                                <td className="px-4 py-3 text-gray-900 font-medium">
+                                  {unit.name}
+                                </td>
                                 <td className="px-4 py-3">
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${userCount > 0
-                                    ? "bg-green-100 text-green-800"
-                                    : "bg-gray-100 text-gray-800"
-                                    }`}>
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      userCount > 0
+                                        ? "bg-green-100 text-green-800"
+                                        : "bg-gray-100 text-gray-800"
+                                    }`}
+                                  >
                                     {userCount} user
                                   </span>
                                 </td>
@@ -717,7 +790,9 @@ function AdminDashboard() {
                                       Delete
                                     </button>
                                     <button
-                                      onClick={() => handleDeleteAllRecords(unit.name)}
+                                      onClick={() =>
+                                        handleDeleteAllRecords(unit.name)
+                                      }
                                       className="px-3 py-1 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
                                       disabled={isLoading}
                                     >
@@ -740,7 +815,6 @@ function AdminDashboard() {
           {/* User Management Page */}
           {activePage === "user" && (
             <div className="space-y-6 min-h-screen mt-12">
-
               {/* Search and Filter Section */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
                 <div className="space-y-4">
@@ -754,7 +828,9 @@ function AdminDashboard() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
-                      <span className="absolute left-3 top-2.5 text-gray-400">🔍</span>
+                      <span className="absolute left-3 top-2.5 text-gray-400">
+                        🔍
+                      </span>
                     </div>
 
                     {/* Role Filter */}
@@ -797,7 +873,8 @@ function AdminDashboard() {
                   {/* Search Results Info */}
                   <div className="flex flex-wrap items-center gap-4 text-sm">
                     <span className="text-gray-700 font-medium">
-                      Menampilkan {filteredUsers.length} dari {users.length} user
+                      Menampilkan {filteredUsers.length} dari {users.length}{" "}
+                      user
                     </span>
 
                     {/* Active Filters */}
@@ -865,7 +942,8 @@ function AdminDashboard() {
                 <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 text-yellow-800">
                     <span className="text-lg">⚠️</span>
-                    <strong>Peringatan:</strong> Anda perlu membuat unit bisnis terlebih dahulu sebelum menambahkan user.
+                    <strong>Peringatan:</strong> Anda perlu membuat unit bisnis
+                    terlebih dahulu sebelum menambahkan user.
                   </div>
                 </div>
               )}
@@ -882,55 +960,108 @@ function AdminDashboard() {
                     <table className="w-full text-sm">
                       <thead className="bg-gray-100 border-b border-gray-200">
                         <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">No</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Email</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Role</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Unit Bisnis</th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            No
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Nama
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Email
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Role
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Unit Bisnis
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Aksi
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
                         {filteredUsers.length === 0 ? (
                           <tr>
-                            <td colSpan="6" className="px-4 py-8 text-center text-gray-500">
+                            <td
+                              colSpan="6"
+                              className="px-4 py-8 text-center text-gray-500"
+                            >
                               {users.length === 0
                                 ? "Belum ada user. Tambahkan user pertama Anda!"
-                                : "Tidak ada user yang sesuai dengan pencarian."
-                              }
+                                : "Tidak ada user yang sesuai dengan pencarian."}
                             </td>
                           </tr>
                         ) : (
                           filteredUsers.map((user, index) => (
                             <tr key={user.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 text-gray-900">{index + 1}</td>
+                              <td className="px-4 py-3 text-gray-900">
+                                {index + 1}
+                              </td>
                               <td className="px-4 py-3">
-                                <span className={searchTerm && user.name.toLowerCase().includes(searchTerm.toLowerCase()) ? "bg-yellow-200" : ""}>
+                                <span
+                                  className={
+                                    searchTerm &&
+                                    user.name
+                                      .toLowerCase()
+                                      .includes(searchTerm.toLowerCase())
+                                      ? "bg-yellow-200"
+                                      : ""
+                                  }
+                                >
                                   {user.name}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-gray-700">
-                                <span className={searchTerm && user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase()) ? "bg-yellow-200" : ""}>
-                                  {user.email || '-'}
+                                <span
+                                  className={
+                                    searchTerm &&
+                                    user.email &&
+                                    user.email
+                                      .toLowerCase()
+                                      .includes(searchTerm.toLowerCase())
+                                      ? "bg-yellow-200"
+                                      : ""
+                                  }
+                                >
+                                  {user.email || "-"}
                                 </span>
                               </td>
                               <td className="px-4 py-3">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${user.role === 'Super Admin' ? 'bg-red-100 text-red-800' :
-                                  user.role === 'Manager' ? 'bg-purple-100 text-purple-800' :
-                                    user.role === 'Supervisor' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'
-                                  } ${roleFilter === user.role ? 'ring-2 ring-blue-300' : ''}`}>
+                                <span
+                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                    user.role === "Super Admin"
+                                      ? "bg-red-100 text-red-800"
+                                      : user.role === "Manager"
+                                      ? "bg-purple-100 text-purple-800"
+                                      : user.role === "Supervisor"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-gray-100 text-gray-800"
+                                  } ${
+                                    roleFilter === user.role
+                                      ? "ring-2 ring-blue-300"
+                                      : ""
+                                  }`}
+                                >
                                   {user.role}
                                 </span>
                               </td>
                               <td className="px-4 py-3 text-gray-700">
-                                <span className={
-                                  Array.isArray(user.unitBisnis)
-                                    ? (user.unitBisnis.includes(unitFilter) ? "bg-yellow-200" : "")
-                                    : (unitFilter === user.unitBisnis ? "bg-yellow-200" : "")
-                                }>
-                                  {Array.isArray(user.unitBisnis) ? user.unitBisnis.join(", ") : (user.unitBisnis || "-")}
+                                <span
+                                  className={
+                                    Array.isArray(user.unitBisnis)
+                                      ? user.unitBisnis.includes(unitFilter)
+                                        ? "bg-yellow-200"
+                                        : ""
+                                      : unitFilter === user.unitBisnis
+                                      ? "bg-yellow-200"
+                                      : ""
+                                  }
+                                >
+                                  {Array.isArray(user.unitBisnis)
+                                    ? user.unitBisnis.join(", ")
+                                    : user.unitBisnis || "-"}
                                 </span>
-
                               </td>
                               <td className="px-4 py-3">
                                 <div className="flex gap-2">
@@ -966,18 +1097,25 @@ function AdminDashboard() {
       {/* Modals */}
       {showUnitModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full" onClick={e => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-4">
                 {editingUnit ? "Edit Unit Bisnis" : "Tambah Unit Bisnis"}
               </h2>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">Nama Unit:</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nama Unit:
+                </label>
                 <input
                   type="text"
                   value={unitForm.name}
-                  onChange={(e) => setUnitForm({ ...unitForm, name: e.target.value })}
+                  onChange={(e) =>
+                    setUnitForm({ ...unitForm, name: e.target.value })
+                  }
                   placeholder="Masukkan nama unit bisnis"
                   disabled={isLoading}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
@@ -990,7 +1128,7 @@ function AdminDashboard() {
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Saving...' : (editingUnit ? "Update" : "Simpan")}
+                  {isLoading ? "Saving..." : editingUnit ? "Update" : "Simpan"}
                 </button>
                 <button
                   onClick={() => setShowUnitModal(false)}
@@ -1007,7 +1145,10 @@ function AdminDashboard() {
 
       {showUserModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="p-6">
               <h2 className="text-xl font-bold text-gray-800 mb-6">
                 {editingUser ? "Edit User" : "Tambah User"}
@@ -1015,11 +1156,15 @@ function AdminDashboard() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Nama:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nama:
+                  </label>
                   <input
                     type="text"
                     value={userForm.name}
-                    onChange={(e) => setUserForm({ ...userForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setUserForm({ ...userForm, name: e.target.value })
+                    }
                     placeholder="Masukkan nama user"
                     disabled={isLoading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
@@ -1029,22 +1174,30 @@ function AdminDashboard() {
                 {!editingUser && (
                   <>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Email:</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email:
+                      </label>
                       <input
                         type="email"
                         value={userForm.email}
-                        onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, email: e.target.value })
+                        }
                         placeholder="Masukkan email"
                         disabled={isLoading}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                       />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Password:</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Password:
+                      </label>
                       <input
                         type="password"
                         value={userForm.password}
-                        onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                        onChange={(e) =>
+                          setUserForm({ ...userForm, password: e.target.value })
+                        }
                         placeholder="Masukkan password"
                         disabled={isLoading}
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
@@ -1054,10 +1207,14 @@ function AdminDashboard() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role:
+                  </label>
                   <select
                     value={userForm.role}
-                    onChange={(e) => setUserForm({ ...userForm, role: e.target.value })}
+                    onChange={(e) =>
+                      setUserForm({ ...userForm, role: e.target.value })
+                    }
                     disabled={isLoading}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                   >
@@ -1070,13 +1227,24 @@ function AdminDashboard() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Pilih Unit Bisnis:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Pilih Unit Bisnis:
+                  </label>
                   <Select
                     isMulti
-                    options={units.map((unit) => ({ value: unit.name, label: unit.name }))}
-                    value={userForm.unitBisnis.map((u) => ({ value: u, label: u }))}
+                    options={units.map((unit) => ({
+                      value: unit.name,
+                      label: unit.name,
+                    }))}
+                    value={userForm.unitBisnis.map((u) => ({
+                      value: u,
+                      label: u,
+                    }))}
                     onChange={(selected) =>
-                      setUserForm({ ...userForm, unitBisnis: selected.map((s) => s.value) })
+                      setUserForm({
+                        ...userForm,
+                        unitBisnis: selected.map((s) => s.value),
+                      })
                     }
                     isDisabled={isLoading}
                     className="text-sm"
@@ -1090,7 +1258,7 @@ function AdminDashboard() {
                   className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
                   disabled={isLoading}
                 >
-                  {isLoading ? 'Saving...' : (editingUser ? "Update" : "Simpan")}
+                  {isLoading ? "Saving..." : editingUser ? "Update" : "Simpan"}
                 </button>
                 <button
                   onClick={() => setShowUserModal(false)}
