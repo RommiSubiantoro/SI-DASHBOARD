@@ -1,25 +1,91 @@
-import React, { useState } from 'react';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase'; // Sesuaikan dengan path Anda
+import React, { useState, useEffect, useMemo } from "react";
+import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
+import { db, auth } from "../firebase";
+import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
 
 // Import komponen yang sudah dipecah
-import Header from '../components/Header';
-import ControlButtons from '../components/ControlButtons';
-import StatsCards from '../components/StatsCards';
-import DataTable from '../components/DataTable';
-import Piechart from '../components/Piechart';
+import Header from "../components/Header";
+import ControlButtons from "../components/ControlButtons";
+import StatsCards from "../components/StatsCards";
+import DataTable from "../components/DataTable";
+import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Navbar from "../components/navbar";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
-import { useDataManagement, useFormManagement } from '../hooks/useDataManagement';
-
+import { useDataManagement } from "../hooks/useDataManagement";
 
 const UserDashboard = () => {
-  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
+  const [assignedUnits, setAssignedUnits] = useState([]);
+  const [isUserDataLoading, setIsUserDataLoading] = useState(true);
+
+  // 🔹 Fetch semua unit bisnis
+  useEffect(() => {
+    const fetchAssignedUnits = async () => {
+      try {
+        onAuthStateChanged(auth, async (user) => {
+          if (user) {
+            // Ambil dokumen user sesuai UID
+            const q = query(
+              collection(db, "users"),
+              where("uid", "==", user.uid)
+            );
+            const snapshot = await getDocs(q);
+
+            if (!snapshot.empty) {
+              const userData = snapshot.docs[0].data();
+
+              // ✅ Tambahkan baris ini
+              const units = Array.isArray(userData.unitBisnis)
+                ? userData.unitBisnis
+                : [];
+
+              setAssignedUnits(units);
+              if (units.length > 0 && !selectedUnit) setSelectedUnit(units[0]);
+            } else {
+              console.warn("Tidak ditemukan user dengan UID:", user.uid);
+            }
+          } else {
+            console.warn("User belum login");
+          }
+        });
+      } catch (err) {
+        console.error("Error fetching assigned units:", err);
+      }
+    };
+
+    fetchAssignedUnits();
+  }, [auth, selectedUnit]);
+
+  const initialDataMap = useMemo(() => {
+    return assignedUnits.reduce((acc, unit) => {
+      acc[unit] = [];
+      return acc;
+    }, {});
+  }, [assignedUnits]);
+
+  useEffect(() => {
+    const unsubscribeUnits = onSnapshot(
+      collection(db, "units"),
+      (snapshot) => {
+        const unitsList = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setUnits(unitsList);
+        setLoadingUnits(false);
+      },
+      (error) => {
+        console.error("Error listening to units:", error);
+        setLoadingUnits(false);
+      }
+    );
+    return () => unsubscribeUnits();
+  }, []);
 
   // Menggunakan Firebase-enabled custom hooks
   const {
@@ -29,42 +95,12 @@ const UserDashboard = () => {
     addDataToFirebase,
     exportToExcel,
     importFromExcelToFirebase,
-    getPieChartData
-  } = useDataManagement({
-    "Samudera Makassar Logistik": [],
-    "Makassar Jaya Samudera": [],
-    "Samudera Perdana": [],
-    "Masaji Kargosentra Utama": [],
-    "Kendari Jaya Samudera": [],
-    "Silkargo Indonesia": [],
-    "Samudera Agencies Indonesia": [],
-    "Samudera Kendari Logistik": []
-  });
+    getPieChartData,
+  } = useDataManagement(initialDataMap);
 
-  const {
-    showAddModal,
-    setShowAddModal,
-    newRecord,
-    resetForm,
-    updateField
-  } = useFormManagement();
-
-  // Units mapping untuk dropdown
-  const units = [
-    { key: "Samudera Makassar Logistik", label: "Samudera Makassar Logistik" },
-    { key: "Makassar Jaya Samudera", label: "Makassar Jaya Samudera" },
-    { key: "Samudera Perdana", label: "Samudera Perdana" },
-    { key: "Masaji Kargosentra Utama", label: "Masaji Kargosentra Utama" },
-    { key: "Kendari Jaya Samudera", label: "Kendari Jaya Samudera" },
-    { key: "Silkargo Indonesia", label: "Silkargo Indonesia" },
-    { key: "Samudera Agencies Indonesia", label: "Samudera Agencies Indonesia" },
-    { key: "Samudera Kendari Logistik", label: "Samudera Kendari Logistik" }
-  ];
-
-  // Data untuk unit yang dipilih
-  const currentData = data[selectedUnit] || [];
+  // 🔹 Pastikan currentData aman
+  const currentData = selectedUnit ? data[selectedUnit] || [] : [];
   const stats = calculateStats(currentData);
-
   // Pie chart data
   const pieData = getPieChartData(currentData, selectedMonth);
 
@@ -75,11 +111,11 @@ const UserDashboard = () => {
       await signOut(auth);
       localStorage.clear();
       sessionStorage.clear();
-      alert('Berhasil logout!');
+      alert("Berhasil logout!");
       window.location.href = "/";
     } catch (error) {
-      console.error('Error during logout:', error);
-      alert('Error during logout: ' + error.message);
+      console.error("Error during logout:", error);
+      alert("Error during logout: " + error.message);
     } finally {
       setIsLoading(false);
     }
@@ -94,14 +130,15 @@ const UserDashboard = () => {
     if (result.success) {
       resetForm();
       setShowAddModal(false);
-      console.log('Data added successfully:', result.message);
+      console.log("Data added successfully:", result.message);
     } else {
-      console.error('Failed to add data:', result.message);
+      console.error("Failed to add data:", result.message);
     }
   };
+
   const handleExportExcel = () => {
     if (!selectedUnit) {
-      alert("⚠️ Silakan pilih Unit Bisnis terlebih dahulu sebelum export!");
+      alert("⚠️ Pilih Unit Bisnis dulu sebelum export!");
       return;
     }
     exportToExcel(selectedUnit, currentData);
@@ -117,27 +154,47 @@ const UserDashboard = () => {
   const [importFile, setImportFile] = useState(null);
   const [showImportModal, setShowImportModal] = useState(false);
   const [importUnit, setImportUnit] = useState("");
-
   const handleImportData = async (event) => {
     const file = event.target.files[0];
+    if (!selectedUnit) {
+      alert("⚠️ Pilih Unit Bisnis dulu sebelum import!");
+      return;
+    }
     if (file) {
       try {
         await importFromExcelToFirebase(selectedUnit, file);
-        // Silent success - tidak ada pesan
-        event.target.value = '';
+        alert("✅ Data berhasil diimport!");
+        event.target.value = ""; // reset input file
       } catch (error) {
-        // Silent error - hanya console log
         console.error("Import failed:", error);
+        alert("❌ Gagal import data: " + error.message);
       }
     }
   };
+
+  // useEffect(() => {
+  //   const savedPage = localStorage.getItem("activePage");
+  //   if (savedPage) {
+  //     setActivePage(savedPage); // kalau ada, pakai halaman terakhir
+  //   } else {
+  //     setActivePage("dashboard"); // kalau belum pernah, default ke dashboard
+  //   }
+  // }, []);
+
+  // // Simpan ke localStorage setiap kali ganti halaman
+  // const handlePageChange = (page) => {
+  //   setActivePage(page);
+  //   localStorage.setItem("activePage", page);
+  // };
 
   return (
     <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
       {/* Sidebar */}
       <aside className="h-screen bg-red-500 border-r shadow-lg flex flex-col">
         <div className="p-4 ">
-          <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">User Panel</h2>
+          <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">
+            User Panel
+          </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
@@ -158,7 +215,7 @@ const UserDashboard = () => {
           <Header
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
-            units={units.map((u) => u.key)}
+            units={assignedUnits}
             title="User Dashboard"
           />
 
@@ -204,104 +261,9 @@ const UserDashboard = () => {
               rowsPerPage={25}
             />
           </div>
-
-
         </main>
       </div>
-
-
-
-      {/* Add Data Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">Tambah Data Baru</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Bulan:</label>
-                <select
-                  value={newRecord.month}
-                  onChange={(e) => updateField("month", e.target.value)}
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value="">Pilih Bulan</option>
-                  {[
-                    "Jan",
-                    "Feb",
-                    "Mar",
-                    "Apr",
-                    "May",
-                    "Jun",
-                    "Jul",
-                    "Aug",
-                    "Sep",
-                    "Oct",
-                    "Nov",
-                    "Dec",
-                  ].map((month) => (
-                    <option key={month} value={month}>
-                      {month}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Revenue:</label>
-                <input
-                  type="number"
-                  value={newRecord.revenue}
-                  onChange={(e) => updateField("revenue", e.target.value)}
-                  placeholder="Masukkan revenue"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Expenses:</label>
-                <input
-                  type="number"
-                  value={newRecord.expenses}
-                  onChange={(e) => updateField("expenses", e.target.value)}
-                  placeholder="Masukkan expenses"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">Target:</label>
-                <input
-                  type="number"
-                  value={newRecord.target}
-                  onChange={(e) => updateField("target", e.target.value)}
-                  placeholder="Masukkan target"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowAddModal(false)}
-                disabled={dataLoading}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
-              >
-                Batal
-              </button>
-              <button
-                onClick={handleSubmitData}
-                disabled={dataLoading}
-                className="px-4 py-2 rounded-lg bg-blue-500 text-white hover:bg-blue-600 transition"
-              >
-                {dataLoading ? "Menyimpan..." : "Simpan"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
-
   );
 };
 

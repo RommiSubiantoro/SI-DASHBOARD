@@ -1,8 +1,16 @@
+// src/components/Piechart.jsx
 import React, { useMemo, useState } from "react";
-import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
 
-
-const COLORS = ["#4facfe", "#ff6b6b", "#3ddb97", "#ffa726", "#8b5cf6", "#f59e0b", "#60a5fa", "#ef4444", "#10b981"];
+const COLORS = [
+  "#4facfe","#ff6b6b","#3ddb97","#ffa726","#8b5cf6","#f59e0b","#60a5fa","#ef4444","#10b981",
+];
 
 const MONTHS = [
   { key: "JAN", label: "Jan" },
@@ -19,239 +27,160 @@ const MONTHS = [
   { key: "DEC", label: "Dec" },
 ];
 
-function normalizeMonthInput(val) {
-  if (!val) return "ALL";
-  const s = String(val).trim();
-  if (s.toUpperCase() === "ALL") return "ALL";
-  return s.slice(0, 3).toUpperCase();
-}
-
 function getNumericValue(row, keys) {
   for (const k of keys) {
     if (!(k in row)) continue;
     const raw = row[k];
     if (raw === null || raw === undefined || raw === "") continue;
-
-    // Normalisasi string: hapus spasi & koma
     let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
-
-    // Tangani format (1,000) sebagai negative
     let isNeg = false;
-    if (/^\(.+\)$/.test(s)) {
-      isNeg = true;
-      s = s.replace(/^\(|\)$/g, "");
-    }
-
+    if (/^\(.+\)$/.test(s)) { isNeg = true; s = s.replace(/^\(|\)$/g, ""); }
     let n = Number(s);
     if (Number.isNaN(n)) n = 0;
-    if (isNeg) n = -Math.abs(n);
-    return n;
+    return isNeg ? -Math.abs(n) : n;
   }
   return 0;
 }
 
-export default function Piechart({ data = [], selectedMonth = "All", setSelectedMonth = () => { }, selectedYear = "2025", setSelectedYear = () => { } }) {
+// detects whether incoming data is already aggregated [{name, value, rawValue?}]
+function isAggregatedData(arr) {
+  return Array.isArray(arr) && arr.length > 0 && arr[0] && Object.prototype.hasOwnProperty.call(arr[0], "value") && Object.prototype.hasOwnProperty.call(arr[0], "name");
+}
+
+export default function Piechart({
+  data = [],                // can be raw rows OR aggregated [{name,value}]
+  selectedMonth = "All",
+  setSelectedMonth = () => {},
+  selectedYear = "2025",
+  setSelectedYear = () => {},
+}) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  const normalizedMonth = normalizeMonthInput(selectedMonth);
+  // jika data sudah aggregated -> gunakan langsung; kalau raw -> aggregate
+  const pieData = useMemo(() => {
+    if (!Array.isArray(data) || data.length === 0) return [];
 
-  // Agregasi data berdasarkan kategori (menggunakan nilai absolut)
-  const aggregatedData = useMemo(() => {
+    if (isAggregatedData(data)) {
+      // ensure numbers + rawValue
+      return data
+        .map((d) => ({
+          name: d.name ?? "Unknown",
+          value: Math.abs(Number(d.value) || 0),
+          rawValue: Number(d.rawValue ?? d.value ?? 0),
+        }))
+        .filter((d) => d.value !== 0)
+        .sort((a,b)=> b.value - a.value);
+    }
+
+    // RAW rows -> aggregate by category using selectedMonth
+    const normalizedMonth = (selectedMonth || "All").toString().trim().slice(0,3).toUpperCase();
     const acc = {};
-
     data.forEach((row) => {
-      // cari nama kategori di beberapa kemungkinan header
-      const category = row.CATEGORY ?? row.category ?? row.Category ?? row['ACCOUNT NAME'] ?? row['ACCOUNT NAME '] ?? "Unknown";
-
+      const category = row.CATEGORY ?? row.category ?? row.Category ?? row["ACCOUNT NAME"] ?? row["ACCOUNT NAME "] ?? "Unknown";
       let value = 0;
-      if (normalizedMonth === "ALL") {
+      if (!selectedMonth || selectedMonth.toLowerCase() === "all") {
         MONTHS.forEach((m) => {
-          const n = getNumericValue(row, [
-            m.key,
-            m.label,
-            m.key.toUpperCase(),
-            m.key.toLowerCase(),
-            m.label.toUpperCase(),
-            m.label.toLowerCase()
-          ]);
-          value += n; // pakai nilai asli (bisa minus)
+          value += getNumericValue(row, [m.key, m.label, m.key.toUpperCase(), m.key.toLowerCase(), m.label.toUpperCase(), m.label.toLowerCase()]);
         });
       } else {
-        const n = getNumericValue(row, [
-          normalizedMonth,
-          normalizedMonth.toUpperCase(),
-          normalizedMonth.toLowerCase(),
-          normalizedMonth[0] + normalizedMonth.slice(1).toLowerCase()
-        ]);
-        value = n; // pakai nilai asli
+        // try candidate keys
+        value = getNumericValue(row, [normalizedMonth, normalizedMonth.toUpperCase(), normalizedMonth.toLowerCase(), normalizedMonth[0] + normalizedMonth.slice(1).toLowerCase()]);
       }
-
-
-      if (!acc[category]) acc[category] = 0;
-      acc[category] += value;
+      acc[category] = (acc[category] || 0) + value;
     });
 
-    return acc;
-  }, [data, normalizedMonth]);
-
-  // Ubah jadi array untuk pie chart dan hapus kategori dengan nilai 0
-  let pieData = Object.entries(aggregatedData)
-    .map(([name, value]) => ({
+    const arr = Object.entries(acc).map(([name, rawValue]) => ({
       name,
-      value: Math.abs(value), // biar chart bisa render
-      rawValue: value, // simpan nilai asli (bisa minus)
-    }))
-    .filter((d) => d.value !== 0)
-    .sort((a, b) => b.value - a.value);
+      value: Math.abs(Number(rawValue) || 0),
+      rawValue: Number(rawValue) || 0,
+    })).filter(d => d.value !== 0).sort((a,b)=> b.value - a.value);
 
+    return arr;
+  }, [data, selectedMonth]);
 
-  // Daftar kategori untuk dropdown filter (ambil dari aggregated hasil sekarang)
-  const categories = ["All", ...Object.keys(aggregatedData)];
+  // categories for filter
+  const categories = useMemo(() => ["All", ...new Set(pieData.map(d => d.name))], [pieData]);
 
-  // Jika user memilih 1 kategori -> filter data pie
-  if (selectedCategory !== "All") {
-    pieData = pieData.filter((p) => p.name === selectedCategory);
-  }
+  const filteredPie = selectedCategory === "All" ? pieData : pieData.filter(p => p.name === selectedCategory);
 
-  const totalValue = Object.values(aggregatedData).reduce((a, b) => a + b, 0);
-  const selectedValue = selectedCategory === "All" ? (pieData.reduce((s, p) => s + p.value, 0)) : (pieData.length > 0 ? pieData[0].value : 0);
-  const selectedPercent = totalValue > 0 ? ((selectedValue / totalValue) * 100).toFixed(1) : "0.0";
+  // total used for percent (use absolute totals to avoid zero due to sign cancellation)
+  const totalAbs = pieData.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const selAbs = filteredPie.reduce((s,p) => s + (Number(p.value)||0), 0);
+  const selPercent = totalAbs > 0 ? ((selAbs / totalAbs) * 100).toFixed(1) : "0.0";
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-2xl">
-      {/* Judul */}
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">
-        Pie Chart Kategori
-      </h3>
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">Pie Chart Kategori</h3>
 
-      {/* Kontrol filter */}
-      <div className="mb-6">
-        {/* Bar filter */}
-        <div className="flex flex-wrap gap-3 mb-4 items-center">
-          <select
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            <option value="All">All</option>
-            {MONTHS.map((m) => (
-              <option key={m.key} value={m.label}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+      <div className="mb-4 flex flex-wrap gap-3 items-center">
+        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-3 py-2 border rounded">
+          <option value="All">All</option>
+          {MONTHS.map(m => <option key={m.key} value={m.label}>{m.label}</option>)}
+        </select>
 
-          <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-          </select>
+        <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-3 py-2 border rounded">
+          <option value="2024">2024</option>
+          <option value="2025">2025</option>
+        </select>
 
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
-          >
-            {categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
+        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="px-3 py-2 border rounded">
+          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
 
-        {/* Info Box */}
-        <div className="w-full lg:w-full bg-gray-50 p-4 rounded-lg border border-gray-200">
-          <div className="flex flex-wrap lg:flex-nowrap justify-between items-center">
-            {/* Bagian kiri */}
-            <div className="text-sm font-medium text-gray-700">
-              {selectedCategory !== "All" ? (
-                <>
-                  <p>
-                    {selectedCategory} (
-                    {normalizedMonth === "ALL" ? "All Months" : normalizedMonth}{" "}
-                    {selectedYear})
-                  </p>
-                  <p className="mt-2 text-lg font-semibold text-gray-900">
-                    {selectedPercent}% dari total
-                  </p>
-                </>
-              ) : (
-                <>
-                  <p>Total kategori: {pieData.length}</p>
-                  <p className="mt-2">Total (abs): Rp {Number(totalValue).toLocaleString()}</p>
-                </>
-              )}
-            </div>
-
-            {/* Bagian kanan */}
-            {selectedCategory !== "All" && (
-              <p className="mt-2 lg:mt-0 text-gray-600 text-lg font-semibold">
-                Rp {Number(selectedValue).toLocaleString()}
-              </p>
+      <div className="w-full bg-gray-50 p-4 rounded mb-4 border">
+        <div className="flex justify-between items-center">
+          <div>
+            {selectedCategory === "All" ? (
+              <>
+                <div>Total kategori: {pieData.length}</div>
+                <div className="mt-1">Total (abs): Rp {Number(totalAbs).toLocaleString()}</div>
+              </>
+            ) : (
+              <>
+                <div>{selectedCategory} - {selPercent}%</div>
+                <div className="mt-1">Rp {Number(selAbs).toLocaleString()}</div>
+              </>
             )}
           </div>
         </div>
-
       </div>
 
-
-      {/* Chart + Info */}
-      <div className="flex flex-col lg:flex-row gap-6 items-start">
-        {/* Chart */}
-        <div className="flex-1 w-full lg:w-3/4 h-[380px] text-3">
+      <div className="flex gap-6 items-start">
+        <div className="flex-1 h-[380px]">
           <ResponsiveContainer width="100%" height="100%">
-            <PieChart width={500} height={300}>
+            <PieChart>
               <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                outerRadius={90}
+                data={filteredPie}
                 dataKey="value"
                 nameKey="name"
+                cx="50%" cy="50%"
+                outerRadius={100}
                 labelLine={false}
+                minAngle={5}
               >
-                {pieData.map((entry, index) => (
-                  <Cell
-                    key={`cell-${index}`}
-                    fill={entry.rawValue < 0 ? "#ef4444" : COLORS[index % COLORS.length]}
-                  />
+                {filteredPie.map((entry, idx) => (
+                  <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} fillOpacity={entry.rawValue < 0 ? 0.6 : 1} />
                 ))}
               </Pie>
-
-              <Tooltip
-                formatter={(val, name, props) => {
-                  if (!props || props.dataIndex === undefined) return val;
-                  const item = pieData[props.dataIndex];
-                  return item ? item.rawValue.toLocaleString() : val;
-                }}
-                contentStyle={{ borderRadius: "8px" }}
-              />
-
-
+              <Tooltip formatter={(val, name, props) => {
+                const idx = props && props.dataIndex;
+                const item = typeof filteredPie[idx] !== "undefined" ? filteredPie[idx] : null;
+                return item ? item.rawValue.toLocaleString() : val;
+              }} />
             </PieChart>
-
           </ResponsiveContainer>
         </div>
-        {/* Legend di luar */}
-        <div className="w-full lg:w-1/4 flex flex-col gap-2">
-          {pieData.map((item, index) => (
-            <div key={index} className="flex items-center text-sm">
-              <div
-                className="w-3 h-3 rounded-full mr-2"
-                style={{ backgroundColor: COLORS[index % COLORS.length] }}
-              />
-              <span className="text-gray-700 text-xs">
-                {item.name}: {item.rawValue.toLocaleString()}
-              </span>
+
+        <div className="w-48 flex flex-col gap-2">
+          {filteredPie.map((item, i) => (
+            <div key={i} className="flex items-center text-sm">
+              <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+              <span className="text-gray-700">{item.name}: {item.rawValue.toLocaleString()}</span>
             </div>
           ))}
         </div>
       </div>
     </div>
-
   );
 }
