@@ -1,7 +1,13 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { signOut, getAuth, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
-import { collection, query, where, getDocs, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
 
 // Import komponen yang sudah dipecah
 import Header from "../components/Header";
@@ -10,6 +16,7 @@ import StatsCards from "../components/StatsCards";
 import DataTable from "../components/DataTable";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
+import Linechart from "../components/Linechart";
 import Navbar from "../components/navbar";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
@@ -17,48 +24,43 @@ import { useDataManagement } from "../hooks/useDataManagement";
 
 const UserDashboard = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
   const [assignedUnits, setAssignedUnits] = useState([]);
-  const [isUserDataLoading, setIsUserDataLoading] = useState(true);
+  const [units, setUnits] = useState([]);
+  const [loadingUnits, setLoadingUnits] = useState(false);
 
   // 🔹 Fetch semua unit bisnis
   useEffect(() => {
-    const fetchAssignedUnits = async () => {
-      try {
-        onAuthStateChanged(auth, async (user) => {
-          if (user) {
-            // Ambil dokumen user sesuai UID
-            const q = query(
-              collection(db, "users"),
-              where("uid", "==", user.uid)
-            );
-            const snapshot = await getDocs(q);
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const q = query(collection(db, "users"), where("uid", "==", user.uid));
 
-            if (!snapshot.empty) {
-              const userData = snapshot.docs[0].data();
+        const unsubscribeUser = onSnapshot(q, (snapshot) => {
+          if (!snapshot.empty) {
+            const userData = snapshot.docs[0].data();
 
-              // ✅ Tambahkan baris ini
-              const units = Array.isArray(userData.unitBisnis)
-                ? userData.unitBisnis
-                : [];
+            const units = Array.isArray(userData.unitBisnis)
+              ? userData.unitBisnis
+              : [];
 
-              setAssignedUnits(units);
-              if (units.length > 0 && !selectedUnit) setSelectedUnit(units[0]);
-            } else {
-              console.warn("Tidak ditemukan user dengan UID:", user.uid);
-            }
+            setAssignedUnits(units);
+
+            // kalau belum ada selectedUnit, pilih default
+            if (units.length > 0 && !selectedUnit) setSelectedUnit(units[0]);
           } else {
-            console.warn("User belum login");
+            console.warn("Tidak ditemukan user dengan UID:", user.uid);
           }
         });
-      } catch (err) {
-        console.error("Error fetching assigned units:", err);
-      }
-    };
 
-    fetchAssignedUnits();
+        return () => unsubscribeUser();
+      } else {
+        console.warn("User belum login");
+      }
+    });
+
+    return () => unsubscribeAuth();
   }, [auth, selectedUnit]);
 
   const initialDataMap = useMemo(() => {
@@ -250,6 +252,7 @@ const UserDashboard = () => {
               setSelectedYear={setSelectedYear}
             />
             <Barchart data={currentData} selectedYear={selectedYear} />
+            <Linechart data={currentData} />
           </div>
 
           <div className="bg-white p-6 rounded-xl shadow">
