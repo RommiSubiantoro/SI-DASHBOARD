@@ -31,6 +31,31 @@ const UserDashboard = () => {
   const [units, setUnits] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(false);
 
+  useEffect(() => {
+    if (!selectedUnit) return;
+
+    // 🔥 Dengarkan data realtime per unit
+    const q = query(collection(db, "data"), where("unit", "==", selectedUnit));
+
+    const unsubscribeData = onSnapshot(q, (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      // Asumsikan kamu ingin update ke state `data` milik useDataManagement
+      // Pastikan kamu punya setData dari hook tersebut
+      setData((prev) => ({
+        ...prev,
+        [selectedUnit]: docs,
+      }));
+
+      console.log("Realtime update:", docs);
+    });
+
+    return () => unsubscribeData();
+  }, [selectedUnit]);
+
   // 🔹 Fetch semua unit bisnis
   useEffect(() => {
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {

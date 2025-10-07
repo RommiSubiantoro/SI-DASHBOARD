@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
+import { CheckCircle, XCircle } from "lucide-react";
 import {
   collection,
   getDocs,
@@ -23,7 +24,7 @@ import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import ExporttableChart from "../components/ExporttableChart";
-import Linechart from "../components/Linechart"
+import Linechart from "../components/Linechart";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from "../hooks/useDataManagement";
@@ -46,6 +47,8 @@ function ManagerDashboard() {
   const [selectedYear, setSelectedYear] = useState("2025");
   const [editingUnit, setEditingUnit] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [unitUploads, setUnitUploads] = useState({});
+  const [loadingUploads, setLoadingUploads] = useState(false);
   const [unitForm, setUnitForm] = useState({ name: "" });
   const [userForm, setUserForm] = useState({
     name: "",
@@ -231,6 +234,32 @@ function ManagerDashboard() {
       setIsLoading(false);
     }
   };
+
+  const fetchUnitUploads = async () => {
+    setLoadingUploads(true);
+    try {
+      // 1️⃣ Ambil daftar unit dari koleksi 'units' (karena ini pasti ada datanya)
+      const unitsSnap = await getDocs(collection(db, "units"));
+      const unitNames = unitsSnap.docs.map((doc) => doc.data().name);
+      const counts = {};
+
+      // 2️⃣ Cek tiap unit apakah punya records
+      for (const unitName of unitNames) {
+        const recordsRef = collection(db, "unitData", unitName, "records");
+        const recordsSnap = await getDocs(recordsRef);
+        counts[unitName] = recordsSnap.size;
+      }
+      setUnitUploads(counts);
+    } catch (err) {
+      console.error("❌ Error fetching uploads:", err);
+    } finally {
+      setLoadingUploads(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnitUploads();
+  }, [units]);
 
   // Fungsi untuk menghitung total stats dari semua unit
   const calculateAllUnitsStats = () => {
@@ -659,6 +688,9 @@ function ManagerDashboard() {
                             Jumlah User
                           </th>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Data Upload
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
                             Aksi
                           </th>
                         </tr>
@@ -681,6 +713,8 @@ function ManagerDashboard() {
                                 Array.isArray(user.unitBisnis) &&
                                 user.unitBisnis.includes(unit.name)
                             ).length;
+                            const hasUploads =
+                              (unitUploads[unit.name] || 0) > 0;
 
                             return (
                               <tr key={unit.id} className="hover:bg-gray-50">
@@ -700,6 +734,18 @@ function ManagerDashboard() {
                                   >
                                     {userCount} user
                                   </span>
+                                </td>
+
+                                <td className="p-2 text-center">
+                                  {loadingUploads ? (
+                                    <span className="text-gray-400 italic text-sm">
+                                      Loading...
+                                    </span>
+                                  ) : hasUploads ? (
+                                    <CheckCircle className="text-green-500 inline-block w-5 h-5" />
+                                  ) : (
+                                    <XCircle className="text-red-500 inline-block w-5 h-5" />
+                                  )}
                                 </td>
 
                                 <td className="px-4 py-3">
