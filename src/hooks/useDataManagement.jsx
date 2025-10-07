@@ -16,8 +16,10 @@ export const useDataManagement = (initialData = {}) => {
   const [data, setData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Real-time listener untuk semua unit data
+  // Real-time listener untuk setiap unit bisnis yang diberikan
   useEffect(() => {
+    if (!initialData || Object.keys(initialData).length === 0) return; // tidak ada unit
+
     const unsubscribers = [];
 
     Object.keys(initialData).forEach((unitKey) => {
@@ -29,8 +31,8 @@ export const useDataManagement = (initialData = {}) => {
             ...doc.data(),
           }));
 
-          setData((prevData) => ({
-            ...prevData,
+          setData((prev) => ({
+            ...prev,
             [unitKey]: unitData,
           }));
         },
@@ -42,10 +44,9 @@ export const useDataManagement = (initialData = {}) => {
       unsubscribers.push(unsubscribe);
     });
 
-    return () => {
-      unsubscribers.forEach((unsubscribe) => unsubscribe());
-    };
-  }, [initialData]); // ✅ jalankan ulang jika initialData berubah
+    // Cleanup listener
+    return () => unsubscribers.forEach((unsub) => unsub());
+  }, [JSON.stringify(Object.keys(initialData))]);
 
   const sumMonths = (row) => {
     return (
