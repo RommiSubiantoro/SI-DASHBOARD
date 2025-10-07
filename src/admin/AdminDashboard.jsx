@@ -492,7 +492,7 @@ function AdminDashboard() {
         });
 
         await secondaryAuth.signOut(); // logout dari auth kedua agar admin tetap login
-        alert("✅ User baru berhasil ditambahkan tanpa logout admin!");
+        alert("✅ User baru berhasil ditambahkan");
       }
 
       // Reset form dan modal

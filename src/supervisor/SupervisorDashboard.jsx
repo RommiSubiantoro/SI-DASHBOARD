@@ -707,22 +707,6 @@ function SupervisorDashboard() {
                                     >
                                       Edit
                                     </button>
-                                    <button
-                                      onClick={() => handleDeleteUnit(unit)}
-                                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Delete
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteAllRecords(unit.name)
-                                      }
-                                      className="px-3 py-1 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Hapus Records
-                                    </button>
                                   </div>
                                 </td>
                               </tr>
@@ -980,13 +964,6 @@ function SupervisorDashboard() {
                                     disabled={isLoading}
                                   >
                                     Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
-                                    disabled={isLoading}
-                                  >
-                                    Delete
                                   </button>
                                 </div>
                               </td>

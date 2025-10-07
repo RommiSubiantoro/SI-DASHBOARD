@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { getAuth, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { LogOut, ChevronDown } from 'lucide-react';
-
+import React, { useState, useEffect, useRef } from "react";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { LogOut, ChevronDown } from "lucide-react";
+import Logo from "../assets/logo-smdr.png";
 
 const Navbar = ({ onLogout }) => {
   const [userProfile, setUserProfile] = useState(null);
@@ -18,7 +18,9 @@ const Navbar = ({ onLogout }) => {
       if (currentUser) {
         try {
           // ambil role yang mungkin sudah ada di localStorage (fallback)
-          const roleFromStorage = (localStorage.getItem("userRole") || "").trim();
+          const roleFromStorage = (
+            localStorage.getItem("userRole") || ""
+          ).trim();
 
           // ambil dokumen user dari Firestore (pastikan doc id = auth.uid)
           const userDocRef = doc(db, "users", currentUser.uid);
@@ -26,13 +28,17 @@ const Navbar = ({ onLogout }) => {
           const userData = userDocSnap.exists() ? userDocSnap.data() : {};
 
           // pilih role: prefer Firestore jika ada, kalau tidak gunakan yang di localStorage
-          const resolvedRole = (userData.role && String(userData.role).trim() !== "")
-            ? String(userData.role).trim()
-            : roleFromStorage;
+          const resolvedRole =
+            userData.role && String(userData.role).trim() !== ""
+              ? String(userData.role).trim()
+              : roleFromStorage;
 
           const profile = {
             email: currentUser.email,
-            displayName: currentUser.displayName || currentUser.email?.split('@')[0] || 'User',
+            displayName:
+              currentUser.displayName ||
+              currentUser.email?.split("@")[0] ||
+              "User",
             photoURL: currentUser.photoURL,
             uid: currentUser.uid,
             role: resolvedRole || "", // bisa kosong kalau memang tidak ada sama sekali
@@ -71,16 +77,21 @@ const Navbar = ({ onLogout }) => {
         setShowDropdown(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const getInitials = (email, displayName) => {
     if (displayName) {
-      return displayName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2);
+      return displayName
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2);
     }
     if (email) return email.substring(0, 2).toUpperCase();
-    return 'U';
+    return "U";
   };
 
   const handleLogout = async () => {
@@ -91,12 +102,16 @@ const Navbar = ({ onLogout }) => {
     if (onLogout) onLogout();
   };
 
-  
   return (
     <nav className="bg-black shadow-md ml-64">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex-shrink-0">
+          <div className="flex items-center space-x-3">
+            <img
+              src={Logo}
+              alt="Samudera Indonesia Logo"
+              className="h-10 w-auto object-contain"
+            />
             <h2 className="text-xl font-bold text-white">Samudera Indonesia</h2>
           </div>
 
@@ -107,8 +122,12 @@ const Navbar = ({ onLogout }) => {
                 onClick={() => setShowDropdown(!showDropdown)}
               >
                 <div className="flex flex-col mr-3 min-w-0">
-                  <span className="text-sm font-medium text-white truncate">{userProfile.displayName}</span>
-                  <span className="text-xs text-gray-300 truncate">{userProfile.email}</span>
+                  <span className="text-sm font-medium text-white truncate">
+                    {userProfile.displayName}
+                  </span>
+                  <span className="text-xs text-gray-300 truncate">
+                    {userProfile.email}
+                  </span>
                 </div>
                 <div className="flex-shrink-0">
                   {userProfile.photoURL ? (
@@ -120,13 +139,18 @@ const Navbar = ({ onLogout }) => {
                   ) : (
                     <div className="w-8 h-8 rounded-full bg-gray-300 flex items-center justify-center">
                       <span className="text-xs font-medium text-gray-700">
-                        {getInitials(userProfile.email, userProfile.displayName)}
+                        {getInitials(
+                          userProfile.email,
+                          userProfile.displayName
+                        )}
                       </span>
                     </div>
                   )}
                 </div>
                 <ChevronDown
-                  className={`ml-1 transition-transform duration-200 ${showDropdown ? 'rotate-180' : ''}`}
+                  className={`ml-1 transition-transform duration-200 ${
+                    showDropdown ? "rotate-180" : ""
+                  }`}
                   size={16}
                 />
               </div>
@@ -134,8 +158,12 @@ const Navbar = ({ onLogout }) => {
               {showDropdown && (
                 <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 overflow-hidden">
                   <div className="px-4 py-3 border-b border-gray-200">
-                    <div className="font-medium text-gray-900 truncate">{userProfile.displayName}</div>
-                    <div className="text-sm text-gray-500 truncate">{userProfile.email}</div>
+                    <div className="font-medium text-gray-900 truncate">
+                      {userProfile.displayName}
+                    </div>
+                    <div className="text-sm text-gray-500 truncate">
+                      {userProfile.email}
+                    </div>
                   </div>
                   <div className="border-t border-gray-200">
                     <button
@@ -150,9 +178,7 @@ const Navbar = ({ onLogout }) => {
               )}
             </div>
           ) : (
-            <div className="text-sm text-gray-500">
-              Not logged in
-            </div>
+            <div className="text-sm text-gray-500">Not logged in</div>
           )}
         </div>
       </div>
