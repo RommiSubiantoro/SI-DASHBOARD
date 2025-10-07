@@ -1,15 +1,17 @@
 // src/components/Piechart.jsx
 import React, { useMemo, useState } from "react";
-import {
-  PieChart,
-  Pie,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
 const COLORS = [
-  "#4facfe","#ff6b6b","#3ddb97","#ffa726","#8b5cf6","#f59e0b","#60a5fa","#ef4444","#10b981",
+  "#4facfe",
+  "#ff6b6b",
+  "#3ddb97",
+  "#ffa726",
+  "#8b5cf6",
+  "#f59e0b",
+  "#60a5fa",
+  "#ef4444",
+  "#10b981",
 ];
 
 const MONTHS = [
@@ -34,7 +36,10 @@ function getNumericValue(row, keys) {
     if (raw === null || raw === undefined || raw === "") continue;
     let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
     let isNeg = false;
-    if (/^\(.+\)$/.test(s)) { isNeg = true; s = s.replace(/^\(|\)$/g, ""); }
+    if (/^\(.+\)$/.test(s)) {
+      isNeg = true;
+      s = s.replace(/^\(|\)$/g, "");
+    }
     let n = Number(s);
     if (Number.isNaN(n)) n = 0;
     return isNeg ? -Math.abs(n) : n;
@@ -42,13 +47,18 @@ function getNumericValue(row, keys) {
   return 0;
 }
 
-// detects whether incoming data is already aggregated [{name, value, rawValue?}]
 function isAggregatedData(arr) {
-  return Array.isArray(arr) && arr.length > 0 && arr[0] && Object.prototype.hasOwnProperty.call(arr[0], "value") && Object.prototype.hasOwnProperty.call(arr[0], "name");
+  return (
+    Array.isArray(arr) &&
+    arr.length > 0 &&
+    arr[0] &&
+    Object.prototype.hasOwnProperty.call(arr[0], "value") &&
+    Object.prototype.hasOwnProperty.call(arr[0], "name")
+  );
 }
 
 export default function Piechart({
-  data = [],                // can be raw rows OR aggregated [{name,value}]
+  data = [],
   selectedMonth = "All",
   setSelectedMonth = () => {},
   selectedYear = "2025",
@@ -56,12 +66,10 @@ export default function Piechart({
 }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
-  // jika data sudah aggregated -> gunakan langsung; kalau raw -> aggregate
   const pieData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0) return [];
 
     if (isAggregatedData(data)) {
-      // ensure numbers + rawValue
       return data
         .map((d) => ({
           name: d.name ?? "Unknown",
@@ -69,114 +77,204 @@ export default function Piechart({
           rawValue: Number(d.rawValue ?? d.value ?? 0),
         }))
         .filter((d) => d.value !== 0)
-        .sort((a,b)=> b.value - a.value);
+        .sort((a, b) => b.value - a.value);
     }
 
-    // RAW rows -> aggregate by category using selectedMonth
-    const normalizedMonth = (selectedMonth || "All").toString().trim().slice(0,3).toUpperCase();
+    const normalizedMonth = (selectedMonth || "All")
+      .toString()
+      .trim()
+      .slice(0, 3)
+      .toUpperCase();
     const acc = {};
     data.forEach((row) => {
-      const category = row.CATEGORY ?? row.category ?? row.Category ?? row["ACCOUNT NAME"] ?? row["ACCOUNT NAME "] ?? "Unknown";
+      const category =
+        row.CATEGORY ??
+        row.category ??
+        row.Category ??
+        row["ACCOUNT NAME"] ??
+        row["ACCOUNT NAME "] ??
+        "Unknown";
+
       let value = 0;
       if (!selectedMonth || selectedMonth.toLowerCase() === "all") {
         MONTHS.forEach((m) => {
-          value += getNumericValue(row, [m.key, m.label, m.key.toUpperCase(), m.key.toLowerCase(), m.label.toUpperCase(), m.label.toLowerCase()]);
+          value += getNumericValue(row, [
+            m.key,
+            m.label,
+            m.key.toUpperCase(),
+            m.key.toLowerCase(),
+            m.label.toUpperCase(),
+            m.label.toLowerCase(),
+          ]);
         });
       } else {
-        // try candidate keys
-        value = getNumericValue(row, [normalizedMonth, normalizedMonth.toUpperCase(), normalizedMonth.toLowerCase(), normalizedMonth[0] + normalizedMonth.slice(1).toLowerCase()]);
+        value = getNumericValue(row, [
+          normalizedMonth,
+          normalizedMonth.toUpperCase(),
+          normalizedMonth.toLowerCase(),
+          normalizedMonth[0] + normalizedMonth.slice(1).toLowerCase(),
+        ]);
       }
       acc[category] = (acc[category] || 0) + value;
     });
 
-    const arr = Object.entries(acc).map(([name, rawValue]) => ({
-      name,
-      value: Math.abs(Number(rawValue) || 0),
-      rawValue: Number(rawValue) || 0,
-    })).filter(d => d.value !== 0).sort((a,b)=> b.value - a.value);
+    const arr = Object.entries(acc)
+      .map(([name, rawValue]) => ({
+        name,
+        value: Math.abs(Number(rawValue) || 0),
+        rawValue: Number(rawValue) || 0,
+      }))
+      .filter((d) => d.value !== 0)
+      .sort((a, b) => b.value - a.value);
 
     return arr;
   }, [data, selectedMonth]);
 
-  // categories for filter
-  const categories = useMemo(() => ["All", ...new Set(pieData.map(d => d.name))], [pieData]);
+  const categories = useMemo(
+    () => ["All", ...new Set(pieData.map((d) => d.name))],
+    [pieData]
+  );
 
-  const filteredPie = selectedCategory === "All" ? pieData : pieData.filter(p => p.name === selectedCategory);
+  const filteredPie =
+    selectedCategory === "All"
+      ? pieData
+      : pieData.filter((p) => p.name === selectedCategory);
 
-  // total used for percent (use absolute totals to avoid zero due to sign cancellation)
   const totalAbs = pieData.reduce((s, p) => s + (Number(p.value) || 0), 0);
-  const selAbs = filteredPie.reduce((s,p) => s + (Number(p.value)||0), 0);
-  const selPercent = totalAbs > 0 ? ((selAbs / totalAbs) * 100).toFixed(1) : "0.0";
+  const selAbs = filteredPie.reduce((s, p) => s + (Number(p.value) || 0), 0);
+  const selPercent =
+    totalAbs > 0 ? ((selAbs / totalAbs) * 100).toFixed(1) : "0.0";
 
   return (
-    <div className="p-6 bg-white shadow-lg rounded-2xl">
-      <h3 className="text-lg font-semibold mb-4 text-gray-800">Pie Chart Kategori</h3>
+    <div className="p-6 bg-white shadow-md rounded-2xl border border-gray-100">
+      <h3 className="text-lg font-semibold mb-4 text-gray-800">
+        PieChart Kategori
+      </h3>
 
-      <div className="mb-4 flex flex-wrap gap-3 items-center">
-        <select value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="px-3 py-2 border rounded">
+      {/* Filter Controls */}
+      <div className="mb-4 flex flex-wrap gap-2 items-center">
+        <select
+          value={selectedMonth}
+          onChange={(e) => setSelectedMonth(e.target.value)}
+          className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-blue-400 focus:outline-none"
+        >
           <option value="All">All</option>
-          {MONTHS.map(m => <option key={m.key} value={m.label}>{m.label}</option>)}
+          {MONTHS.map((m) => (
+            <option key={m.key} value={m.label}>
+              {m.label}
+            </option>
+          ))}
         </select>
 
-        <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="px-3 py-2 border rounded">
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+          className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-blue-400 focus:outline-none"
+        >
           <option value="2024">2024</option>
           <option value="2025">2025</option>
         </select>
 
-        <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="px-3 py-2 border rounded">
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="px-2 py-1 border border-gray-300 rounded-md text-xs focus:ring-1 focus:ring-blue-400 focus:outline-none"
+        >
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
         </select>
       </div>
 
-      <div className="w-full bg-gray-50 p-4 rounded mb-4 border">
-        <div className="flex justify-between items-center">
-          <div>
-            {selectedCategory === "All" ? (
-              <>
-                <div>Total kategori: {pieData.length}</div>
-                <div className="mt-1">Total (abs): Rp {Number(totalAbs).toLocaleString()}</div>
-              </>
-            ) : (
-              <>
-                <div>{selectedCategory} - {selPercent}%</div>
-                <div className="mt-1">Rp {Number(selAbs).toLocaleString()}</div>
-              </>
-            )}
-          </div>
-        </div>
+      <div className="w-full bg-gray-50 p-2 rounded-md mb-3 border border-gray-200 text-xs text-gray-600">
+        {selectedCategory === "All" ? (
+          <>
+            <div>
+              Total kategori:{" "}
+              <span className="font-medium text-gray-800">
+                {pieData.length}
+              </span>
+            </div>
+            <div>
+              Total (abs):{" "}
+              <span className="font-medium text-gray-800">
+                Rp {Number(totalAbs).toLocaleString()}
+              </span>
+            </div>
+          </>
+        ) : (
+          <>
+            <div>
+              <span className="font-medium text-gray-800">
+                {selectedCategory}
+              </span>{" "}
+              — {selPercent}%
+            </div>
+            <div>
+              Rp{" "}
+              <span className="font-medium text-gray-800">
+                {Number(selAbs).toLocaleString()}
+              </span>
+            </div>
+          </>
+        )}
       </div>
 
-      <div className="flex gap-6 items-start">
-        <div className="flex-1 h-[380px]">
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={filteredPie}
-                dataKey="value"
-                nameKey="name"
-                cx="50%" cy="50%"
-                outerRadius={100}
-                labelLine={false}
-                minAngle={5}
-              >
-                {filteredPie.map((entry, idx) => (
-                  <Cell key={`cell-${idx}`} fill={COLORS[idx % COLORS.length]} fillOpacity={entry.rawValue < 0 ? 0.6 : 1} />
-                ))}
-              </Pie>
-              <Tooltip formatter={(val, name, props) => {
-                const idx = props && props.dataIndex;
-                const item = typeof filteredPie[idx] !== "undefined" ? filteredPie[idx] : null;
-                return item ? item.rawValue.toLocaleString() : val;
-              }} />
-            </PieChart>
-          </ResponsiveContainer>
+      {/* Chart & Legend */}
+      {/* Chart & Legend (centered layout) */}
+      <div className="flex flex-col items-center justify-center gap-4">
+        {/* Chart di tengah */}
+        <div className="w-full flex justify-center">
+          <div className="h-[340px] w-[340px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={filteredPie}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={120}
+                  labelLine={false}
+                  minAngle={5}
+                >
+                  {filteredPie.map((entry, idx) => (
+                    <Cell
+                      key={`cell-${idx}`}
+                      fill={COLORS[idx % COLORS.length]}
+                      fillOpacity={entry.rawValue < 0 ? 0.6 : 1}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  formatter={(val, name, props) => {
+                    const idx = props?.dataIndex;
+                    const item = filteredPie[idx];
+                    return item ? item.rawValue.toLocaleString() : val;
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
-        <div className="w-48 flex flex-col gap-2">
+        {/* Legend di bawah chart */}
+        <div className="w-full flex flex-wrap justify-center gap-2 mt-2">
           {filteredPie.map((item, i) => (
-            <div key={i} className="flex items-center text-sm">
-              <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-              <span className="text-gray-700">{item.name}: {item.rawValue.toLocaleString()}</span>
+            <div
+              key={i}
+              className="flex items-center text-xs text-gray-700"
+              title={`${item.name}: ${item.rawValue.toLocaleString()}`}
+            >
+              <div
+                className="w-3 h-3 rounded-full mr-2"
+                style={{ backgroundColor: COLORS[i % COLORS.length] }}
+              />
+              <span className="truncate max-w-[120px]">
+                {item.name}: {item.rawValue.toLocaleString()}
+              </span>
             </div>
           ))}
         </div>

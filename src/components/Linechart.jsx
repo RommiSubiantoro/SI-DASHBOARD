@@ -122,7 +122,7 @@ export default function Linechart({ data = [] }) {
       <ResponsiveContainer width="100%" height={380}>
         <LineChart
           data={chartData}
-          margin={{ top: 10, right: 30, left: 10, bottom: 5 }}
+          margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
         >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis dataKey="month" tick={{ fontSize: 12 }} />

@@ -24,6 +24,7 @@ import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import ExporttableChart from "../components/ExporttableChart";
+import Linechart from "../components/Linechart";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from "../hooks/useDataManagement";
@@ -586,7 +587,7 @@ function SupervisorDashboard() {
               </div>
 
               {/* Charts */}
-              <div className="w-full flex flex-col lg:flex-row gap-6">
+              <div className="w-full flex flex-col gap-6">
                 <ExporttableChart
                   currentData={currentData}
                   selectedMonth={selectedMonth}
@@ -594,6 +595,7 @@ function SupervisorDashboard() {
                   selectedYear={selectedYear}
                   setSelectedYear={setSelectedYear}
                 >
+                  {/* Baris 1: Piechart & Barchart berdampingan */}
                   <div className="w-full flex flex-col lg:flex-row gap-6">
                     <div className="flex-1 p-2 shadow rounded-lg bg-white">
                       <Piechart
@@ -610,6 +612,13 @@ function SupervisorDashboard() {
                         data={currentData}
                         selectedYear={selectedYear}
                       />
+                    </div>
+                  </div>
+
+                  {/* Baris 2: Linechart di bawah */}
+                  <div className="w-full mt-6">
+                    <div className="p-2 shadow rounded-lg bg-white">
+                      <Linechart data={currentData} />
                     </div>
                   </div>
                 </ExporttableChart>

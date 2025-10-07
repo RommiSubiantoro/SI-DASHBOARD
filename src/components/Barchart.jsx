@@ -78,7 +78,7 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
         </select>
       </div>
 
-      <div className="w-full h-80 bg-gray-50 rounded-lg p-4">
+      <div className="w-full h-120 bg-gray-50 rounded-lg p-4">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={chartData}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />

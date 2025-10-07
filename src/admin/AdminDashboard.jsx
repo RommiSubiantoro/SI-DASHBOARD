@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Select from "react-select";
+import { CheckCircle, XCircle } from "lucide-react";
 
 import {
   collection,
@@ -25,12 +26,13 @@ import Navbar from "../components/navbar";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import ExporttableChart from "../components/ExporttableChart";
+import Linechart from "../components/Linechart";
 
 // Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from "../hooks/useDataManagement";
 
 function AdminDashboard() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] = useState("");
 
   // State untuk unit bisnis
   const [units, setUnits] = useState([]);
@@ -48,6 +50,8 @@ function AdminDashboard() {
   const [editingUnit, setEditingUnit] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
   const [unitForm, setUnitForm] = useState({ name: "" });
+  const [unitUploads, setUnitUploads] = useState({});
+  const [loadingUploads, setLoadingUploads] = useState(false);
   const [userForm, setUserForm] = useState({
     name: "",
     email: "",
@@ -212,6 +216,39 @@ function AdminDashboard() {
     );
     return () => unsubscribeUsers();
   }, []);
+
+  const fetchUnitUploads = async () => {
+    setLoadingUploads(true);
+    try {
+      // 1️⃣ Ambil daftar unit dari koleksi 'units' (karena ini pasti ada datanya)
+      const unitsSnap = await getDocs(collection(db, "units"));
+      const unitNames = unitsSnap.docs.map((doc) => doc.data().name);
+
+      console.log("📦 Jumlah unit bisnis:", unitNames.length);
+
+      const counts = {};
+
+      // 2️⃣ Cek tiap unit apakah punya records
+      for (const unitName of unitNames) {
+        const recordsRef = collection(db, "unitData", unitName, "records");
+        const recordsSnap = await getDocs(recordsRef);
+
+        console.log(`➡️ ${unitName} memiliki ${recordsSnap.size} records`);
+        counts[unitName] = recordsSnap.size;
+      }
+
+      console.log("📊 Hasil akhir counts:", counts);
+      setUnitUploads(counts);
+    } catch (err) {
+      console.error("❌ Error fetching uploads:", err);
+    } finally {
+      setLoadingUploads(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnitUploads();
+  }, [units]);
 
   // Logout handler
   const handleLogout = async () => {
@@ -491,6 +528,21 @@ function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    const savedPage = localStorage.getItem("activePage");
+    if (savedPage) {
+      setActivePage(savedPage); // kalau ada, pakai halaman terakhir
+    } else {
+      setActivePage("dashboard"); // kalau belum pernah, default ke dashboard
+    }
+  }, []);
+
+  // Simpan ke localStorage setiap kali ganti halaman
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    localStorage.setItem("activePage", page);
+  };
+
   // Export functions (existing code)
   const handleExportUnits = () => {
     const csvContent =
@@ -561,7 +613,7 @@ function AdminDashboard() {
                     ? "text-white bg-red-600 shadow-md"
                     : "text-white hover:bg-red-400"
                 }`}
-                onClick={() => setActivePage("dashboard")}
+                onClick={() => handlePageChange("dashboard")}
               >
                 📊 Dashboard
               </button>
@@ -572,7 +624,7 @@ function AdminDashboard() {
                     ? "text-white bg-red-600 shadow-md"
                     : "text-white hover:bg-red-400"
                 }`}
-                onClick={() => setActivePage("unit")}
+                onClick={() => handlePageChange("unit")}
               >
                 🏢 Manage Unit Bisnis
               </button>
@@ -583,7 +635,7 @@ function AdminDashboard() {
                     ? "text-white bg-red-600 shadow-md"
                     : "text-white hover:bg-red-400"
                 }`}
-                onClick={() => setActivePage("user")}
+                onClick={() => handlePageChange("user")}
               >
                 👥 Manage User
               </button>
@@ -658,7 +710,7 @@ function AdminDashboard() {
               </div>
 
               {/* Charts */}
-              <div className="w-full flex flex-col lg:flex-row gap-6">
+              <div className="w-full flex flex-col gap-6">
                 <ExporttableChart
                   currentData={currentData}
                   selectedMonth={selectedMonth}
@@ -666,6 +718,7 @@ function AdminDashboard() {
                   selectedYear={selectedYear}
                   setSelectedYear={setSelectedYear}
                 >
+                  {/* Baris 1: Piechart & Barchart berdampingan */}
                   <div className="w-full flex flex-col lg:flex-row gap-6">
                     <div className="flex-1 p-2 shadow rounded-lg bg-white">
                       <Piechart
@@ -682,6 +735,13 @@ function AdminDashboard() {
                         data={currentData}
                         selectedYear={selectedYear}
                       />
+                    </div>
+                  </div>
+
+                  {/* Baris 2: Linechart di bawah */}
+                  <div className="w-full mt-6">
+                    <div className="p-2 shadow rounded-lg bg-white">
+                      <Linechart data={currentData} />
                     </div>
                   </div>
                 </ExporttableChart>
@@ -730,6 +790,9 @@ function AdminDashboard() {
                             Jumlah User
                           </th>
                           <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                            Data Upload
+                          </th>
+                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
                             Aksi
                           </th>
                         </tr>
@@ -752,6 +815,8 @@ function AdminDashboard() {
                                 Array.isArray(user.unitBisnis) &&
                                 user.unitBisnis.includes(unit.name)
                             ).length;
+                            const hasUploads =
+                              (unitUploads[unit.name] || 0) > 0;
 
                             return (
                               <tr key={unit.id} className="hover:bg-gray-50">
@@ -771,6 +836,17 @@ function AdminDashboard() {
                                   >
                                     {userCount} user
                                   </span>
+                                </td>
+                                <td className="p-2 text-center">
+                                  {loadingUploads ? (
+                                    <span className="text-gray-400 italic text-sm">
+                                      Loading...
+                                    </span>
+                                  ) : hasUploads ? (
+                                    <CheckCircle className="text-green-500 inline-block w-5 h-5" />
+                                  ) : (
+                                    <XCircle className="text-red-500 inline-block w-5 h-5" />
+                                  )}
                                 </td>
 
                                 <td className="px-4 py-3">
