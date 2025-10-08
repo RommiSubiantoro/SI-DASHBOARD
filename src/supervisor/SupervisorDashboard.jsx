@@ -574,7 +574,7 @@ function SupervisorDashboard() {
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
                 units={units.map((unit) => unit.name)}
-                title="Manager Dashboard"
+                title="Supervisor Dashboard"
               />
 
               {/* Stats overview untuk semua unit */}

@@ -57,6 +57,36 @@ function isAggregatedData(arr) {
   );
 }
 
+// 👉 Custom Label untuk menampilkan persentase
+const renderCustomizedLabel = ({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+  index,
+}) => {
+  const RADIAN = Math.PI / 180;
+  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+  const x = cx + radius * Math.cos(-midAngle * RADIAN);
+  const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+  return (
+    <text
+      x={x}
+      y={y}
+      fill="white"
+      textAnchor="middle"
+      dominantBaseline="central"
+      fontSize={12}
+      fontWeight="bold"
+    >
+      {`${(percent * 100).toFixed(1)}%`}
+    </text>
+  );
+};
+
 export default function Piechart({
   data = [],
   selectedMonth = "All",
@@ -222,7 +252,6 @@ export default function Piechart({
         )}
       </div>
 
-      {/* Chart & Legend */}
       {/* Chart & Legend (centered layout) */}
       <div className="flex flex-col items-center justify-center gap-4">
         {/* Chart di tengah */}
@@ -238,6 +267,7 @@ export default function Piechart({
                   cy="50%"
                   outerRadius={120}
                   labelLine={false}
+                  label={renderCustomizedLabel} // ✅ Tambahkan label persen di sini
                   minAngle={5}
                 >
                   {filteredPie.map((entry, idx) => (
