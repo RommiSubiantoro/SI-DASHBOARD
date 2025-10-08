@@ -28,33 +28,31 @@ const UserDashboard = () => {
   const [selectedYear, setSelectedYear] = useState("2025");
   const [isLoading, setIsLoading] = useState(false);
   const [assignedUnits, setAssignedUnits] = useState([]);
+  const [dataMap, setDataMap] = useState({});
   const [units, setUnits] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(false);
 
-  useEffect(() => {
-    if (!selectedUnit) return;
+useEffect(() => {
+  if (!selectedUnit) return;
 
-    // 🔥 Dengarkan data realtime per unit
-    const q = query(collection(db, "data"), where("unit", "==", selectedUnit));
+  const q = query(collection(db, "data"), where("unit", "==", selectedUnit));
+  const unsubscribeData = onSnapshot(q, (snapshot) => {
+    const docs = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-    const unsubscribeData = onSnapshot(q, (snapshot) => {
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    // Simpan ke state lokal dataMap
+    setDataMap((prev) => ({
+      ...prev,
+      [selectedUnit]: docs,
+    }));
 
-      // Asumsikan kamu ingin update ke state `data` milik useDataManagement
-      // Pastikan kamu punya setData dari hook tersebut
-      setData((prev) => ({
-        ...prev,
-        [selectedUnit]: docs,
-      }));
+    console.log(`Realtime update untuk ${selectedUnit}:`, docs);
+  });
 
-      console.log("Realtime update:", docs);
-    });
-
-    return () => unsubscribeData();
-  }, [selectedUnit]);
+  return () => unsubscribeData();
+}, [selectedUnit]);
 
   // 🔹 Fetch semua unit bisnis
   useEffect(() => {
@@ -122,14 +120,14 @@ const UserDashboard = () => {
     addDataToFirebase,
     exportToExcel,
     importFromExcelToFirebase,
-    getPieChartData,
+   
   } = useDataManagement(initialDataMap);
 
   // 🔹 Pastikan currentData aman
   const currentData = selectedUnit ? data[selectedUnit] || [] : [];
   const stats = calculateStats(currentData);
   // Pie chart data
-  const pieData = getPieChartData(currentData, selectedMonth);
+
 
   // Handler functions
   const handleLogout = async () => {
