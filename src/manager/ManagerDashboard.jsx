@@ -89,6 +89,15 @@ function ManagerDashboard() {
 
   const filteredUsers = getFilteredUsers();
 
+  // Pagination logic (setelah filteredUsers)
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
+
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const paginatedUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+
   // Fungsi untuk reset filters
   const handleResetFilters = () => {
     setSearchTerm("");
@@ -908,6 +917,7 @@ function ManagerDashboard() {
               )}
 
               {/* Users Table */}
+               {/* Users Table */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                 {loadingUsers ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-500">
@@ -915,137 +925,169 @@ function ManagerDashboard() {
                     <p className="text-sm">Loading users...</p>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-100 border-b border-gray-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            No
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Nama
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Email
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Role
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Unit Bisnis
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Aksi
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {filteredUsers.length === 0 ? (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead className="bg-gray-100 border-b border-gray-200">
                           <tr>
-                            <td
-                              colSpan="6"
-                              className="px-4 py-8 text-center text-gray-500"
-                            >
-                              {users.length === 0
-                                ? "Belum ada user. Tambahkan user pertama Anda!"
-                                : "Tidak ada user yang sesuai dengan pencarian."}
-                            </td>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              No
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              Nama
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              Email
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              Role
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              Unit Bisnis
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
+                              Aksi
+                            </th>
                           </tr>
-                        ) : (
-                          filteredUsers.map((user, index) => (
-                            <tr key={user.id} className="hover:bg-gray-50">
-                              <td className="px-4 py-3 text-gray-900">
-                                {index + 1}
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={
-                                    searchTerm &&
-                                    user.name
-                                      .toLowerCase()
-                                      .includes(searchTerm.toLowerCase())
-                                      ? "bg-yellow-200"
-                                      : ""
-                                  }
-                                >
-                                  {user.name}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-700">
-                                <span
-                                  className={
-                                    searchTerm &&
-                                    user.email &&
-                                    user.email
-                                      .toLowerCase()
-                                      .includes(searchTerm.toLowerCase())
-                                      ? "bg-yellow-200"
-                                      : ""
-                                  }
-                                >
-                                  {user.email || "-"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <span
-                                  className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                    user.role === "Super Admin"
-                                      ? "bg-red-100 text-red-800"
-                                      : user.role === "Manager"
-                                      ? "bg-purple-100 text-purple-800"
-                                      : user.role === "Supervisor"
-                                      ? "bg-blue-100 text-blue-800"
-                                      : "bg-gray-100 text-gray-800"
-                                  } ${
-                                    roleFilter === user.role
-                                      ? "ring-2 ring-blue-300"
-                                      : ""
-                                  }`}
-                                >
-                                  {user.role}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 text-gray-700">
-                                <span
-                                  className={
-                                    Array.isArray(user.unitBisnis)
-                                      ? user.unitBisnis.includes(unitFilter)
-                                        ? "bg-yellow-200"
-                                        : ""
-                                      : unitFilter === user.unitBisnis
-                                      ? "bg-yellow-200"
-                                      : ""
-                                  }
-                                >
-                                  {Array.isArray(user.unitBisnis)
-                                    ? user.unitBisnis.join(", ")
-                                    : user.unitBisnis || "-"}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3">
-                                <div className="flex gap-2">
-                                  <button
-                                    onClick={() => handleEditUser(user)}
-                                    className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
-                                    disabled={isLoading}
-                                  >
-                                    Edit
-                                  </button>
-                                  <button
-                                    onClick={() => handleDeleteUser(user.id)}
-                                    className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
-                                    disabled={isLoading}
-                                  >
-                                    Delete
-                                  </button>
-                                </div>
+                        </thead>
+
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {paginatedUsers.length === 0 ? (
+                            <tr>
+                              <td
+                                colSpan="6"
+                                className="px-4 py-8 text-center text-gray-500"
+                              >
+                                {users.length === 0
+                                  ? "Belum ada user. Tambahkan user pertama Anda!"
+                                  : "Tidak ada user yang sesuai dengan pencarian."}
                               </td>
                             </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
+                          ) : (
+                            paginatedUsers.map((user, index) => (
+                              <tr key={user.id} className="hover:bg-gray-50">
+                                <td className="px-4 py-3 text-gray-900">
+                                  {(currentPage - 1) * usersPerPage + index + 1}
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={
+                                      searchTerm &&
+                                      user.name
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase())
+                                        ? "bg-yellow-200"
+                                        : ""
+                                    }
+                                  >
+                                    {user.name}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-700">
+                                  <span
+                                    className={
+                                      searchTerm &&
+                                      user.email &&
+                                      user.email
+                                        .toLowerCase()
+                                        .includes(searchTerm.toLowerCase())
+                                        ? "bg-yellow-200"
+                                        : ""
+                                    }
+                                  >
+                                    {user.email || "-"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <span
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                                      user.role === "Super Admin"
+                                        ? "bg-red-100 text-red-800"
+                                        : user.role === "Manager"
+                                        ? "bg-purple-100 text-purple-800"
+                                        : user.role === "Supervisor"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : "bg-gray-100 text-gray-800"
+                                    } ${
+                                      roleFilter === user.role
+                                        ? "ring-2 ring-blue-300"
+                                        : ""
+                                    }`}
+                                  >
+                                    {user.role}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3 text-gray-700">
+                                  <span
+                                    className={
+                                      Array.isArray(user.unitBisnis)
+                                        ? user.unitBisnis.includes(unitFilter)
+                                          ? "bg-yellow-200"
+                                          : ""
+                                        : unitFilter === user.unitBisnis
+                                        ? "bg-yellow-200"
+                                        : ""
+                                    }
+                                  >
+                                    {Array.isArray(user.unitBisnis)
+                                      ? user.unitBisnis.join(", ")
+                                      : user.unitBisnis || "-"}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleEditUser(user)}
+                                      className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
+                                      disabled={isLoading}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteUser(user.id)}
+                                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
+                                      disabled={isLoading}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination Controls */}
+                    <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-200">
+                      <button
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 1))
+                        }
+                        disabled={currentPage === 1}
+                        className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        &lt; Prev
+                      </button>
+
+                      <span className="text-sm text-gray-600">
+                        Halaman {currentPage} dari {totalPages}
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          setCurrentPage((prev) =>
+                            Math.min(prev + 1, totalPages)
+                          )
+                        }
+                        disabled={currentPage === totalPages}
+                        className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
+                      >
+                        Next &gt;
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
