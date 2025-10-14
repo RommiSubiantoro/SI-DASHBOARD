@@ -11,63 +11,73 @@ import {
 import { db } from "../firebase";
 import * as XLSX from "xlsx";
 
-// Custom hook untuk manajemen data dengan Firebase real-time sync
+// 🔹 Custom hook untuk manajemen data (realtime & sinkron)
 export const useDataManagement = (initialData = {}) => {
   const [data, setData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Real-time listener untuk setiap unit bisnis yang diberikan
+  // =====================================================
+  // 1️⃣ REALTIME LISTENER BERDASARKAN UNIT & TAHUN
+  // =====================================================
   useEffect(() => {
-    if (!initialData || Object.keys(initialData).length === 0) return; // tidak ada unit
+    if (!initialData || Object.keys(initialData).length === 0) return;
 
     const unsubscribers = [];
 
     Object.keys(initialData).forEach((unitKey) => {
-      const unsubscribe = onSnapshot(
-        collection(db, `unitData/${unitKey}/records`),
-        (snapshot) => {
-          const unitData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
+      const yearKeys = Object.keys(initialData[unitKey] || {});
 
-          setData((prev) => ({
-            ...prev,
-            [unitKey]: unitData,
-          }));
-        },
-        (error) => {
-          console.error(`Error listening to ${unitKey} data:`, error);
-        }
-      );
+      yearKeys.forEach((year) => {
+        const unsubscribe = onSnapshot(
+          collection(db, `unitData/${unitKey}/${year}/data/items`),
+          (snapshot) => {
+            const yearData = snapshot.docs.map((doc) => ({
+              id: doc.id,
+              ...doc.data(),
+            }));
 
-      unsubscribers.push(unsubscribe);
+            setData((prev) => ({
+              ...prev,
+              [unitKey]: {
+                ...(prev[unitKey] || {}),
+                [year]: yearData,
+              },
+            }));
+          },
+          (error) => {
+            console.error(`Error listening ${unitKey}/${year}:`, error);
+          }
+        );
+
+        unsubscribers.push(unsubscribe);
+      });
     });
 
-    // Cleanup listener
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [JSON.stringify(Object.keys(initialData))]);
 
-  const sumMonths = (row) => {
-    return (
-      (row.Jan || 0) +
-      (row.Feb || 0) +
-      (row.Mar || 0) +
-      (row.Apr || 0) +
-      (row.May || 0) +
-      (row.Jun || 0) +
-      (row.Jul || 0) +
-      (row.Aug || 0) +
-      (row.Sep || 0) +
-      (row.Oct || 0) +
-      (row.Nov || 0) +
-      (row.Dec || 0)
-    );
-  };
+  // =====================================================
+  // 2️⃣ HELPER - HITUNG TOTAL BULAN
+  // =====================================================
+  const sumMonths = (row) =>
+    (row.Jan || 0) +
+    (row.Feb || 0) +
+    (row.Mar || 0) +
+    (row.Apr || 0) +
+    (row.May || 0) +
+    (row.Jun || 0) +
+    (row.Jul || 0) +
+    (row.Aug || 0) +
+    (row.Sep || 0) +
+    (row.Oct || 0) +
+    (row.Nov || 0) +
+    (row.Dec || 0);
 
-  // Fungsi untuk menghitung statistik
+  // =====================================================
+  // 3️⃣ HITUNG STATISTIK
+  // =====================================================
   const calculateStats = (unitData) => {
-    if (!unitData || unitData.length === 0) {
+    if (!unitData || unitData.length === 0)
       return {
         totalRevenue: 0,
         totalExpenses: 0,
@@ -75,7 +85,6 @@ export const useDataManagement = (initialData = {}) => {
         totalAct2025: 0,
         avgTarget: 0,
       };
-    }
 
     const totalRevenue = unitData.reduce(
       (sum, item) => sum + (item.revenue || 0),
@@ -85,10 +94,7 @@ export const useDataManagement = (initialData = {}) => {
       (sum, item) => sum + (item.expenses || 0),
       0
     );
-    const totalProfit = unitData.reduce(
-      (sum, item) => sum + (item.profit || 0),
-      0
-    );
+    const totalProfit = totalRevenue - totalExpenses;
     const totalAct2025 = unitData.reduce((sum, row) => sum + sumMonths(row), 0);
     const avgTarget =
       unitData.length > 0
@@ -96,73 +102,59 @@ export const useDataManagement = (initialData = {}) => {
           unitData.length
         : 0;
 
-    return {
-      totalRevenue,
-      totalExpenses,
-      totalProfit,
-      totalAct2025,
-      avgTarget,
-    };
+    return { totalRevenue, totalExpenses, totalProfit, totalAct2025, avgTarget };
   };
 
-  // Fungsi untuk menambah data ke Firebase
-  const addDataToFirebase = async (selectedUnit, newRecord) => {
+  // =====================================================
+  // 4️⃣ TAMBAH DATA MANUAL
+  // =====================================================
+  const addDataToFirebase = async (selectedUnit, newRecord, selectedYear) => {
     if (
-      newRecord.month &&
-      newRecord.revenue &&
-      newRecord.expenses &&
-      newRecord.target
+      !newRecord.month ||
+      !newRecord.revenue ||
+      !newRecord.expenses ||
+      !newRecord.target
     ) {
-      try {
-        setIsLoading(true);
-
-        const revenue = parseInt(newRecord.revenue);
-        const expenses = parseInt(newRecord.expenses);
-        const target = parseInt(newRecord.target);
-        const profit = revenue - expenses;
-
-        const recordData = {
-          month: newRecord.month,
-          revenue,
-          expenses,
-          profit,
-          target,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        };
-
-        // Generate unique ID atau gunakan timestamp
-        const recordId = `record_${Date.now()}`;
-
-        await setDoc(
-          doc(db, `unitData/${selectedUnit}/records`, recordId),
-          recordData
-        );
-
-        return { success: true, message: "Data berhasil ditambahkan!" };
-      } catch (error) {
-        console.error("Error adding data to Firebase:", error);
-        return {
-          success: false,
-          message: "Error menambahkan data: " + error.message,
-        };
-      } finally {
-        setIsLoading(false);
-      }
+      return { success: false, message: "Semua field harus diisi!" };
     }
-    return { success: false, message: "Semua field harus diisi!" };
+
+    try {
+      setIsLoading(true);
+      const revenue = parseInt(newRecord.revenue);
+      const expenses = parseInt(newRecord.expenses);
+      const target = parseInt(newRecord.target);
+      const profit = revenue - expenses;
+
+      const recordData = {
+        month: newRecord.month,
+        revenue,
+        expenses,
+        profit,
+        target,
+        tahun: selectedYear || new Date().getFullYear().toString(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+
+      const recordId = `record_${Date.now()}`;
+      await setDoc(
+        doc(db, `unitData/${selectedUnit}/${selectedYear}/data/items`, recordId),
+        recordData
+      );
+
+      return { success: true, message: "✅ Data berhasil ditambahkan!" };
+    } catch (error) {
+      console.error("Error adding data:", error);
+      return { success: false, message: "❌ Gagal: " + error.message };
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Fungsi untuk export Excel
-  const exportToExcel = (selectedUnit, unitData) => {
-    const ws = XLSX.utils.json_to_sheet(unitData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, selectedUnit);
-    XLSX.writeFile(wb, `${selectedUnit}_data.xlsx`);
-  };
-
-  // Fungsi untuk import Excel dan save ke Firebase
-  const importFromExcelToFirebase = async (selectedUnit, file) => {
+  // =====================================================
+  // 5️⃣ IMPORT DARI EXCEL
+  // =====================================================
+  const importFromExcelToFirebase = async (selectedUnit, file, selectedYear) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = async (e) => {
@@ -192,16 +184,13 @@ export const useDataManagement = (initialData = {}) => {
             Dec: headers.indexOf("DEC"),
           };
 
-          // Clear existing data first
+          // 🔹 Hapus data lama
           const existingDocs = await getDocs(
-            collection(db, `unitData/${selectedUnit}/records`)
+            collection(db, `unitData/${selectedUnit}/${selectedYear}/data/items`)
           );
-          const deletePromises = existingDocs.docs.map((doc) =>
-            deleteDoc(doc.ref)
-          );
-          await Promise.all(deletePromises);
+          await Promise.all(existingDocs.docs.map((doc) => deleteDoc(doc.ref)));
 
-          // Add new data
+          // 🔹 Tambahkan data baru
           const addPromises = rows.map(async (row, index) => {
             const recordData = {
               category: row[headers.indexOf("CATEGORY")] || "",
@@ -220,21 +209,22 @@ export const useDataManagement = (initialData = {}) => {
               Oct: row[monthIndexes.Oct] || 0,
               Nov: row[monthIndexes.Nov] || 0,
               Dec: row[monthIndexes.Dec] || 0,
+              tahun: selectedYear,
               createdAt: new Date(),
               updatedAt: new Date(),
             };
 
             const recordId = `import_${Date.now()}_${index}`;
             return setDoc(
-              doc(db, `unitData/${selectedUnit}/records`, recordId),
+              doc(db, `unitData/${selectedUnit}/${selectedYear}/data/items`, recordId),
               recordData
             );
           });
 
           await Promise.all(addPromises);
-          resolve("Data berhasil diimport dan disinkronkan!");
+          resolve("✅ Data berhasil diimport & disinkronkan!");
         } catch (error) {
-          reject("Error importing file: " + error.message);
+          reject("❌ Error importing file: " + error.message);
         } finally {
           setIsLoading(false);
         }
@@ -243,7 +233,80 @@ export const useDataManagement = (initialData = {}) => {
     });
   };
 
-  // Fungsi untuk mendapatkan pie chart data
+  // =====================================================
+  // 6️⃣ EXPORT KE EXCEL
+  // =====================================================
+  const exportToExcel = (selectedUnit, unitData) => {
+    const ws = XLSX.utils.json_to_sheet(unitData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, selectedUnit);
+    XLSX.writeFile(wb, `${selectedUnit}_data.xlsx`);
+  };
+
+  // =====================================================
+  // 7️⃣ UPDATE DATA
+  // =====================================================
+  const updateDataInFirebase = async (selectedUnit, selectedYear, recordId, updateData) => {
+    try {
+      setIsLoading(true);
+      await updateDoc(
+        doc(db, `unitData/${selectedUnit}/${selectedYear}/data/items`, recordId),
+        { ...updateData, updatedAt: new Date() }
+      );
+      return { success: true, message: "✅ Data berhasil diupdate!" };
+    } catch (error) {
+      console.error("Error updating data:", error);
+      return { success: false, message: "❌ Gagal update: " + error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =====================================================
+  // 8️⃣ HAPUS DATA SATUAN
+  // =====================================================
+  const deleteDataFromFirebase = async (selectedUnit, selectedYear, recordId) => {
+    try {
+      setIsLoading(true);
+      await deleteDoc(doc(db, `unitData/${selectedUnit}/${selectedYear}/data/items`, recordId));
+      return { success: true, message: "🗑️ Data berhasil dihapus!" };
+    } catch (error) {
+      console.error("Error deleting data:", error);
+      return { success: false, message: "❌ Gagal hapus: " + error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =====================================================
+  // 9️⃣ HAPUS SEMUA DATA DALAM TAHUN (RESET)
+  // =====================================================
+  const resetYearData = async (selectedUnit, selectedYear) => {
+    try {
+      setIsLoading(true);
+      const dataRef = collection(db, `unitData/${selectedUnit}/${selectedYear}/data/items`);
+      const snapshot = await getDocs(dataRef);
+
+      if (snapshot.empty) {
+        return { success: false, message: "⚠️ Tidak ada data untuk dihapus!" };
+      }
+
+      for (const docSnap of snapshot.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+
+      return { success: true, message: `✅ Semua data tahun ${selectedYear} telah dihapus!` };
+    } catch (error) {
+      console.error("Error resetting data:", error);
+      return { success: false, message: "❌ Gagal reset data: " + error.message };
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =====================================================
+  // 🔟 PIE CHART DATA
+  // =====================================================
   const getPieChartData = (unitData, selectedMonth) => {
     if (!unitData) return [];
     return unitData.map((row) => ({
@@ -252,43 +315,9 @@ export const useDataManagement = (initialData = {}) => {
     }));
   };
 
-  // Fungsi untuk update data di Firebase
-  const updateDataInFirebase = async (selectedUnit, recordId, updateData) => {
-    try {
-      setIsLoading(true);
-      await updateDoc(doc(db, `unitData/${selectedUnit}/records`, recordId), {
-        ...updateData,
-        updatedAt: new Date(),
-      });
-      return { success: true, message: "Data berhasil diupdate!" };
-    } catch (error) {
-      console.error("Error updating data:", error);
-      return {
-        success: false,
-        message: "Error mengupdate data: " + error.message,
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Fungsi untuk delete data dari Firebase
-  const deleteDataFromFirebase = async (selectedUnit, recordId) => {
-    try {
-      setIsLoading(true);
-      await deleteDoc(doc(db, `unitData/${selectedUnit}/records`, recordId));
-      return { success: true, message: "Data berhasil dihapus!" };
-    } catch (error) {
-      console.error("Error deleting data:", error);
-      return {
-        success: false,
-        message: "Error menghapus data: " + error.message,
-      };
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // =====================================================
+  // RETURN SEMUA FUNGSI
+  // =====================================================
   return {
     data,
     isLoading,
@@ -300,10 +329,13 @@ export const useDataManagement = (initialData = {}) => {
     deleteDataFromFirebase,
     getPieChartData,
     sumMonths,
+    resetYearData, // 🔥 Tambahan baru
   };
 };
 
-// Custom hook untuk form management
+// =====================================================
+// HOOK UNTUK FORM TAMBAH DATA
+// =====================================================
 export const useFormManagement = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newRecord, setNewRecord] = useState({
@@ -313,21 +345,16 @@ export const useFormManagement = () => {
     target: "",
   });
 
-  const resetForm = () => {
+  const resetForm = () =>
     setNewRecord({
       month: "",
       revenue: "",
       expenses: "",
       target: "",
     });
-  };
 
-  const updateField = (field, value) => {
-    setNewRecord((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
+  const updateField = (field, value) =>
+    setNewRecord((prev) => ({ ...prev, [field]: value }));
 
   return {
     showAddModal,

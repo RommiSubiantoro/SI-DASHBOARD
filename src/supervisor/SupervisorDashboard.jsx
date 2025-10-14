@@ -39,7 +39,6 @@ function SupervisorDashboard() {
   // State untuk users
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  
 
   // State untuk form modal
   const [showUnitModal, setShowUnitModal] = useState(false);
@@ -129,7 +128,7 @@ function SupervisorDashboard() {
   ];
 
   // Data untuk dashboard
-  const currentData = data[selectedUnit] || [];
+  const [currentData, setCurrentData] = useState([]);
   const stats = calculateStats(currentData);
 
   // Firebase functions untuk Units (existing code)
@@ -247,33 +246,57 @@ function SupervisorDashboard() {
   };
 
   // Fungsi untuk menghitung total stats dari semua unit
-  const calculateAllUnitsStats = () => {
+  const [allUnitsStats, setAllUnitsStats] = useState({
+    totalRevenue: 0,
+    totalExpenses: 0,
+    totalAct2025: 0,
+    avgTarget: 0,
+  });
+
+  const calculateAllUnitsStats = async () => {
     let totalRevenue = 0;
     let totalExpenses = 0;
     let totalAct2025 = 0;
     let totalRecords = 0;
     let totalTargets = 0;
 
-    Object.values(data).forEach((unitData) => {
-      if (unitData && unitData.length > 0) {
-        const unitStats = calculateStats(unitData);
-        totalRevenue += unitStats.totalRevenue;
-        totalExpenses += unitStats.totalExpenses;
-        totalAct2025 += unitStats.totalAct2025;
-        totalRecords += unitData.length;
-        totalTargets += unitStats.avgTarget * unitData.length;
-      }
-    });
+    try {
+      for (const unit of units) {
+        const unitName = unit.name;
+        const itemsRef = collection(
+          db,
+          `unitData/${unitName}/${selectedYear}/data/items`
+        );
+        const itemsSnap = await getDocs(itemsRef);
 
-    return {
-      totalRevenue,
-      totalExpenses,
-      totalAct2025,
-      avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
-    };
+        const unitData = itemsSnap.docs.map((doc) => doc.data());
+
+        if (unitData.length > 0) {
+          const stats = calculateStats(unitData);
+          totalRevenue += stats.totalRevenue;
+          totalExpenses += stats.totalExpenses;
+          totalAct2025 += stats.totalAct2025;
+          totalRecords += unitData.length;
+          totalTargets += stats.avgTarget * unitData.length;
+        }
+      }
+
+      setAllUnitsStats({
+        totalRevenue,
+        totalExpenses,
+        totalAct2025,
+        avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
+      });
+    } catch (err) {
+      console.error("❌ Error calculating all units stats:", err);
+    }
   };
 
-  const allUnitsStats = calculateAllUnitsStats();
+  useEffect(() => {
+    if (units.length > 0 && selectedYear) {
+      calculateAllUnitsStats();
+    }
+  }, [units, selectedYear]);
 
   // Unit management functions (existing code)
 
@@ -353,17 +376,25 @@ function SupervisorDashboard() {
   const fetchUnitUploads = async () => {
     setLoadingUploads(true);
     try {
-      // 1️⃣ Ambil daftar unit dari koleksi 'units' (karena ini pasti ada datanya)
       const unitsSnap = await getDocs(collection(db, "units"));
       const unitNames = unitsSnap.docs.map((doc) => doc.data().name);
       const counts = {};
 
-      // 2️⃣ Cek tiap unit apakah punya records
       for (const unitName of unitNames) {
-        const recordsRef = collection(db, "unitData", unitName, "records");
-        const recordsSnap = await getDocs(recordsRef);
-        counts[unitName] = recordsSnap.size;
+        // Cek dua tahun (2024 & 2025)
+        let totalCount = 0;
+        for (const year of ["2024", "2025"]) {
+          const itemsRef = collection(
+            db,
+            `unitData/${unitName}/${year}/data/items`
+          );
+          const itemsSnap = await getDocs(itemsRef);
+          totalCount += itemsSnap.size;
+        }
+        counts[unitName] = totalCount;
+        console.log(`📊 ${unitName}: total ${totalCount} data`);
       }
+
       setUnitUploads(counts);
     } catch (err) {
       console.error("❌ Error fetching uploads:", err);
@@ -372,9 +403,30 @@ function SupervisorDashboard() {
     }
   };
 
+  // Panggil setiap kali daftar unit berubah
   useEffect(() => {
     fetchUnitUploads();
   }, [units]);
+  // Data Listener
+  useEffect(() => {
+    if (!selectedUnit || !selectedYear) return;
+
+    const itemsRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
+
+    const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log("📡 Admin realtime data:", docs);
+      setCurrentData(docs);
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit, selectedYear]);
 
   // Tambahkan setelah handleDeleteUnit
   const handleDeleteAllRecords = async (unitName) => {
@@ -574,6 +626,8 @@ function SupervisorDashboard() {
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
                 units={units.map((unit) => unit.name)}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
                 title="Supervisor Dashboard"
               />
 
@@ -588,10 +642,10 @@ function SupervisorDashboard() {
                   totalAct2025={allUnitsStats.totalAct2025}
                   avgTarget={allUnitsStats.avgTarget}
                   labels={{
-                    revenue: "Total Act 2024 (All Units)",
-                    expenses: "Total Budget (All Units)",
-                    act2025: "Total Act 2025 (All Units)",
-                    avgTarget: "VAR YTD (All Units)",
+                    revenue: `Total ACT ${selectedYear}`,
+                    expenses: `Total BDGT ${selectedYear}`,
+                    act2025: `Total ACT ${selectedYear}`,
+                    avgTarget: "Avg Target",
                   }}
                 />
               </div>

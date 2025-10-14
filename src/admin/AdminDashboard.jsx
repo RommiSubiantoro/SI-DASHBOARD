@@ -42,7 +42,6 @@ function AdminDashboard() {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-
   // State untuk form modal
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -141,7 +140,7 @@ function AdminDashboard() {
   ];
 
   // Data untuk dashboard
-  const currentData = data[selectedUnit] || [];
+  const [currentData, setCurrentData] = useState([]);
   const stats = calculateStats(currentData);
 
   // Firebase functions untuk Units (existing code)
@@ -187,7 +186,8 @@ function AdminDashboard() {
     }
   };
 
-  // Real-time listeners (existing code)
+  // ======== 🔹 LISTENERS & FETCH DATA 🔹 ========
+
   useEffect(() => {
     const unsubscribeUnits = onSnapshot(
       collection(db, "units"),
@@ -226,27 +226,31 @@ function AdminDashboard() {
     return () => unsubscribeUsers();
   }, []);
 
+  // =======================================================
+  // 🔹 Fetch data jumlah uploads per unit & tahun (2024/2025)
+  // =======================================================
   const fetchUnitUploads = async () => {
     setLoadingUploads(true);
     try {
-      // 1️⃣ Ambil daftar unit dari koleksi 'units' (karena ini pasti ada datanya)
       const unitsSnap = await getDocs(collection(db, "units"));
       const unitNames = unitsSnap.docs.map((doc) => doc.data().name);
-
-      console.log("📦 Jumlah unit bisnis:", unitNames.length);
-
       const counts = {};
 
-      // 2️⃣ Cek tiap unit apakah punya records
       for (const unitName of unitNames) {
-        const recordsRef = collection(db, "unitData", unitName, "records");
-        const recordsSnap = await getDocs(recordsRef);
-
-        console.log(`➡️ ${unitName} memiliki ${recordsSnap.size} records`);
-        counts[unitName] = recordsSnap.size;
+        // Cek dua tahun (2024 & 2025)
+        let totalCount = 0;
+        for (const year of ["2024", "2025"]) {
+          const itemsRef = collection(
+            db,
+            `unitData/${unitName}/${year}/data/items`
+          );
+          const itemsSnap = await getDocs(itemsRef);
+          totalCount += itemsSnap.size;
+        }
+        counts[unitName] = totalCount;
+        console.log(`📊 ${unitName}: total ${totalCount} data`);
       }
 
-      console.log("📊 Hasil akhir counts:", counts);
       setUnitUploads(counts);
     } catch (err) {
       console.error("❌ Error fetching uploads:", err);
@@ -255,9 +259,33 @@ function AdminDashboard() {
     }
   };
 
+  // Panggil setiap kali daftar unit berubah
   useEffect(() => {
     fetchUnitUploads();
   }, [units]);
+
+  // =======================================================
+  // 🔹 Realtime Chart Data (contoh untuk dashboard chart admin)
+  // =======================================================
+  useEffect(() => {
+    if (!selectedUnit || !selectedYear) return;
+
+    const itemsRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
+
+    const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
+      const docs = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log("📡 Admin realtime data:", docs);
+      setCurrentData(docs);
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit, selectedYear]);
 
   // Logout handler
   const handleLogout = async () => {
@@ -299,38 +327,60 @@ function AdminDashboard() {
     }
   };
 
-  // Fungsi untuk menghitung total stats dari semua unit
-  const calculateAllUnitsStats = () => {
-    let totalRevenue = 0;
+  const [allUnitsStats, setAllUnitsStats] = useState({
+    totalAct2024: 0,
+    totalExpenses: 0,
+    totalAct2025: 0,
+    avgTarget: 0,
+  });
+
+  const calculateAllUnitsStats = async () => {
+    let totalAct2024 = 0;
     let totalExpenses = 0;
     let totalAct2025 = 0;
     let totalRecords = 0;
     let totalTargets = 0;
 
-    Object.values(data).forEach((unitData) => {
-      if (unitData && unitData.length > 0) {
-        const unitStats = calculateStats(unitData);
-        totalRevenue += unitStats.totalRevenue;
-        totalExpenses += unitStats.totalExpenses;
-        totalAct2025 += unitStats.totalAct2025;
-        totalRecords += unitData.length;
-        totalTargets += unitStats.avgTarget * unitData.length;
-      }
-    });
+    try {
+      for (const unit of units) {
+        const unitName = unit.name;
+        const itemsRef = collection(
+          db,
+          `unitData/${unitName}/${selectedYear}/data/items`
+        );
+        const itemsSnap = await getDocs(itemsRef);
 
-    return {
-      totalRevenue,
-      totalExpenses,
-      totalAct2025,
-      avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
-    };
+        const unitData = itemsSnap.docs.map((doc) => doc.data());
+
+        if (unitData.length > 0) {
+          const stats = calculateStats(unitData);
+          totalAct2024 += stats.totalRevenue;
+          totalExpenses += stats.totalExpenses;
+          totalAct2025 += stats.totalAct2025;
+          totalRecords += unitData.length;
+          totalTargets += stats.avgTarget * unitData.length;
+        }
+      }
+
+      setAllUnitsStats({
+        totalAct2024,
+        totalExpenses,
+        totalAct2025,
+        avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
+      });
+    } catch (err) {
+      console.error("❌ Error calculating all units stats:", err);
+    }
   };
 
-  const allUnitsStats = calculateAllUnitsStats();
+  useEffect(() => {
+    if (units.length > 0 && selectedYear) {
+      calculateAllUnitsStats();
+    }
+  }, [units, selectedYear]);
 
-
-  // User managemt 
-   const handleEditUser = (user) => {
+  // User managemt
+  const handleEditUser = (user) => {
     setEditingUser(user);
     setUserForm({
       name: user.name,
@@ -341,8 +391,6 @@ function AdminDashboard() {
     });
     setShowUserModal(true);
   };
-
-  
 
   // Unit management functions (existing code)
   const handleAddUnit = () => {
@@ -693,6 +741,8 @@ function AdminDashboard() {
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
                 units={units.map((unit) => unit.name)}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
                 title="Admin Dashboard"
               />
 
@@ -702,7 +752,7 @@ function AdminDashboard() {
                   Overview Semua Unit
                 </h3>
                 <StatsCards
-                  totalRevenue={allUnitsStats.totalRevenue}
+                  totalRevenue={allUnitsStats.totalAct2024}
                   totalExpenses={allUnitsStats.totalExpenses}
                   totalAct2025={allUnitsStats.totalAct2025}
                   avgTarget={allUnitsStats.avgTarget}
