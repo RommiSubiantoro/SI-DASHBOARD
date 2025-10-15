@@ -644,7 +644,7 @@ function SupervisorDashboard() {
                   labels={{
                     revenue: `Total ACT ${selectedYear}`,
                     expenses: `Total BDGT ${selectedYear}`,
-                    act2025: `Total ACT ${selectedYear}`,
+                    act2025: `Total ACT ${selectedYear} All Unit`,
                     avgTarget: "Avg Target",
                   }}
                 />
@@ -662,8 +662,8 @@ function SupervisorDashboard() {
                   avgTarget={stats.avgTarget}
                   labels={{
                     revenue: `Act 2024 ${selectedUnit}`,
-                    expenses: `Budget ${selectedUnit}`,
-                    act2025: `Act 2025 ${selectedUnit}`,
+                    expenses: `Budget ${selectedYear} ${selectedUnit}`,
+                    act2025: `Act ${selectedYear} ${selectedUnit}`,
                     avgTarget: `VAR YTD ${selectedUnit}`,
                   }}
                 />

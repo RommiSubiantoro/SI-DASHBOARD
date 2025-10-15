@@ -184,8 +184,8 @@ const UserDashboard = () => {
             avgTarget={stats.avgTarget}
             labels={{
               revenue: `Total ACT ${selectedYear}`,
-              expenses: `Total BDGT ${selectedYear}`,
-              act2025: `Total ACT ${selectedYear}`,
+              expenses: `Total BDGT ${selectedYear} ${selectedUnit}`,
+              act2025: `Total ACT ${selectedYear} ${selectedUnit}`,
               avgTarget: "Avg Target",
             }}
           />

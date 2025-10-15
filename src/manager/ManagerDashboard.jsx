@@ -128,7 +128,7 @@ function ManagerDashboard() {
   const auth = getAuth();
 
   // Data untuk dashboard
- const [currentData, setCurrentData] = useState([]);
+  const [currentData, setCurrentData] = useState([]);
   const stats = calculateStats(currentData);
 
   // Firebase functions untuk Units (existing code)
@@ -252,18 +252,32 @@ function ManagerDashboard() {
       const counts = {};
 
       for (const unitName of unitNames) {
-        // Cek dua tahun (2024 & 2025)
-        let totalCount = 0;
-        for (const year of ["2024", "2025"]) {
-          const itemsRef = collection(
+        let total2024 = 0;
+        let total2025 = 0;
+
+        try {
+          const ref2024 = collection(
             db,
-            `unitData/${unitName}/${year}/data/items`
+            `unitData/${unitName}/2024/data/items`
           );
-          const itemsSnap = await getDocs(itemsRef);
-          totalCount += itemsSnap.size;
+          const snap2024 = await getDocs(ref2024);
+          total2024 = snap2024.size;
+        } catch (err) {
+          console.warn(`⚠️ Tidak bisa ambil data ${unitName} tahun 2024`, err);
         }
-        counts[unitName] = totalCount;
-        console.log(`📊 ${unitName}: total ${totalCount} data`);
+
+        try {
+          const ref2025 = collection(
+            db,
+            `unitData/${unitName}/2025/data/items`
+          );
+          const snap2025 = await getDocs(ref2025);
+          total2025 = snap2025.size;
+        } catch (err) {
+          console.warn(`⚠️ Tidak bisa ambil data ${unitName} tahun 2025`, err);
+        }
+
+        counts[unitName] = { 2024: total2024, 2025: total2025 };
       }
 
       setUnitUploads(counts);
@@ -426,29 +440,43 @@ function ManagerDashboard() {
   };
 
   // Tambahkan setelah handleDeleteUnit
-  const handleDeleteAllRecords = async (unitName) => {
-    if (!unitName) {
-      alert("Unit bisnis tidak valid!");
+  const handleDeleteAllRecords = async (unitName, year) => {
+    if (!unitName || !year) {
+      alert("Unit bisnis atau tahun tidak valid!");
       return;
     }
 
     if (
-      !window.confirm(`Yakin ingin menghapus semua records di ${unitName}?`)
+      !window.confirm(
+        `Yakin ingin menghapus semua data ${unitName} tahun ${year}?`
+      )
     ) {
       return;
     }
 
     try {
       setIsLoading(true);
-      const recordsRef = collection(db, "unitData", unitName, "records");
-      const snapshot = await getDocs(recordsRef);
 
-      const deletePromises = snapshot.docs.map((record) =>
-        deleteDoc(doc(db, "unitData", unitName, "records", record.id))
+      const itemsRef = collection(
+        db,
+        `unitData/${unitName}/${year}/data/items`
+      );
+      const snapshot = await getDocs(itemsRef);
+
+      if (snapshot.empty) {
+        alert(`Tidak ada data yang ditemukan untuk ${unitName} tahun ${year}.`);
+        return;
+      }
+
+      const deletePromises = snapshot.docs.map((docItem) =>
+        deleteDoc(
+          doc(db, `unitData/${unitName}/${year}/data/items`, docItem.id)
+        )
       );
 
       await Promise.all(deletePromises);
-      console.log(`All records in "${unitName}" deleted successfully`);
+      alert(`✅ Semua data ${unitName} tahun ${year} berhasil dihapus.`);
+      fetchUnitUploads(); // refresh tabel
     } catch (error) {
       console.error("Error deleting records:", error);
       alert("❌ Gagal menghapus records: " + error.message);
@@ -655,10 +683,10 @@ function ManagerDashboard() {
                   totalAct2025={allUnitsStats.totalAct2025}
                   avgTarget={allUnitsStats.avgTarget}
                   labels={{
-                    revenue: "Total Act 2024 (All Units)",
-                    expenses: "Total Budget (All Units)",
-                    act2025: "Total Act 2025 (All Units)",
-                    avgTarget: "VAR YTD (All Units)",
+                    revenue: `Act 2024 ${selectedUnit}`,
+                    expenses: `Budget ${selectedYear} ${selectedUnit}`,
+                    act2025: `Act ${selectedYear} ${selectedUnit}`,
+                    avgTarget: `VAR YTD ${selectedUnit}`,
                   }}
                 />
               </div>
@@ -675,8 +703,8 @@ function ManagerDashboard() {
                   avgTarget={stats.avgTarget}
                   labels={{
                     revenue: `Act 2024 ${selectedUnit}`,
-                    expenses: `Budget ${selectedUnit}`,
-                    act2025: `Act 2025 ${selectedUnit}`,
+                    expenses: `Budget ${selectedYear} ${selectedUnit}`,
+                    act2025: `Act ${selectedYear} ${selectedUnit}`,
                     avgTarget: `VAR YTD ${selectedUnit}`,
                   }}
                 />
@@ -777,17 +805,22 @@ function ManagerDashboard() {
                                 Array.isArray(user.unitBisnis) &&
                                 user.unitBisnis.includes(unit.name)
                             ).length;
-                            const hasUploads =
-                              (unitUploads[unit.name] || 0) > 0;
+
+                            const uploads2024 =
+                              unitUploads[unit.name]?.["2024"] || 0;
+                            const uploads2025 =
+                              unitUploads[unit.name]?.["2025"] || 0;
 
                             return (
                               <tr key={unit.id} className="hover:bg-gray-50">
                                 <td className="px-4 py-3 text-gray-900">
                                   {index + 1}
                                 </td>
+
                                 <td className="px-4 py-3 text-gray-900 font-medium">
                                   {unit.name}
                                 </td>
+
                                 <td className="px-4 py-3">
                                   <span
                                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -800,18 +833,72 @@ function ManagerDashboard() {
                                   </span>
                                 </td>
 
-                                <td className="p-2 text-center">
+                                {/* 📂 Data Upload per Tahun */}
+                                <td className="px-4 py-3 text-sm">
                                   {loadingUploads ? (
                                     <span className="text-gray-400 italic text-sm">
                                       Loading...
                                     </span>
-                                  ) : hasUploads ? (
-                                    <CheckCircle className="text-green-500 inline-block w-5 h-5" />
                                   ) : (
-                                    <XCircle className="text-red-500 inline-block w-5 h-5" />
+                                    <div className="flex flex-col gap-2">
+                                      {/* Tahun 2024 */}
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-700 text-xs font-medium">
+                                          2024:
+                                        </span>
+                                        {unitUploads[unit.name]?.["2024"] >
+                                        0 ? (
+                                          <CheckCircle className="text-green-500 w-5 h-5" />
+                                        ) : (
+                                          <XCircle className="text-red-500 w-5 h-5" />
+                                        )}
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteAllRecords(
+                                              unit.name,
+                                              "2024"
+                                            )
+                                          }
+                                          className="px-2 py-1 text-[11px] font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
+                                          disabled={
+                                            isLoading || uploads2024 === 0
+                                          }
+                                        >
+                                          Hapus 2024
+                                        </button>
+                                      </div>
+
+                                      {/* Tahun 2025 */}
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-700 text-xs font-medium">
+                                          2025:
+                                        </span>
+                                        {unitUploads[unit.name]?.["2025"] >
+                                        0 ? (
+                                          <CheckCircle className="text-green-500 w-5 h-5" />
+                                        ) : (
+                                          <XCircle className="text-red-500 w-5 h-5" />
+                                        )}
+                                        <button
+                                          onClick={() =>
+                                            handleDeleteAllRecords(
+                                              unit.name,
+                                              "2025"
+                                            )
+                                          }
+                                          className="px-2 py-1 text-[11px] font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
+                                          disabled={
+                                            isLoading || uploads2025 === 0
+                                          }
+                                        >
+                                          Hapus 2025
+                                        </button>
+                                      </div>
+                                    </div>
                                   )}
                                 </td>
 
+                                {/* 🔧 Tombol Edit/Delete Unit */}
                                 <td className="px-4 py-3">
                                   <div className="flex gap-2">
                                     <button
@@ -827,15 +914,6 @@ function ManagerDashboard() {
                                       disabled={isLoading}
                                     >
                                       Delete
-                                    </button>
-                                    <button
-                                      onClick={() =>
-                                        handleDeleteAllRecords(unit.name)
-                                      }
-                                      className="px-3 py-1 text-xs font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Hapus Records
                                     </button>
                                   </div>
                                 </td>
