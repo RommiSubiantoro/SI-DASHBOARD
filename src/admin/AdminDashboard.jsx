@@ -1,6 +1,14 @@
+// src/pages/AdminDashboard.jsx
 import React, { useState, useEffect } from "react";
-import Select from "react-select";
-import { CheckCircle, XCircle } from "lucide-react";
+import Sidebar from "./Sidebar";
+import Navbar from "../components/navbar";
+import DashboardPage from "./DashboardPage";
+import UnitManagement from "./UnitManagement";
+import UserManagement from "./UserManagement";
+import UnitModal from "./UnitModal";
+import UserModal from "./UserModal";
+import MasterCategory from "./MasterCategory";
+import MasterCode from "./MasterCode";
 
 import {
   collection,
@@ -10,6 +18,8 @@ import {
   deleteDoc,
   doc,
   onSnapshot,
+  query,
+  where,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -18,95 +28,54 @@ import {
 } from "firebase/auth";
 import { db, firebaseConfig } from "../firebase";
 import { initializeApp } from "firebase/app";
-
-// Import komponen yang sudah dipecah
-import Header from "../components/Header";
-import StatsCards from "../components/StatsCards";
-import Navbar from "../components/navbar";
-import Piechart from "../components/Piechart";
-import Barchart from "../components/Barchart";
-import ExporttableChart from "../components/ExporttableChart";
-import Linechart from "../components/Linechart";
-
-// Import custom hooks yang sudah diupdate dengan Firebase
 import { useDataManagement } from "../hooks/useDataManagement";
 
 function AdminDashboard() {
+  // -------------------------
+  // General UI / loading state
+  // -------------------------
   const [activePage, setActivePage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // State untuk unit bisnis
+  // -------------------------
+  // Units & uploads
+  // -------------------------
   const [units, setUnits] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
+  const [unitUploads, setUnitUploads] = useState({});
+  const [loadingUploads, setLoadingUploads] = useState(false);
 
-  // State untuk users
+  // -------------------------
+  // Users
+  // -------------------------
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // State untuk form modal
+  // -------------------------
+  // Modals & forms
+  // -------------------------
   const [showUnitModal, setShowUnitModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [selectedMonth, setSelectedMonth] = useState("All");
-  const [selectedYear, setSelectedYear] = useState("2025");
   const [editingUnit, setEditingUnit] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
   const [unitForm, setUnitForm] = useState({ name: "" });
-  const [unitUploads, setUnitUploads] = useState({});
-  const [loadingUploads, setLoadingUploads] = useState(false);
+
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
   const [userForm, setUserForm] = useState({
     name: "",
     email: "",
     password: "",
     role: "",
-    unitBisnis: "",
+    unitBisnis: [],
   });
-  const [isLoading, setIsLoading] = useState(false);
 
-  // Dashboard states
+  // -------------------------
+  // Dashboard states & stats
+  // -------------------------
   const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedMonth, setSelectedMonth] = useState("All");
+  const [selectedYear, setSelectedYear] = useState("2025");
+  const [currentData, setCurrentData] = useState([]);
 
-  // Tambahkan state untuk search di AdminDashboard
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [unitFilter, setUnitFilter] = useState("");
-
-  const getFilteredUsers = () => {
-    return users.filter((user) => {
-      const matchesSearch =
-        searchTerm === "" ||
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (user.email &&
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-
-      const matchesRole = roleFilter === "" || user.role === roleFilter;
-
-      const matchesUnit =
-        unitFilter === "" ||
-        (Array.isArray(user.unitBisnis)
-          ? user.unitBisnis.includes(unitFilter)
-          : user.unitBisnis === unitFilter);
-
-      return matchesSearch && matchesRole && matchesUnit;
-    });
-  };
-
-  const filteredUsers = getFilteredUsers();
-
-  const [currentPage, setCurrentPage] = useState(1);
-  const usersPerPage = 10;
-
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  const indexOfLastUser = currentPage * usersPerPage;
-  const indexOfFirstUser = indexOfLastUser - usersPerPage;
-  const paginatedUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
-
-  // Fungsi untuk reset filters
-  const handleResetFilters = () => {
-    setSearchTerm("");
-    setRoleFilter("");
-    setUnitFilter("");
-  };
-
-  // Menggunakan Firebase-enabled custom hooks untuk dashboard data
   const {
     data,
     isLoading: dataLoading,
@@ -124,222 +93,7 @@ function AdminDashboard() {
     "Samudera Kendari Logistik": [],
   });
 
-  // Dapatkan instance autentikasi
-  const auth = getAuth();
-
-  // Units mapping untuk dashboard
-  const dashboardUnits = [
-    "Samudera Makassar Logistik",
-    "Makassar Jaya Samudera",
-    "Samudera Perdana",
-    "Masaji Kargosentra Utama",
-    "Kendari Jaya Samudera",
-    "Silkargo Indonesia",
-    "Samudera Agencies Indonesia",
-    "Samudera Kendari Logistik",
-  ];
-
-  // Data untuk dashboard
-  const [currentData, setCurrentData] = useState([]);
   const stats = calculateStats(currentData);
-
-  // Firebase functions untuk Units (existing code)
-  const fetchUnits = async () => {
-    try {
-      setLoadingUnits(true);
-      const unitsCollection = collection(db, "units");
-      const unitsSnapshot = await getDocs(unitsCollection);
-      const unitsList = unitsSnapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      if (unitsList.length === 0) {
-        const defaultUnits = [
-          { name: "Samudera Makassar Logistik" },
-          { name: "Makassar Jaya Samudera" },
-          { name: "Kendari Jaya Samudera" },
-          { name: "Samudera Kendari Logistik" },
-          { name: "Samudera Agencies Indonesia" },
-          { name: "Samudera Perdana" },
-          { name: "Masaji Kargosentra Utama" },
-          { name: "Silkargo Indonesia" },
-        ];
-
-        for (const unit of defaultUnits) {
-          await addDoc(collection(db, "units"), {
-            ...unit,
-            createdAt: new Date(),
-            updatedAt: new Date(),
-          });
-        }
-        await fetchUnits();
-        return;
-      }
-
-      setUnits(unitsList);
-    } catch (error) {
-      console.error("Error fetching units:", error);
-      alert("Error loading units from database");
-    } finally {
-      setLoadingUnits(false);
-    }
-  };
-
-  // ======== 🔹 LISTENERS & FETCH DATA 🔹 ========
-
-  useEffect(() => {
-    const unsubscribeUnits = onSnapshot(
-      collection(db, "units"),
-      (snapshot) => {
-        const unitsList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUnits(unitsList);
-        setLoadingUnits(false);
-      },
-      (error) => {
-        console.error("Error listening to units:", error);
-        setLoadingUnits(false);
-      }
-    );
-    return () => unsubscribeUnits();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribeUsers = onSnapshot(
-      collection(db, "users"),
-      (snapshot) => {
-        const usersList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUsers(usersList);
-        setLoadingUsers(false);
-      },
-      (error) => {
-        console.error("Error listening to users:", error);
-        setLoadingUsers(false);
-      }
-    );
-    return () => unsubscribeUsers();
-  }, []);
-
-  // =======================================================
-  // 🔹 Fetch data jumlah uploads per unit & tahun (2024/2025)
-  // =======================================================
-  const fetchUnitUploads = async () => {
-    setLoadingUploads(true);
-    try {
-      const unitsSnap = await getDocs(collection(db, "units"));
-      const unitNames = unitsSnap.docs.map((doc) => doc.data().name);
-      const counts = {};
-
-      for (const unitName of unitNames) {
-        let total2024 = 0;
-        let total2025 = 0;
-
-        try {
-          const ref2024 = collection(
-            db,
-            `unitData/${unitName}/2024/data/items`
-          );
-          const snap2024 = await getDocs(ref2024);
-          total2024 = snap2024.size;
-        } catch (err) {
-          console.warn(`⚠️ Tidak bisa ambil data ${unitName} tahun 2024`, err);
-        }
-
-        try {
-          const ref2025 = collection(
-            db,
-            `unitData/${unitName}/2025/data/items`
-          );
-          const snap2025 = await getDocs(ref2025);
-          total2025 = snap2025.size;
-        } catch (err) {
-          console.warn(`⚠️ Tidak bisa ambil data ${unitName} tahun 2025`, err);
-        }
-
-        counts[unitName] = { 2024: total2024, 2025: total2025 };
-      }
-
-      setUnitUploads(counts);
-    } catch (err) {
-      console.error("❌ Error fetching uploads:", err);
-    } finally {
-      setLoadingUploads(false);
-    }
-  };
-
-  // Panggil setiap kali daftar unit berubah
-  useEffect(() => {
-    fetchUnitUploads();
-  }, [units]);
-
-  // =======================================================
-  // 🔹 Realtime Chart Data (contoh untuk dashboard chart admin)
-  // =======================================================
-  useEffect(() => {
-    if (!selectedUnit || !selectedYear) return;
-
-    const itemsRef = collection(
-      db,
-      `unitData/${selectedUnit}/${selectedYear}/data/items`
-    );
-
-    const unsubscribe = onSnapshot(itemsRef, (snapshot) => {
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      console.log("📡 Admin realtime data:", docs);
-      setCurrentData(docs);
-    });
-
-    return () => unsubscribe();
-  }, [selectedUnit, selectedYear]);
-
-  // Logout handler
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      await signOut(auth);
-      localStorage.clear();
-      sessionStorage.clear();
-      alert("Berhasil logout!");
-      window.location.href = "/";
-    } catch (error) {
-      console.error("Error during logout:", error);
-      alert("Error during logout: " + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Dashboard handlers menggunakan komponen baru dengan Firebase
-  const handleExportExcel = () => {
-    exportToExcel(selectedUnit, currentData);
-  };
-
-  const handleExportPDF = () => {
-    alert(`Admin exporting ${selectedUnit} data to PDF...`);
-  };
-
-  const handleImportData = async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      try {
-        const message = await importFromExcelToFirebase(selectedUnit, file);
-        alert("✅ " + message);
-        // Reset file input
-        event.target.value = "";
-      } catch (error) {
-        alert("❌ " + error);
-      }
-    }
-  };
 
   const [allUnitsStats, setAllUnitsStats] = useState({
     totalAct2024: 0,
@@ -348,31 +102,176 @@ function AdminDashboard() {
     avgTarget: 0,
   });
 
-  const calculateAllUnitsStats = async () => {
-    let totalAct2024 = 0;
-    let totalExpenses = 0;
-    let totalAct2025 = 0;
-    let totalRecords = 0;
-    let totalTargets = 0;
+  // -------------------------
+  // User search & pagination
+  // -------------------------
+  const [searchTerm, setSearchTerm] = useState("");
+  const [roleFilter, setRoleFilter] = useState("");
+  const [unitFilter, setUnitFilter] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 10;
 
+  // -------------------------
+  // Master Category & Code
+  // -------------------------
+  const [categories, setCategories] = useState([]);
+  const [loadingCategories, setLoadingCategories] = useState(true);
+
+  const [codes, setCodes] = useState([]);
+  const [loadingCodes, setLoadingCodes] = useState(true);
+
+  // -------------------------
+  // Firebase Auth
+  // -------------------------
+  const auth = getAuth();
+
+  // =========================
+  // Firebase listeners
+  // =========================
+
+  // Units
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "units"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setUnits(list);
+        setLoadingUnits(false);
+      },
+      (err) => {
+        console.error("listen units err:", err);
+        setLoadingUnits(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Users
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "users"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setUsers(list);
+        setLoadingUsers(false);
+      },
+      (err) => {
+        console.error("listen users err:", err);
+        setLoadingUsers(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Master categories
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "masterCategory"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setCategories(list);
+        setLoadingCategories(false);
+      },
+      (err) => {
+        console.error("listen masterCategory err:", err);
+        setLoadingCategories(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Master codes
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "masterCode"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setCodes(list);
+        setLoadingCodes(false);
+      },
+      (err) => {
+        console.error("listen masterCode err:", err);
+        setLoadingCodes(false);
+      }
+    );
+    return () => unsubscribe();
+  }, []);
+
+  // Unit uploads counts per year
+  const fetchUnitUploads = async () => {
+    setLoadingUploads(true);
     try {
+      const unitsSnap = await getDocs(collection(db, "units"));
+      const unitNames = unitsSnap.docs.map((d) => d.data().name);
+      const counts = {};
+      for (const unitName of unitNames) {
+        let total2024 = 0;
+        let total2025 = 0;
+        try {
+          const snap2024 = await getDocs(
+            collection(db, `unitData/${unitName}/2024/data/items`)
+          );
+          total2024 = snap2024.size;
+        } catch (err) {
+          console.warn(`can't fetch ${unitName} 2024`, err);
+        }
+        try {
+          const snap2025 = await getDocs(
+            collection(db, `unitData/${unitName}/2025/data/items`)
+          );
+          total2025 = snap2025.size;
+        } catch (err) {
+          console.warn(`can't fetch ${unitName} 2025`, err);
+        }
+        counts[unitName] = { 2024: total2024, 2025: total2025 };
+      }
+      setUnitUploads(counts);
+    } catch (err) {
+      console.error("fetchUnitUploads err:", err);
+    } finally {
+      setLoadingUploads(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUnitUploads();
+  }, [units]);
+
+  // Realtime chart data for selectedUnit + selectedYear
+  useEffect(() => {
+    if (!selectedUnit || !selectedYear) return;
+    const itemsRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
+    const unsubscribe = onSnapshot(itemsRef, (snap) => {
+      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setCurrentData(docs);
+    });
+    return () => unsubscribe();
+  }, [selectedUnit, selectedYear]);
+
+  // Aggregate all units stats
+  const calculateAllUnitsStats = async () => {
+    try {
+      let totalAct2024 = 0;
+      let totalExpenses = 0;
+      let totalAct2025 = 0;
+      let totalRecords = 0;
+      let totalTargets = 0;
+
       for (const unit of units) {
-        const unitName = unit.name;
-        const itemsRef = collection(
-          db,
-          `unitData/${unitName}/${selectedYear}/data/items`
+        const itemsSnap = await getDocs(
+          collection(db, `unitData/${unit.name}/${selectedYear}/data/items`)
         );
-        const itemsSnap = await getDocs(itemsRef);
-
-        const unitData = itemsSnap.docs.map((doc) => doc.data());
-
+        const unitData = itemsSnap.docs.map((d) => d.data());
         if (unitData.length > 0) {
-          const stats = calculateStats(unitData);
-          totalAct2024 += stats.totalRevenue;
-          totalExpenses += stats.totalExpenses;
-          totalAct2025 += stats.totalAct2025;
+          const s = calculateStats(unitData);
+          totalAct2024 += s.totalRevenue;
+          totalExpenses += s.totalExpenses;
+          totalAct2025 += s.totalAct2025;
           totalRecords += unitData.length;
-          totalTargets += stats.avgTarget * unitData.length;
+          totalTargets += s.avgTarget * unitData.length;
         }
       }
 
@@ -383,7 +282,7 @@ function AdminDashboard() {
         avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
       });
     } catch (err) {
-      console.error("❌ Error calculating all units stats:", err);
+      console.error("calculateAllUnitsStats err:", err);
     }
   };
 
@@ -391,22 +290,42 @@ function AdminDashboard() {
     if (units.length > 0 && selectedYear) {
       calculateAllUnitsStats();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [units, selectedYear]);
 
-  // User managemt
-  const handleEditUser = (user) => {
-    setEditingUser(user);
-    setUserForm({
-      name: user.name,
-      email: user.email || "",
-      password: "",
-      role: user.role,
-      unitBisnis: user.unitBisnis || [],
-    });
-    setShowUserModal(true);
+  // -------------------------
+  // Auth / Navigation handlers
+  // -------------------------
+  const handleLogout = async () => {
+    try {
+      setIsLoading(true);
+      await signOut(auth);
+      localStorage.clear();
+      sessionStorage.clear();
+      alert("Berhasil logout!");
+      window.location.href = "/";
+    } catch (err) {
+      console.error("logout err:", err);
+      alert("Error during logout: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  // Unit management functions (existing code)
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    localStorage.setItem("activePage", page);
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem("activePage");
+    if (saved) setActivePage(saved);
+    else setActivePage("dashboard");
+  }, []);
+
+  // =========================
+  // Unit handlers (CRUD)
+  // =========================
   const handleAddUnit = () => {
     setEditingUnit(null);
     setUnitForm({ name: "" });
@@ -424,16 +343,11 @@ function AdminDashboard() {
       alert("Nama unit tidak boleh kosong!");
       return;
     }
-
     try {
       setIsLoading(true);
-
       if (editingUnit) {
-        const unitRef = doc(db, "units", editingUnit.id);
-        await updateDoc(unitRef, {
-          name: unitForm.name,
-          updatedAt: new Date(),
-        });
+        const ref = doc(db, "units", editingUnit.id);
+        await updateDoc(ref, { name: unitForm.name, updatedAt: new Date() });
         alert("Unit bisnis berhasil diupdate!");
       } else {
         await addDoc(collection(db, "units"), {
@@ -446,92 +360,80 @@ function AdminDashboard() {
       setShowUnitModal(false);
       setUnitForm({ name: "" });
       setEditingUnit(null);
-    } catch (error) {
-      console.error("Error saving unit:", error);
-      alert("Error saving unit to database");
+    } catch (err) {
+      console.error("handleSaveUnit err:", err);
+      alert("Error saving unit: " + err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteUnit = async (unitToDelete) => {
-    const usersUsingUnit = users.filter((user) =>
-      Array.isArray(user.unitBisnis)
-        ? user.unitBisnis.includes(unitToDelete.name)
-        : user.unitBisnis === unitToDelete.name
-    );
-
-    if (usersUsingUnit.length > 0) {
-      alert(
-        `Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsingUnit.length} user yang menggunakannya.`
-      );
-      return;
-    }
-
-    if (
-      window.confirm(
-        `Apakah Anda yakin ingin menghapus unit "${unitToDelete.name}"?`
-      )
-    ) {
-      try {
-        setIsLoading(true);
-        await deleteDoc(doc(db, "units", unitToDelete.id));
-        alert("Unit bisnis berhasil dihapus!");
-      } catch (error) {
-        console.error("Error deleting unit:", error);
-        alert("Error deleting unit from database");
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  };
-
-  // Tambahkan setelah handleDeleteUnit
-  const handleDeleteAllRecords = async (unitName, year) => {
-    if (!unitName || !year) {
-      alert("Unit bisnis atau tahun tidak valid!");
-      return;
-    }
-
-    if (
-      !window.confirm(
-        `Yakin ingin menghapus semua data ${unitName} tahun ${year}?`
-      )
-    ) {
-      return;
-    }
-
     try {
-      setIsLoading(true);
-
-      const itemsRef = collection(
-        db,
-        `unitData/${unitName}/${year}/data/items`
+      const usersUsing = users.filter((u) =>
+        Array.isArray(u.unitBisnis)
+          ? u.unitBisnis.includes(unitToDelete.name)
+          : u.unitBisnis === unitToDelete.name
       );
-      const snapshot = await getDocs(itemsRef);
-
-      if (snapshot.empty) {
-        alert(`Tidak ada data yang ditemukan untuk ${unitName} tahun ${year}.`);
+      if (usersUsing.length > 0) {
+        alert(
+          `Tidak dapat menghapus unit "${unitToDelete.name}" karena masih ada ${usersUsing.length} user yang menggunakannya.`
+        );
         return;
       }
-
-      const deletePromises = snapshot.docs.map((docItem) =>
-        deleteDoc(
-          doc(db, `unitData/${unitName}/${year}/data/items`, docItem.id)
+      if (
+        !window.confirm(
+          `Apakah Anda yakin ingin menghapus unit "${unitToDelete.name}"?`
         )
-      );
-
-      await Promise.all(deletePromises);
-      alert(`✅ Semua data ${unitName} tahun ${year} berhasil dihapus.`);
-      fetchUnitUploads(); // refresh tabel
-    } catch (error) {
-      console.error("Error deleting records:", error);
-      alert("❌ Gagal menghapus records: " + error.message);
+      )
+        return;
+      setIsLoading(true);
+      await deleteDoc(doc(db, "units", unitToDelete.id));
+      alert("Unit berhasil dihapus");
+    } catch (err) {
+      console.error("handleDeleteUnit err:", err);
+      alert("Error deleting unit: " + err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handleDeleteAllRecords = async (unitName, year) => {
+    if (!unitName || !year) {
+      alert("Unit atau tahun tidak valid");
+      return;
+    }
+    if (!window.confirm(`Yakin hapus semua data ${unitName} tahun ${year}?`))
+      return;
+    try {
+      setIsLoading(true);
+      const itemsRef = collection(
+        db,
+        `unitData/${unitName}/${year}/data/items`
+      );
+      const snap = await getDocs(itemsRef);
+      if (snap.empty) {
+        alert("Tidak ada data ditemukan.");
+        setIsLoading(false);
+        return;
+      }
+      const delPromises = snap.docs.map((d) =>
+        deleteDoc(doc(db, `unitData/${unitName}/${year}/data/items`, d.id))
+      );
+      await Promise.all(delPromises);
+      alert(`Semua data ${unitName} tahun ${year} telah dihapus.`);
+      fetchUnitUploads();
+    } catch (err) {
+      console.error("handleDeleteAllRecords err:", err);
+      alert("Gagal menghapus records: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =========================
+  // User handlers (CRUD)
+  // =========================
   const handleAddUser = () => {
     setEditingUser(null);
     setUserForm({
@@ -540,6 +442,18 @@ function AdminDashboard() {
       password: "",
       role: "",
       unitBisnis: [],
+    });
+    setShowUserModal(true);
+  };
+
+  const handleEditUser = (user) => {
+    setEditingUser(user);
+    setUserForm({
+      name: user.name || "",
+      email: user.email || "",
+      password: "",
+      role: user.role || "",
+      unitBisnis: user.unitBisnis || [],
     });
     setShowUserModal(true);
   };
@@ -555,14 +469,11 @@ function AdminDashboard() {
       alert("Semua field harus diisi dan pilih minimal 1 unit bisnis!");
       return;
     }
-
     try {
       setIsLoading(true);
-
       if (editingUser) {
-        // Update user lama
-        const userRef = doc(db, "users", editingUser.id);
-        await updateDoc(userRef, {
+        const ref = doc(db, "users", editingUser.id);
+        await updateDoc(ref, {
           name: userForm.name,
           role: userForm.role,
           unitBisnis: userForm.unitBisnis,
@@ -570,18 +481,15 @@ function AdminDashboard() {
         });
         alert("User berhasil diupdate!");
       } else {
-        // ✅ Gunakan secondaryAuth supaya admin tidak logout
+        // create user using secondary app to keep admin logged in
         const appSecondary = initializeApp(firebaseConfig, "Secondary");
         const secondaryAuth = getAuth(appSecondary);
-
         const userCredential = await createUserWithEmailAndPassword(
           secondaryAuth,
           userForm.email,
           userForm.password
         );
-
         const uid = userCredential.user.uid;
-
         await addDoc(collection(db, "users"), {
           uid,
           name: userForm.name,
@@ -591,12 +499,9 @@ function AdminDashboard() {
           createdAt: new Date(),
           updatedAt: new Date(),
         });
-
-        await secondaryAuth.signOut(); // logout dari auth kedua agar admin tetap login
-        alert("✅ User baru berhasil ditambahkan");
+        await secondaryAuth.signOut();
+        alert("User baru berhasil ditambahkan");
       }
-
-      // Reset form dan modal
       setShowUserModal(false);
       setUserForm({
         name: "",
@@ -606,64 +511,46 @@ function AdminDashboard() {
         unitBisnis: [],
       });
       setEditingUser(null);
-    } catch (error) {
-      console.error("Error saving user:", error);
-      alert(`Error saving user: ${error.message}`);
+    } catch (err) {
+      console.error("handleSaveUser err:", err);
+      alert("Error saving user: " + err.message);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDeleteUser = async (id) => {
-    if (window.confirm("Apakah Anda yakin ingin menghapus user ini?")) {
-      try {
-        setIsLoading(true);
-        await deleteDoc(doc(db, "users", id));
-        alert("User berhasil dihapus!");
-      } catch (error) {
-        console.error("Error deleting user:", error);
-        alert("Error deleting user from database");
-      } finally {
-        setIsLoading(false);
-      }
+    if (!window.confirm("Apakah Anda yakin ingin menghapus user ini?")) return;
+    try {
+      setIsLoading(true);
+      await deleteDoc(doc(db, "users", id));
+      alert("User berhasil dihapus");
+    } catch (err) {
+      console.error("handleDeleteUser err:", err);
+      alert("Error deleting user: " + err.message);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  useEffect(() => {
-    const savedPage = localStorage.getItem("activePage");
-    if (savedPage) {
-      setActivePage(savedPage); // kalau ada, pakai halaman terakhir
-    } else {
-      setActivePage("dashboard"); // kalau belum pernah, default ke dashboard
-    }
-  }, []);
-
-  // Simpan ke localStorage setiap kali ganti halaman
-  const handlePageChange = (page) => {
-    setActivePage(page);
-    localStorage.setItem("activePage", page);
-  };
-
-  // Export functions (existing code)
+  // =========================
+  // Export helpers (CSV / Excel / PDF stub)
+  // =========================
   const handleExportUnits = () => {
-    const csvContent =
+    const csv =
       "data:text/csv;charset=utf-8," +
       "No,Nama Unit,Jumlah User\n" +
       units
-        .map((unit, index) => {
+        .map((unit, idx) => {
           const userCount = users.filter(
-            (user) =>
-              Array.isArray(user.unitBisnis) &&
-              user.unitBisnis.includes(unit.name)
+            (u) =>
+              Array.isArray(u.unitBisnis) && u.unitBisnis.includes(unit.name)
           ).length;
-
-          return `${index + 1},"${unit.name}",${userCount}`;
+          return `${idx + 1},"${unit.name}",${userCount}`;
         })
         .join("\n");
-
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", encodeURI(csv));
     link.setAttribute("download", "unit_bisnis.csv");
     document.body.appendChild(link);
     link.click();
@@ -671,869 +558,380 @@ function AdminDashboard() {
   };
 
   const handleExportUsers = () => {
-    const csvContent =
+    const csv =
       "data:text/csv;charset=utf-8," +
       "No,Nama,Email,Role,Unit Bisnis\n" +
       users
         .map(
-          (user, index) =>
-            `${index + 1},"${user.name}","${user.email || "-"}","${
-              user.role
-            }","${
-              Array.isArray(user.unitBisnis)
-                ? user.unitBisnis.join("; ")
-                : user.unitBisnis || "-"
+          (u, idx) =>
+            `${idx + 1},"${u.name}","${u.email || "-"}","${u.role}","${
+              Array.isArray(u.unitBisnis)
+                ? u.unitBisnis.join("; ")
+                : u.unitBisnis || "-"
             }"`
         )
         .join("\n");
-
-    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
+    link.setAttribute("href", encodeURI(csv));
     link.setAttribute("download", "users.csv");
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Dashboard export/import
+  const handleExportExcel = () => {
+    exportToExcel(selectedUnit, currentData);
+  };
+
+  const handleExportPDF = () => {
+    alert("Export to PDF belum diimplementasikan");
+  };
+
+  const handleImportData = async (event) => {
+    const file = event.target.files ? event.target.files[0] : event;
+    if (!file) return;
+    try {
+      const message = await importFromExcelToFirebase(selectedUnit, file);
+      alert("✅ " + message);
+      if (event.target) event.target.value = "";
+    } catch (err) {
+      alert("❌ " + err);
+    }
+  };
+
+  // =========================
+  // Master Category CRUD
+  // =========================
+  const handleAddCategory = async ({ name }) => {
+    if (!name || !name.trim())
+      return alert("Nama kategori tidak boleh kosong.");
+    // limit check: optional (front-end enforces too)
+    if (categories.length >= 6) return alert("Maksimal 6 kategori.");
+    try {
+      setIsLoading(true);
+      await addDoc(collection(db, "masterCategory"), {
+        name: name.trim(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      alert("Kategori berhasil ditambahkan");
+    } catch (err) {
+      console.error("handleAddCategory err:", err);
+      alert("Gagal menambahkan kategori: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditCategory = async (category) => {
+    if (!category.name || !category.name.trim())
+      return alert("Nama kategori tidak boleh kosong.");
+    try {
+      setIsLoading(true);
+      await updateDoc(doc(db, "masterCategory", category.id), {
+        name: category.name.trim(),
+        updatedAt: new Date(),
+      });
+      alert("Kategori berhasil diupdate");
+    } catch (err) {
+      console.error("handleEditCategory err:", err);
+      alert("Gagal update kategori: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteCategory = async (category) => {
+    try {
+      // find codes that reference this category as primary or in description
+      const qPrimary = query(
+        collection(db, "masterCode"),
+        where("category", "==", category.name)
+      );
+      const snapPrimary = await getDocs(qPrimary);
+
+      const qDesc = query(
+        collection(db, "masterCode"),
+        where("description", "array-contains", category.name)
+      );
+      const snapDesc = await getDocs(qDesc);
+
+      if (!snapPrimary.empty || !snapDesc.empty) {
+        if (
+          !window.confirm(
+            "Kategori ini digunakan di beberapa code. Hapus akan menghapus referensi. Lanjutkan?"
+          )
+        )
+          return;
+        // clear primary category for those docs
+        const updatePromises = [];
+        snapPrimary.docs.forEach((d) =>
+          updatePromises.push(
+            updateDoc(doc(db, "masterCode", d.id), { category: "" })
+          )
+        );
+        snapDesc.docs.forEach((d) => {
+          const desc = d.data().description || [];
+          const newDesc = desc.filter((x) => x !== category.name);
+          updatePromises.push(
+            updateDoc(doc(db, "masterCode", d.id), { description: newDesc })
+          );
+        });
+        await Promise.all(updatePromises);
+      }
+
+      await deleteDoc(doc(db, "masterCategory", category.id));
+      alert("Kategori berhasil dihapus");
+    } catch (err) {
+      console.error("handleDeleteCategory err:", err);
+      alert("Gagal hapus kategori: " + err.message);
+    }
+  };
+
+  // =========================
+  // Master Code CRUD
+  // =========================
+  // Tambah data Master Code
+  const handleAddCode = async ({
+    code,
+    accountName,
+    category,
+    description = "",
+  }) => {
+    if (!code || !code.trim()) return alert("Kode tidak boleh kosong");
+    if (!accountName || !accountName.trim())
+      return alert("Account Name tidak boleh kosong");
+    if (!category || !category.trim()) return alert("Pilih kategori utama");
+
+    try {
+      setIsLoading(true);
+      await addDoc(collection(db, "masterCode"), {
+        code: code.trim(),
+        accountName: accountName.trim(), // ✅ tambahkan field baru
+        category: category.trim(),
+        description: description.trim(), // ✅ sekarang berupa string, bukan array
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+      alert("Code berhasil ditambahkan");
+    } catch (err) {
+      console.error("handleAddCode err:", err);
+      alert("Gagal menambahkan code: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Edit data Master Code
+  const handleEditCode = async (codeObj) => {
+    if (!codeObj.code || !codeObj.code.trim())
+      return alert("Kode tidak boleh kosong");
+    if (!codeObj.accountName || !codeObj.accountName.trim())
+      return alert("Account Name tidak boleh kosong");
+    if (!codeObj.category || !codeObj.category.trim())
+      return alert("Pilih kategori utama");
+
+    try {
+      setIsLoading(true);
+      await updateDoc(doc(db, "masterCode", codeObj.id), {
+        code: codeObj.code.trim(),
+        accountName: codeObj.accountName.trim(), // ✅ simpan juga saat update
+        category: codeObj.category.trim(),
+        description:
+          typeof codeObj.description === "string"
+            ? codeObj.description.trim()
+            : Array.isArray(codeObj.description)
+            ? codeObj.description.join(", ")
+            : "",
+        updatedAt: new Date(),
+      });
+      alert("Code berhasil diupdate");
+    } catch (err) {
+      console.error("handleEditCode err:", err);
+      alert("Gagal update code: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Hapus data Master Code (sudah benar)
+  const handleDeleteCode = async (codeObj) => {
+    if (!window.confirm(`Hapus code "${codeObj.code}"?`)) return;
+    try {
+      setIsLoading(true);
+      await deleteDoc(doc(db, "masterCode", codeObj.id));
+      alert("Code berhasil dihapus");
+    } catch (err) {
+      console.error("handleDeleteCode err:", err);
+      alert("Gagal hapus code: " + err.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // =========================
+  // User filters & pagination helpers
+  // =========================
+  const getFilteredUsers = () => {
+    return users.filter((user) => {
+      const matchesSearch =
+        !searchTerm ||
+        (user.name &&
+          user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (user.email &&
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()));
+      const matchesRole = !roleFilter || user.role === roleFilter;
+      const matchesUnit =
+        !unitFilter ||
+        (Array.isArray(user.unitBisnis)
+          ? user.unitBisnis.includes(unitFilter)
+          : user.unitBisnis === unitFilter);
+      return matchesSearch && matchesRole && matchesUnit;
+    });
+  };
+
+  const filteredUsers = getFilteredUsers();
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / usersPerPage)
+  );
+  const indexOfLastUser = currentPage * usersPerPage;
+  const indexOfFirstUser = indexOfLastUser - usersPerPage;
+  const paginatedUsers = filteredUsers.slice(indexOfFirstUser, indexOfLastUser);
+
+  const handleResetFilters = () => {
+    setSearchTerm("");
+    setRoleFilter("");
+    setUnitFilter("");
+  };
+
+  // =========================
+  // Render
+  // =========================
   return (
     <div className="min-h-screen bg-gray-100">
-      <div className="flex  ">
-        {/* Sidebar */}
-        <div className="w-64 fixed bg-red-500 shadow-lg border-r border-gray-100 min-h-screen flex flex-col justify-between ">
-          {/* Bagian atas */}
-          <div className="p-6">
-            <h2 className="text-2xl font-bold text-white mb-8 px-7">
-              Admin Panel
-            </h2>
+      <div className="flex">
+        <Sidebar
+          activePage={activePage}
+          onChangePage={handlePageChange}
+          onLogout={handleLogout}
+        />
 
-            <nav className="space-y-2">
-              <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  activePage === "dashboard"
-                    ? "text-white bg-red-600 shadow-md"
-                    : "text-white hover:bg-red-400"
-                }`}
-                onClick={() => handlePageChange("dashboard")}
-              >
-                📊 Dashboard
-              </button>
-
-              <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  activePage === "unit"
-                    ? "text-white bg-red-600 shadow-md"
-                    : "text-white hover:bg-red-400"
-                }`}
-                onClick={() => handlePageChange("unit")}
-              >
-                🏢 Manage Unit Bisnis
-              </button>
-
-              <button
-                className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
-                  activePage === "user"
-                    ? "text-white bg-red-600 shadow-md"
-                    : "text-white hover:bg-red-400"
-                }`}
-                onClick={() => handlePageChange("user")}
-              >
-                👥 Manage User
-              </button>
-            </nav>
-          </div>
-
-          {/* Bagian bawah (footer sidebar) */}
-          <div className="p-6 border-t border-red-400">
-            <button
-              onClick={handleLogout}
-              className="w-full text-left px-4 py-3 rounded-lg font-medium text-sm text-white hover:bg-red-400 transition-all duration-200"
-            >
-              🚪 Logout
-            </button>
-          </div>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-6 ml-64 ">
-          {/* Navbar */}
+        <div className="flex-1 p-6 ml-64">
           <div className="fixed top-0 left-0 w-full z-50">
             <Navbar onLogout={handleLogout} />
           </div>
 
-          {/* Dashboard Page */}
+          {/* Dashboard */}
           {activePage === "dashboard" && (
-            <div className="space-y-6 pt-16">
-              {/* Header Component */}
-              <Header
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                units={units.map((unit) => unit.name)}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
-                title="Admin Dashboard"
-              />
-
-              {/* Stats overview untuk semua unit */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Overview Semua Unit
-                </h3>
-                <StatsCards
-                  totalRevenue={allUnitsStats.totalAct2024}
-                  totalExpenses={allUnitsStats.totalExpenses}
-                  totalAct2025={allUnitsStats.totalAct2025}
-                  avgTarget={allUnitsStats.avgTarget}
-                  labels={{
-                    revenue: `Total ACT ${selectedYear}`,
-                    expenses: `Total BDGT ${selectedYear} ${selectedUnit}`,
-                    act2025: `Total ACT ${selectedYear} All Unit`,
-                    avgTarget: "Avg Target",
-                  }}
-                />
-              </div>
-
-              {/* Stats cards untuk unit terpilih */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                  Detail Unit: {selectedUnit}
-                </h3>
-                <StatsCards
-                  totalRevenue={stats.totalRevenue}
-                  totalExpenses={stats.totalExpenses}
-                  totalAct2025={stats.totalAct2025}
-                  avgTarget={stats.avgTarget}
-                  labels={{
-                    revenue: `Act 2024 ${selectedUnit}`,
-                    expenses: `Budget ${selectedYear} ${selectedUnit}`,
-                    act2025: `Act ${selectedYear} ${selectedUnit}`,
-                    avgTarget: `VAR YTD ${selectedUnit}`,
-                  }}
-                />
-              </div>
-
-              {/* Charts */}
-              <div className="w-full flex flex-col gap-6">
-                <ExporttableChart
-                  currentData={currentData}
-                  selectedMonth={selectedMonth}
-                  setSelectedMonth={setSelectedMonth}
-                  selectedYear={selectedYear}
-                  setSelectedYear={setSelectedYear}
-                >
-                  {/* Baris 1: Piechart & Barchart berdampingan */}
-                  <div className="w-full flex flex-col lg:flex-row gap-6">
-                    <div className="flex-1 p-2 shadow rounded-lg bg-white">
-                      <Piechart
-                        data={currentData}
-                        selectedMonth={selectedMonth}
-                        setSelectedMonth={setSelectedMonth}
-                        selectedYear={selectedYear}
-                        setSelectedYear={setSelectedYear}
-                      />
-                    </div>
-
-                    <div className="flex-1 p-2 shadow rounded-lg bg-white">
-                      <Barchart
-                        data={currentData}
-                        selectedYear={selectedYear}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Baris 2: Linechart di bawah */}
-                  <div className="w-full mt-6">
-                    <div className="p-2 shadow rounded-lg bg-white">
-                      <Linechart data={currentData} />
-                    </div>
-                  </div>
-                </ExporttableChart>
-              </div>
-            </div>
+            <DashboardPage
+              selectedUnit={selectedUnit}
+              setSelectedUnit={setSelectedUnit}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              units={units}
+              stats={stats}
+              allUnitsStats={allUnitsStats}
+              currentData={currentData}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              handleExportExcel={handleExportExcel}
+              handleImportData={(e) => handleImportData(e)}
+              handleExportPDF={handleExportPDF}
+            />
           )}
 
-          {/* Unit Management Page */}
+          {/* Unit management */}
           {activePage === "unit" && (
-            <div className="space-y-6 min-h-screen mt-12">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h1 className="text-2xl font-bold text-gray-800 mb-6">
-                  Manage Unit Bisnis
-                </h1>
-
-                {/* Action Buttons */}
-                <div className="flex flex-wrap gap-3 mb-6">
-                  <button
-                    className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                    onClick={handleAddUnit}
-                    disabled={isLoading}
-                  >
-                    ➕ Tambah Unit
-                  </button>
-                </div>
-
-                {/* Loading State */}
-                {loadingUnits ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                    <p className="text-sm">Loading units...</p>
-                  </div>
-                ) : (
-                  /* Table */
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead className="bg-gray-100 border-b border-gray-200">
-                        <tr>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            No
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Nama Unit
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Jumlah User
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Data Upload
-                          </th>
-                          <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                            Aksi
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {units.length === 0 ? (
-                          <tr>
-                            <td
-                              colSpan="5"
-                              className="px-4 py-8 text-center text-gray-500"
-                            >
-                              Belum ada unit bisnis. Tambahkan unit bisnis
-                              pertama Anda!
-                            </td>
-                          </tr>
-                        ) : (
-                          units.map((unit, index) => {
-                            const userCount = users.filter(
-                              (user) =>
-                                Array.isArray(user.unitBisnis) &&
-                                user.unitBisnis.includes(unit.name)
-                            ).length;
-
-                            const uploads2024 =
-                              unitUploads[unit.name]?.["2024"] || 0;
-                            const uploads2025 =
-                              unitUploads[unit.name]?.["2025"] || 0;
-
-                            return (
-                              <tr key={unit.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-gray-900">
-                                  {index + 1}
-                                </td>
-
-                                <td className="px-4 py-3 text-gray-900 font-medium">
-                                  {unit.name}
-                                </td>
-
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                      userCount > 0
-                                        ? "bg-green-100 text-green-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    }`}
-                                  >
-                                    {userCount} user
-                                  </span>
-                                </td>
-
-                                {/* 📂 Data Upload per Tahun */}
-                                <td className="px-4 py-3 text-sm">
-                                  {loadingUploads ? (
-                                    <span className="text-gray-400 italic text-sm">
-                                      Loading...
-                                    </span>
-                                  ) : (
-                                    <div className="flex flex-col gap-2">
-                                      {/* Tahun 2024 */}
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-gray-700 text-xs font-medium">
-                                          2024:
-                                        </span>
-                                        {unitUploads[unit.name]?.["2024"] >
-                                        0 ? (
-                                          <CheckCircle className="text-green-500 w-5 h-5" />
-                                        ) : (
-                                          <XCircle className="text-red-500 w-5 h-5" />
-                                        )}
-                                        <button
-                                          onClick={() =>
-                                            handleDeleteAllRecords(
-                                              unit.name,
-                                              "2024"
-                                            )
-                                          }
-                                          className="px-2 py-1 text-[11px] font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
-                                          disabled={
-                                            isLoading || uploads2024 === 0
-                                          }
-                                        >
-                                          Hapus 2024
-                                        </button>
-                                      </div>
-
-                                      {/* Tahun 2025 */}
-                                      <div className="flex items-center justify-between">
-                                        <span className="text-gray-700 text-xs font-medium">
-                                          2025:
-                                        </span>
-                                        {unitUploads[unit.name]?.["2025"] >
-                                        0 ? (
-                                          <CheckCircle className="text-green-500 w-5 h-5" />
-                                        ) : (
-                                          <XCircle className="text-red-500 w-5 h-5" />
-                                        )}
-                                        <button
-                                          onClick={() =>
-                                            handleDeleteAllRecords(
-                                              unit.name,
-                                              "2025"
-                                            )
-                                          }
-                                          className="px-2 py-1 text-[11px] font-medium text-orange-700 bg-orange-100 hover:bg-orange-200 rounded transition-colors disabled:opacity-50"
-                                          disabled={
-                                            isLoading || uploads2025 === 0
-                                          }
-                                        >
-                                          Hapus 2025
-                                        </button>
-                                      </div>
-                                    </div>
-                                  )}
-                                </td>
-
-                                {/* 🔧 Tombol Edit/Delete Unit */}
-                                <td className="px-4 py-3">
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleEditUnit(unit)}
-                                      className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteUnit(unit)}
-                                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
+            <UnitManagement
+              units={units}
+              users={users}
+              loadingUnits={loadingUnits}
+              loadingUploads={loadingUploads}
+              unitUploads={unitUploads}
+              handleAddUnit={handleAddUnit}
+              handleEditUnit={handleEditUnit}
+              handleDeleteUnit={handleDeleteUnit}
+              handleDeleteAllRecords={handleDeleteAllRecords}
+              handleExportUnits={handleExportUnits}
+              isLoading={isLoading}
+            />
           )}
 
-          {/* User Management Page */}
+          {/* User management */}
           {activePage === "user" && (
-            <div className="space-y-6 min-h-screen mt-12">
-              {/* Search and Filter Section */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <div className="space-y-4">
-                  <div className="flex flex-wrap gap-4 items-center">
-                    {/* Search Input */}
-                    <div className="relative flex-1 min-w-[200px]">
-                      <input
-                        type="text"
-                        placeholder="Cari berdasarkan nama atau email..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <span className="absolute left-3 top-2.5 text-gray-400">
-                        🔍
-                      </span>
-                    </div>
+            <UserManagement
+              users={users}
+              loadingUsers={loadingUsers}
+              units={units}
+              searchTerm={searchTerm}
+              setSearchTerm={setSearchTerm}
+              roleFilter={roleFilter}
+              setRoleFilter={setRoleFilter}
+              unitFilter={unitFilter}
+              setUnitFilter={setUnitFilter}
+              handleResetFilters={handleResetFilters}
+              paginatedUsers={paginatedUsers}
+              currentPage={currentPage}
+              usersPerPage={usersPerPage}
+              totalPages={totalPages}
+              setCurrentPage={setCurrentPage}
+              handleAddUser={handleAddUser}
+              handleEditUser={handleEditUser}
+              handleDeleteUser={handleDeleteUser}
+              handleExportUsers={handleExportUsers}
+              isLoading={isLoading}
+            />
+          )}
 
-                    {/* Role Filter */}
-                    <select
-                      value={roleFilter}
-                      onChange={(e) => setRoleFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
-                      <option value="">Semua Role</option>
-                      <option value="User">User</option>
-                      <option value="Supervisor">Supervisor</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Super Admin">Super Admin</option>
-                    </select>
+          {/* Master Category */}
+          {activePage === "masterCategory" && (
+            <MasterCategory
+              categories={categories}
+              codes={codes} // ⬅️ penting untuk relasi ke MasterCode
+              loading={loadingCategories || loadingCodes}
+              onAddCategory={handleAddCategory}
+              onEditCategory={handleEditCategory}
+              onDeleteCategory={handleDeleteCategory}
+            />
+          )}
 
-                    {/* Unit Filter */}
-                    <select
-                      value={unitFilter}
-                      onChange={(e) => setUnitFilter(e.target.value)}
-                      className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                    >
-                      <option value="">Semua Unit</option>
-                      {units.map((unit) => (
-                        <option key={unit.id} value={unit.name}>
-                          {unit.name}
-                        </option>
-                      ))}
-                    </select>
-
-                    {/* Reset Button */}
-                    <button
-                      onClick={handleResetFilters}
-                      className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white font-medium text-sm rounded-lg transition-colors disabled:opacity-50"
-                      disabled={!searchTerm && !roleFilter && !unitFilter}
-                    >
-                      Reset Filter
-                    </button>
-                  </div>
-
-                  {/* Search Results Info */}
-                  <div className="flex flex-wrap items-center gap-4 text-sm">
-                    <span className="text-gray-700 font-medium">
-                      Menampilkan {paginatedUsers.length} dari {users.length}{" "}
-                      user
-                    </span>
-
-                    {/* Active Filters */}
-                    {(searchTerm || roleFilter || unitFilter) && (
-                      <div className="flex flex-wrap gap-2">
-                        {searchTerm && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-                            Pencarian: "{searchTerm}"
-                            <button
-                              onClick={() => setSearchTerm("")}
-                              className="text-blue-600 hover:text-blue-800 font-bold"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        )}
-                        {roleFilter && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-                            Role: {roleFilter}
-                            <button
-                              onClick={() => setRoleFilter("")}
-                              className="text-green-600 hover:text-green-800 font-bold"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        )}
-                        {unitFilter && (
-                          <span className="inline-flex items-center gap-1 px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-                            Unit: {unitFilter}
-                            <button
-                              onClick={() => setUnitFilter("")}
-                              className="text-purple-600 hover:text-purple-800 font-bold"
-                            >
-                              ×
-                            </button>
-                          </span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={handleAddUser}
-                  className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                  disabled={isLoading || units.length === 0}
-                >
-                  ➕ Tambah User
-                </button>
-                <button
-                  className="flex items-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-lg transition-colors shadow-sm disabled:opacity-50"
-                  onClick={handleExportUsers}
-                  disabled={users.length === 0}
-                >
-                  📊 Ekspor Data
-                </button>
-              </div>
-
-              {/* Warning Box */}
-              {units.length === 0 && (
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-                  <div className="flex items-center gap-2 text-yellow-800">
-                    <span className="text-lg">⚠️</span>
-                    <strong>Peringatan:</strong> Anda perlu membuat unit bisnis
-                    terlebih dahulu sebelum menambahkan user.
-                  </div>
-                </div>
-              )}
-
-              {/* Users Table */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                {loadingUsers ? (
-                  <div className="flex flex-col items-center justify-center py-12 text-gray-500">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                    <p className="text-sm">Loading users...</p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead className="bg-gray-100 border-b border-gray-200">
-                          <tr>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              No
-                            </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              Nama
-                            </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              Email
-                            </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              Role
-                            </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              Unit Bisnis
-                            </th>
-                            <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">
-                              Aksi
-                            </th>
-                          </tr>
-                        </thead>
-
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {paginatedUsers.length === 0 ? (
-                            <tr>
-                              <td
-                                colSpan="6"
-                                className="px-4 py-8 text-center text-gray-500"
-                              >
-                                {users.length === 0
-                                  ? "Belum ada user. Tambahkan user pertama Anda!"
-                                  : "Tidak ada user yang sesuai dengan pencarian."}
-                              </td>
-                            </tr>
-                          ) : (
-                            paginatedUsers.map((user, index) => (
-                              <tr key={user.id} className="hover:bg-gray-50">
-                                <td className="px-4 py-3 text-gray-900">
-                                  {(currentPage - 1) * usersPerPage + index + 1}
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={
-                                      searchTerm &&
-                                      user.name
-                                        .toLowerCase()
-                                        .includes(searchTerm.toLowerCase())
-                                        ? "bg-yellow-200"
-                                        : ""
-                                    }
-                                  >
-                                    {user.name}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-gray-700">
-                                  <span
-                                    className={
-                                      searchTerm &&
-                                      user.email &&
-                                      user.email
-                                        .toLowerCase()
-                                        .includes(searchTerm.toLowerCase())
-                                        ? "bg-yellow-200"
-                                        : ""
-                                    }
-                                  >
-                                    {user.email || "-"}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <span
-                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                      user.role === "Super Admin"
-                                        ? "bg-red-100 text-red-800"
-                                        : user.role === "Manager"
-                                        ? "bg-purple-100 text-purple-800"
-                                        : user.role === "Supervisor"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-gray-100 text-gray-800"
-                                    } ${
-                                      roleFilter === user.role
-                                        ? "ring-2 ring-blue-300"
-                                        : ""
-                                    }`}
-                                  >
-                                    {user.role}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-gray-700">
-                                  <span
-                                    className={
-                                      Array.isArray(user.unitBisnis)
-                                        ? user.unitBisnis.includes(unitFilter)
-                                          ? "bg-yellow-200"
-                                          : ""
-                                        : unitFilter === user.unitBisnis
-                                        ? "bg-yellow-200"
-                                        : ""
-                                    }
-                                  >
-                                    {Array.isArray(user.unitBisnis)
-                                      ? user.unitBisnis.join(", ")
-                                      : user.unitBisnis || "-"}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3">
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleEditUser(user)}
-                                      className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteUser(user.id)}
-                                      className="px-3 py-1 text-xs font-medium text-red-700 bg-red-100 hover:bg-red-200 rounded transition-colors disabled:opacity-50"
-                                      disabled={isLoading}
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-
-                    {/* Pagination Controls */}
-                    <div className="flex justify-between items-center px-4 py-3 bg-gray-50 border-t border-gray-200">
-                      <button
-                        onClick={() =>
-                          setCurrentPage((prev) => Math.max(prev - 1, 1))
-                        }
-                        disabled={currentPage === 1}
-                        className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
-                      >
-                        &lt; Prev
-                      </button>
-
-                      <span className="text-sm text-gray-600">
-                        Halaman {currentPage} dari {totalPages}
-                      </span>
-
-                      <button
-                        onClick={() =>
-                          setCurrentPage((prev) =>
-                            Math.min(prev + 1, totalPages)
-                          )
-                        }
-                        disabled={currentPage === totalPages}
-                        className="px-3 py-1 text-sm font-medium text-gray-600 bg-white border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-50"
-                      >
-                        Next &gt;
-                      </button>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+          {/* Master Code */}
+          {activePage === "masterCode" && (
+            <MasterCode
+              codes={codes}
+              categories={categories}
+              loading={loadingCodes}
+              onAddCode={handleAddCode}
+              onEditCode={handleEditCode}
+              onDeleteCode={handleDeleteCode}
+            />
           )}
         </div>
       </div>
 
-      {/* Modals */}
-      {showUnitModal && (
-        <div className="fixed inset-0  bg-white bg-opacity-100 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-lg shadow-xl max-w-md w-full"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-4">
-                {editingUnit ? "Edit Unit Bisnis" : "Tambah Unit Bisnis"}
-              </h2>
+      {/* Modals for Unit & User */}
+      <UnitModal
+        show={showUnitModal}
+        onClose={() => setShowUnitModal(false)}
+        onSave={handleSaveUnit}
+        form={unitForm}
+        setForm={setUnitForm}
+        loading={isLoading}
+        editing={editingUnit}
+      />
 
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nama Unit:
-                </label>
-                <input
-                  type="text"
-                  value={unitForm.name}
-                  onChange={(e) =>
-                    setUnitForm({ ...unitForm, name: e.target.value })
-                  }
-                  placeholder="Masukkan nama unit bisnis"
-                  disabled={isLoading}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                />
-              </div>
-
-              <div className="flex gap-3">
-                <button
-                  onClick={handleSaveUnit}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Saving..." : editingUnit ? "Update" : "Simpan"}
-                </button>
-                <button
-                  onClick={() => setShowUnitModal(false)}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showUserModal && (
-        <div className="fixed inset-0 bg-white bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div
-            className="bg-white rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="p-6">
-              <h2 className="text-xl font-bold text-gray-800 mb-6">
-                {editingUser ? "Edit User" : "Tambah User"}
-              </h2>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nama:
-                  </label>
-                  <input
-                    type="text"
-                    value={userForm.name}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, name: e.target.value })
-                    }
-                    placeholder="Masukkan nama user"
-                    disabled={isLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                  />
-                </div>
-
-                {!editingUser && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email:
-                      </label>
-                      <input
-                        type="email"
-                        value={userForm.email}
-                        onChange={(e) =>
-                          setUserForm({ ...userForm, email: e.target.value })
-                        }
-                        placeholder="Masukkan email"
-                        disabled={isLoading}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Password:
-                      </label>
-                      <input
-                        type="password"
-                        value={userForm.password}
-                        onChange={(e) =>
-                          setUserForm({ ...userForm, password: e.target.value })
-                        }
-                        placeholder="Masukkan password"
-                        disabled={isLoading}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                      />
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role:
-                  </label>
-                  <select
-                    value={userForm.role}
-                    onChange={(e) =>
-                      setUserForm({ ...userForm, role: e.target.value })
-                    }
-                    disabled={isLoading}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-                  >
-                    <option value="">Pilih Role</option>
-                    <option value="User">User</option>
-                    <option value="Supervisor">Supervisor</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Super Admin">Super Admin</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Pilih Unit Bisnis:
-                  </label>
-                  <Select
-                    isMulti
-                    options={units.map((unit) => ({
-                      value: unit.name,
-                      label: unit.name,
-                    }))}
-                    value={userForm.unitBisnis.map((u) => ({
-                      value: u,
-                      label: u,
-                    }))}
-                    onChange={(selected) =>
-                      setUserForm({
-                        ...userForm,
-                        unitBisnis: selected.map((s) => s.value),
-                      })
-                    }
-                    isDisabled={isLoading}
-                    className="text-sm"
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleSaveUser}
-                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  {isLoading ? "Saving..." : editingUser ? "Update" : "Simpan"}
-                </button>
-                <button
-                  onClick={() => setShowUserModal(false)}
-                  className="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50"
-                  disabled={isLoading}
-                >
-                  Batal
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <UserModal
+        show={showUserModal}
+        onClose={() => setShowUserModal(false)}
+        onSave={handleSaveUser}
+        form={userForm}
+        setForm={setUserForm}
+        loading={isLoading}
+        editing={editingUser}
+        units={units}
+      />
     </div>
   );
 }

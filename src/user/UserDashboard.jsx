@@ -64,7 +64,6 @@ const UserDashboard = () => {
 
   // 🔹 Import & Export dari hook custom
   const {
-    calculateStats,
     exportToExcel,
     importFromExcelToFirebase,
   } = useDataManagement({});
@@ -91,8 +90,7 @@ const UserDashboard = () => {
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
 
-  // 🔹 Hitung statistik
-  const stats = calculateStats(currentData);
+  
 
   // ====== HANDLERS ======
 
@@ -177,18 +175,7 @@ const UserDashboard = () => {
             showExportButtons
           />
 
-          <StatsCards
-            totalRevenue={stats.totalRevenue}
-            totalExpenses={stats.totalExpenses}
-            totalAct2025={stats.totalAct2025}
-            avgTarget={stats.avgTarget}
-            labels={{
-              revenue: `Total ACT ${selectedYear}`,
-              expenses: `Total BDGT ${selectedYear} ${selectedUnit}`,
-              act2025: `Total ACT ${selectedYear} ${selectedUnit}`,
-              avgTarget: "Avg Target",
-            }}
-          />
+         
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Piechart
