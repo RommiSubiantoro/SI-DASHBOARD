@@ -63,10 +63,7 @@ const UserDashboard = () => {
   }, []);
 
   // 🔹 Import & Export dari hook custom
-  const {
-    exportToExcel,
-    importFromExcelToFirebase,
-  } = useDataManagement({});
+  const { exportToExcel, importFromExcelToFirebase } = useDataManagement({});
 
   // 🔹 Listener realtime Firestore sesuai struktur baru
   useEffect(() => {
@@ -89,8 +86,6 @@ const UserDashboard = () => {
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
-
-  
 
   // ====== HANDLERS ======
 
@@ -175,8 +170,6 @@ const UserDashboard = () => {
             showExportButtons
           />
 
-         
-
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Piechart
               data={currentData}
@@ -184,6 +177,7 @@ const UserDashboard = () => {
               setSelectedMonth={setSelectedMonth}
               selectedYear={selectedYear}
             />
+
             <Barchart data={currentData} selectedYear={selectedYear} />
             <Linechart data={currentData} />
           </div>
