@@ -69,19 +69,47 @@ const UserDashboard = () => {
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
-    // ✅ Sesuai struktur baru: unitData/{unit}/{year}/data/items
     const colRef = collection(
       db,
       `unitData/${selectedUnit}/${selectedYear}/data/items`
     );
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const docs = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      console.log(`📡 Listening to ${selectedUnit}/${selectedYear}:`, docs);
-      setCurrentData(docs);
+      const rawData = snapshot.docs.map((doc) => doc.data());
+
+      // 🔹 Hanya ambil Debit
+      const debitData = rawData.filter((item) => item.type === "Debit");
+
+      // 🔹 Kelompokkan berdasarkan account dan bulan
+      const grouped = {};
+
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setCurrentData(Object.values(grouped)); // untuk DataTable
     });
 
     return () => unsubscribe();
@@ -104,6 +132,26 @@ const UserDashboard = () => {
     }
   };
 
+  const columns = [
+    { Header: "Account Name", accessor: "accountName" },
+    { Header: "Account Code", accessor: "accountCode" },
+    { Header: "Category", accessor: "category" },
+    { Header: "Area", accessor: "area" },
+    { Header: "Business Line", accessor: "businessLine" },
+    { Header: "Jan", accessor: "Jan" },
+    { Header: "Feb", accessor: "Feb" },
+    { Header: "Mar", accessor: "Mar" },
+    { Header: "Apr", accessor: "Apr" },
+    { Header: "May", accessor: "May" },
+    { Header: "Jun", accessor: "Jun" },
+    { Header: "Jul", accessor: "Jul" },
+    { Header: "Aug", accessor: "Aug" },
+    { Header: "Sep", accessor: "Sep" },
+    { Header: "Oct", accessor: "Oct" },
+    { Header: "Nov", accessor: "Nov" },
+    { Header: "Dec", accessor: "Dec" },
+  ];
+
   const handleExportExcel = () => {
     if (!selectedUnit || !selectedYear) {
       alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum export!");
@@ -120,12 +168,26 @@ const UserDashboard = () => {
     }
     if (file) {
       try {
-        await importFromExcelToFirebase(selectedUnit, file, selectedYear);
-        alert("✅ Data berhasil diimport!");
+        setIsLoading(true);
+
+        // 1️⃣ Import ke Firestore
+        const importedData = await importFromExcelToFirebase(
+          selectedUnit,
+          file,
+          selectedYear
+        );
+
+        // 2️⃣ Update langsung ke state agar chart otomatis refresh
+        setCurrentData(importedData);
+        console.log("🔥 Data dari Firestore:", groupedData);
+
+        alert("✅ Data berhasil diimport dan chart diperbarui!");
         event.target.value = "";
       } catch (error) {
         console.error("Import failed:", error);
         alert("❌ Gagal import data: " + error.message);
+      } finally {
+        setIsLoading(false);
       }
     }
   };
@@ -177,7 +239,6 @@ const UserDashboard = () => {
               setSelectedMonth={setSelectedMonth}
               selectedYear={selectedYear}
             />
-
             <Barchart data={currentData} selectedYear={selectedYear} />
             <Linechart data={currentData} />
           </div>
@@ -185,6 +246,7 @@ const UserDashboard = () => {
           <div className="bg-white p-6 rounded-xl shadow">
             <DataTable
               data={currentData}
+              columns={columns}
               title={`Data ${selectedUnit} - ${selectedYear}`}
               showFilters
               showPagination
