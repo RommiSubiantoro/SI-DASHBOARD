@@ -14,20 +14,38 @@ const DataTable = ({
   const [currentPage, setCurrentPage] = useState(1);
 
   const defaultMonths = [
-    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
   ];
   const monthList = months.length > 0 ? months : defaultMonths;
 
+  const safeData = Array.isArray(data) ? data : [];
+
   // 🔹 Filter berdasarkan Category, BusinessLine, dan AccountCode
   const filteredData = useMemo(() => {
-    return data.filter((row) => {
-      const matchCategory = categoryFilter ? row.category === categoryFilter : true;
-      const matchBusiness = businessLineFilter ? row.businessLine === businessLineFilter : true;
-      const matchAccount = accountCodeFilter ? row.accountCode === accountCodeFilter : true;
+    return safeData.filter((row) => {
+      const matchCategory = categoryFilter
+        ? row.category === categoryFilter
+        : true;
+      const matchBusiness = businessLineFilter
+        ? row.businessLine === businessLineFilter
+        : true;
+      const matchAccount = accountCodeFilter
+        ? row.accountCode === accountCodeFilter
+        : true;
       return matchCategory && matchBusiness && matchAccount;
     });
-  }, [data, categoryFilter, businessLineFilter, accountCodeFilter]);
+  }, [safeData, categoryFilter, businessLineFilter, accountCodeFilter]);
 
   // 🔹 Ambil unique category, business line, dan account code
   const categories = useMemo(() => {

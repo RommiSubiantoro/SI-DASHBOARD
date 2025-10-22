@@ -76,32 +76,36 @@ export const useDataManagement = (initialData = {}) => {
           const data = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
           for (const row of data) {
-            // hanya simpan yang Debit
             if (row["Dr/Cr"] !== "Debit") continue;
 
-            // konversi tanggal Excel → bulan
             const jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
-            const month = jsDate.toLocaleString("en-US", { month: "short" }); // Jan, Feb, Mar ...
-
-            // Bersihkan angka
+            const month = jsDate.toLocaleString("en-US", { month: "short" });
             const cleanValue = parseFloat(row["Doc Value"]) || 0;
 
-            await addDoc(
-              collection(
-                db,
-                `unitData/${selectedUnit}/${selectedYear}/data/items`
-              ),
-              {
-                accountName: row["Line Desc."] || "-",
-                accountCode: row["Account Code"] || "-",
-                category: row["El4 short name"] || "-",
-                area: row["Location"] || "-",
-                businessLine: row["Business Line"] || "-",
-                month,
-                docValue: cleanValue,
-                type: row["Dr/Cr"],
-              }
-            );
+            try {
+              await addDoc(
+                collection(
+                  db,
+                  "unitData",
+                  selectedUnit,
+                  selectedYear,
+                  "data",
+                  "items"
+                ),
+                {
+                  accountName: row["Line Desc."] || "-",
+                  accountCode: row["Account Code"] || "-",
+                  category: row["El4 short name"] || "-",
+                  area: row["Location"] || "-",
+                  businessLine: row["Business Line"] || "-",
+                  month,
+                  docValue: cleanValue,
+                  type: row["Dr/Cr"],
+                }
+              );
+            } catch (err) {
+              console.warn("Lewati data duplikat:", err.message);
+            }
           }
 
           resolve(true);

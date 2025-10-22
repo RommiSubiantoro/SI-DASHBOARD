@@ -79,7 +79,6 @@ function AdminDashboard() {
   const {
     data,
     isLoading: dataLoading,
-    calculateStats,
     exportToExcel,
     importFromExcelToFirebase,
   } = useDataManagement({
@@ -91,15 +90,6 @@ function AdminDashboard() {
     "Silkargo Indonesia": [],
     "Samudera Agencies Indonesia": [],
     "Samudera Kendari Logistik": [],
-  });
-
-  const stats = calculateStats(currentData);
-
-  const [allUnitsStats, setAllUnitsStats] = useState({
-    totalAct2024: 0,
-    totalExpenses: 0,
-    totalAct2025: 0,
-    avgTarget: 0,
   });
 
   // -------------------------
@@ -240,58 +230,100 @@ function AdminDashboard() {
   // Realtime chart data for selectedUnit + selectedYear
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
-    const itemsRef = collection(
+
+    const colRef = collection(
       db,
       `unitData/${selectedUnit}/${selectedYear}/data/items`
     );
-    const unsubscribe = onSnapshot(itemsRef, (snap) => {
-      const docs = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-      setCurrentData(docs);
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const rawData = snapshot.docs.map((doc) => doc.data());
+
+      // 🔹 Hanya ambil Debit
+      const debitData = rawData.filter((item) => item.type === "Debit");
+
+      // 🔹 Kelompokkan berdasarkan account dan bulan
+      const grouped = {};
+
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setCurrentData(Object.values(grouped)); // untuk DataTable
     });
+
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
-
-  // Aggregate all units stats
-  const calculateAllUnitsStats = async () => {
-    try {
-      let totalAct2024 = 0;
-      let totalExpenses = 0;
-      let totalAct2025 = 0;
-      let totalRecords = 0;
-      let totalTargets = 0;
-
-      for (const unit of units) {
-        const itemsSnap = await getDocs(
-          collection(db, `unitData/${unit.name}/${selectedYear}/data/items`)
-        );
-        const unitData = itemsSnap.docs.map((d) => d.data());
-        if (unitData.length > 0) {
-          const s = calculateStats(unitData);
-          totalAct2024 += s.totalRevenue;
-          totalExpenses += s.totalExpenses;
-          totalAct2025 += s.totalAct2025;
-          totalRecords += unitData.length;
-          totalTargets += s.avgTarget * unitData.length;
-        }
-      }
-
-      setAllUnitsStats({
-        totalAct2024,
-        totalExpenses,
-        totalAct2025,
-        avgTarget: totalRecords > 0 ? totalTargets / totalRecords : 0,
-      });
-    } catch (err) {
-      console.error("calculateAllUnitsStats err:", err);
-    }
-  };
-
   useEffect(() => {
-    if (units.length > 0 && selectedYear) {
-      calculateAllUnitsStats();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [units, selectedYear]);
+    if (!selectedUnit || !selectedYear) return;
+
+    const colRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const rawData = snapshot.docs.map((doc) => doc.data());
+
+      // 🔹 Hanya ambil Debit
+      const debitData = rawData.filter((item) => item.type === "Debit");
+
+      // 🔹 Kelompokkan berdasarkan account dan bulan
+      const grouped = {};
+
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setCurrentData(Object.values(grouped)); // untuk DataTable
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit, selectedYear]);
 
   // -------------------------
   // Auth / Navigation handlers
@@ -831,8 +863,6 @@ function AdminDashboard() {
               selectedYear={selectedYear}
               setSelectedYear={setSelectedYear}
               units={units}
-              stats={stats}
-              allUnitsStats={allUnitsStats}
               currentData={currentData}
               selectedMonth={selectedMonth}
               setSelectedMonth={setSelectedMonth}

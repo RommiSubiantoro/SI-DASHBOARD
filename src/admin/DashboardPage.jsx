@@ -1,7 +1,6 @@
 // src/components/DashboardPage.jsx
 import React from "react";
 import Header from "../components/Header";
-import StatsCards from "../components/StatsCards";
 import ExporttableChart from "../components/ExporttableChart";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
@@ -13,8 +12,6 @@ const DashboardPage = ({
   selectedYear,
   setSelectedYear,
   units,
-  stats,
-  allUnitsStats,
   currentData,
   selectedMonth,
   setSelectedMonth,

@@ -29,25 +29,27 @@ function getNumericValue(row, keys) {
 }
 
 function isAggregatedData(arr) {
-  return Array.isArray(arr) && arr.length > 0 && arr[0] && Object.prototype.hasOwnProperty.call(arr[0], "value") && Object.prototype.hasOwnProperty.call(arr[0], "month");
+  return Array.isArray(arr) && arr.length > 0 && arr[0] && 
+         Object.prototype.hasOwnProperty.call(arr[0], "value") && 
+         Object.prototype.hasOwnProperty.call(arr[0], "month");
 }
 
 export default function Barchart({ data = [], selectedYear = "2025", setSelectedYear = () => {} }) {
   const [selectedCategory, setSelectedCategory] = useState("All");
 
+  // ✅ Perbaikan: jaga agar selalu array
+  const safeData = Array.isArray(data) ? data : [];
+
   // build chartData per month
   const chartData = useMemo(() => {
-    // if data already aggregated per month (e.g. [{month,value}]) just use it (and possibly filter category not applicable)
-    if (isAggregatedData(data)) {
-      // assume data is array of {month, value}
-      return data.map(d => ({ month: d.month, value: Math.abs(Number(d.value) || 0) }));
+    if (isAggregatedData(safeData)) {
+      return safeData.map(d => ({ month: d.month, value: Math.abs(Number(d.value) || 0) }));
     }
 
-    // raw rows -> sum absolute per month
     const monthAcc = {};
-    MONTHS.forEach(m => monthAcc[m.label] = 0);
+    MONTHS.forEach(m => (monthAcc[m.label] = 0));
 
-    data.forEach(row => {
+    safeData.forEach(row => {
       const category = row.CATEGORY ?? row.category ?? row.Category ?? row["ACCOUNT NAME"] ?? row["ACCOUNT NAME "] ?? "Unknown";
       if (selectedCategory !== "All" && category !== selectedCategory) return;
 
@@ -58,23 +60,41 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
     });
 
     return Object.entries(monthAcc).map(([month, value]) => ({ month, value }));
-  }, [data, selectedCategory]);
+  }, [safeData, selectedCategory]);
 
-  // categories list for filter
-  const categories = useMemo(() => ["All", ...new Set((Array.isArray(data) ? data.map(r => r.CATEGORY ?? r.category ?? r.Category ?? r["ACCOUNT NAME"] ?? r["ACCOUNT NAME "] ?? "Unknown") : []))], [data]);
+  const categories = useMemo(() => [
+    "All",
+    ...new Set(
+      safeData.map(r =>
+        r.CATEGORY ?? r.category ?? r.Category ?? r["ACCOUNT NAME"] ?? r["ACCOUNT NAME "] ?? "Unknown"
+      )
+    ),
+  ], [safeData]);
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">Bar Chart Per Bulan</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+        Bar Chart Per Bulan
+      </h3>
 
       <div className="flex gap-3 mb-4 justify-center items-center">
-        <select value={selectedYear} onChange={(e)=> setSelectedYear(e.target.value)} className="px-3 py-2 border rounded">
+        <select
+          value={selectedYear}
+          onChange={(e) => setSelectedYear(e.target.value)}
+          className="px-3 py-2 border rounded"
+        >
           <option value="2024">2024</option>
           <option value="2025">2025</option>
         </select>
 
-        <select value={selectedCategory} onChange={(e)=> setSelectedCategory(e.target.value)} className="px-3 py-2 border rounded">
-          {categories.map(c => <option key={c} value={c}>{c}</option>)}
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="px-3 py-2 border rounded"
+        >
+          {categories.map(c => (
+            <option key={c} value={c}>{c}</option>
+          ))}
         </select>
       </div>
 
@@ -84,10 +104,12 @@ export default function Barchart({ data = [], selectedYear = "2025", setSelected
             <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
             <XAxis dataKey="month" tick={{ fontSize: 10 }} />
             <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip formatter={(v)=> Number(v).toLocaleString()} />
+            <Tooltip formatter={(v) => Number(v).toLocaleString()} />
             <Legend wrapperStyle={{ fontSize: 10 }} />
             <Bar dataKey="value">
-              {chartData.map((entry, idx) => <Cell key={`bar-${idx}`} fill={COLORS[idx % COLORS.length]} />)}
+              {chartData.map((entry, idx) => (
+                <Cell key={`bar-${idx}`} fill={COLORS[idx % COLORS.length]} />
+              ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>

@@ -169,17 +169,10 @@ const UserDashboard = () => {
     if (file) {
       try {
         setIsLoading(true);
+        await importFromExcelToFirebase(selectedUnit, file, selectedYear);
 
-        // 1️⃣ Import ke Firestore
-        const importedData = await importFromExcelToFirebase(
-          selectedUnit,
-          file,
-          selectedYear
-        );
-
-        // 2️⃣ Update langsung ke state agar chart otomatis refresh
-        setCurrentData(importedData);
-        console.log("🔥 Data dari Firestore:", groupedData);
+        // Jangan setCurrentData() di sini
+        console.log("🔥 Import selesai, data Firestore akan update otomatis");
 
         alert("✅ Data berhasil diimport dan chart diperbarui!");
         event.target.value = "";
