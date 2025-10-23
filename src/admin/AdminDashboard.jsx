@@ -9,6 +9,8 @@ import UnitModal from "./UnitModal";
 import UserModal from "./UserModal";
 import MasterCategory from "./MasterCategory";
 import MasterCode from "./MasterCode";
+import LibraryCode from "./LibraryCode";
+import DashboardView from "../components/DashboardView";
 
 import {
   collection,
@@ -872,6 +874,22 @@ function AdminDashboard() {
             />
           )}
 
+          {activePage === "dashboardView" && (
+            <DashboardView
+              selectedUnit={selectedUnit}
+              setSelectedUnit={setSelectedUnit}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              units={units}
+              currentData={currentData}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              handleExportExcel={handleExportExcel}
+              handleImportData={(e) => handleImportData(e)}
+              handleExportPDF={handleExportPDF}
+            />
+          )}
+
           {/* Unit management */}
           {activePage === "unit" && (
             <UnitManagement
@@ -930,6 +948,18 @@ function AdminDashboard() {
           {/* Master Code */}
           {activePage === "masterCode" && (
             <MasterCode
+              codes={codes}
+              categories={categories}
+              loading={loadingCodes}
+              onAddCode={handleAddCode}
+              onEditCode={handleEditCode}
+              onDeleteCode={handleDeleteCode}
+            />
+          )}
+
+          {/* Library Code */}
+          {activePage === "libraryCode" && (
+            <LibraryCode
               codes={codes}
               categories={categories}
               loading={loadingCodes}

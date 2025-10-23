@@ -1,5 +1,8 @@
 // src/components/MasterCode.jsx
 import React, { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../firebase";
+import CreatableSelect from "react-select/creatable"; // 🔹 Import react-select
 
 const MasterCode = ({
   codes = [],
@@ -12,8 +15,30 @@ const MasterCode = ({
   const [editing, setEditing] = useState(null);
   const [code, setCode] = useState("");
   const [accountName, setAccountName] = useState("");
-  const [primaryCategory, setPrimaryCategory] = useState(""); // kategori utama
-  const [description, setDescription] = useState(""); // deskripsi tambahan
+  const [primaryCategory, setPrimaryCategory] = useState("");
+  const [description, setDescription] = useState("");
+  const [libraryCodes, setLibraryCodes] = useState([]);
+  const [loadingLibrary, setLoadingLibrary] = useState(false);
+
+  // 🔹 Ambil data dari Firestore
+  useEffect(() => {
+    const fetchLibraryCodes = async () => {
+      try {
+        setLoadingLibrary(true);
+        const querySnapshot = await getDocs(collection(db, "libraryCode"));
+        const data = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setLibraryCodes(data);
+      } catch (error) {
+        console.error("Gagal mengambil librarycode:", error);
+      } finally {
+        setLoadingLibrary(false);
+      }
+    };
+    fetchLibraryCodes();
+  }, []);
 
   useEffect(() => {
     if (editing) {
@@ -33,9 +58,29 @@ const MasterCode = ({
     }
   }, [editing]);
 
+  // 🔹 Handle pilih atau ketik code
+  const handleSelectCode = (selectedOption) => {
+    if (!selectedOption) {
+      setCode("");
+      setAccountName("");
+      return;
+    }
+
+    const selectedCode = selectedOption.value;
+    setCode(selectedCode);
+
+    const found = libraryCodes.find((item) => item.code === selectedCode);
+    if (found) {
+      setAccountName(found.accountName || "");
+    } else {
+      // Kalau kode baru diketik manual
+      setAccountName("");
+    }
+  };
+
   const save = async () => {
     if (!primaryCategory) return alert("Pilih kategori utama");
-    if (!code.trim()) return alert("Kode tidak boleh kosong");
+    if (!code.trim()) return alert("Pilih atau isi kode");
     if (!accountName.trim()) return alert("Account Name tidak boleh kosong");
     if (!description.trim()) return alert("Deskripsi tidak boleh kosong");
 
@@ -59,6 +104,12 @@ const MasterCode = ({
     setDescription("");
   };
 
+  // 🔹 Opsi untuk react-select
+  const codeOptions = libraryCodes.map((item) => ({
+    value: item.code,
+    label: `${item.code} - ${item.accountName}`,
+  }));
+
   return (
     <div className="space-y-6 min-h-screen mt-12">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
@@ -66,9 +117,9 @@ const MasterCode = ({
           <h1 className="text-2xl font-bold text-gray-800">Master Code</h1>
         </div>
 
-        {/* 🔹 Form input (Category di depan, Description di belakang) */}
+        {/* 🔹 Form input */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          {/* Category */}
+          {/* Description */}
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               Description
@@ -87,14 +138,18 @@ const MasterCode = ({
             </select>
           </div>
 
-          {/* Code */}
+          {/* Code - pakai CreatableSelect */}
           <div>
             <label className="block text-sm text-gray-600 mb-1">Code</label>
-            <input
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-              placeholder="Kode (mis. 52101)"
-              className="w-full px-3 py-2 border rounded-lg"
+            <CreatableSelect
+              isClearable
+              isLoading={loadingLibrary}
+              value={code ? { value: code, label: code } : null}
+              onChange={handleSelectCode}
+              options={codeOptions}
+              placeholder="Pilih atau ketik kode..."
+              className="react-select-container"
+              classNamePrefix="react-select"
             />
           </div>
 
@@ -111,7 +166,7 @@ const MasterCode = ({
             />
           </div>
 
-          {/* Description */}
+          {/* CATEGORY */}
           <div>
             <label className="block text-sm text-gray-600 mb-1">
               CATEGORY
@@ -142,7 +197,7 @@ const MasterCode = ({
           )}
         </div>
 
-        {/* 🔹 Tabel daftar code (Category di depan, Description di belakang) */}
+        {/* 🔹 Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-gray-100 border-b">

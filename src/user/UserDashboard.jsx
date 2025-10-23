@@ -12,6 +12,7 @@ import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
 import Navbar from "../components/navbar";
+import DashboardView from "../components/DashboardView";
 
 // Custom hook
 import { useDataManagement } from "../hooks/useDataManagement";
@@ -223,6 +224,11 @@ const UserDashboard = () => {
             onExportExcel={handleExportExcel}
             showImportButton
             showExportButtons
+          />
+
+          <DashboardView
+            currentData={currentData}
+            selectedYear={selectedYear}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

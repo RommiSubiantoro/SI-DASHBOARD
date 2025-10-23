@@ -97,7 +97,7 @@ export const useDataManagement = (initialData = {}) => {
                   accountCode: row["Account Code"] || "-",
                   category: row["El4 short name"] || "-",
                   area: row["Location"] || "-",
-                  businessLine: row["Business Line"] || "-",
+                  businessLine: row["Business Line"] || ["Alocation"] || [""],
                   month,
                   docValue: cleanValue,
                   type: row["Dr/Cr"],

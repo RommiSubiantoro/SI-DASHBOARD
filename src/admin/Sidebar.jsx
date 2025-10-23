@@ -10,6 +10,8 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
         <nav className="space-y-2">
           <button onClick={() => onChangePage("dashboard")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "dashboard" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>📊 Dashboard</button>
 
+          <button onClick={() => onChangePage("dashboardView")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "dashboardView" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>View Table</button>
+
           <button onClick={() => onChangePage("unit")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "unit" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>🏢 Manage Unit Bisnis</button>
 
           <button onClick={() => onChangePage("user")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "user" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>👥 Manage User</button>
@@ -17,6 +19,8 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
           <button onClick={() => onChangePage("masterCategory")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "masterCategory" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>🗂 Master Category</button>
 
           <button onClick={() => onChangePage("masterCode")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "masterCode" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>🔢 Master Code</button>
+
+          <button onClick={() => onChangePage("libraryCode")} className={`w-full text-left px-4 py-3 rounded-lg font-medium text-sm ${activePage === "libraryCode" ? "text-white bg-red-600" : "text-white hover:bg-red-400"}`}>🔣 Library Code</button>
         </nav>
       </div>
 
