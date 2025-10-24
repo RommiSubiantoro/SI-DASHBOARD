@@ -25,6 +25,7 @@ const UserDashboard = () => {
   const [currentData, setCurrentData] = useState([]);
   const [units, setUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [masterCode, setMasterCode] = useState([]);
 
   // 🔹 Ambil unit bisnis user berdasarkan auth
   useEffect(() => {
@@ -61,6 +62,19 @@ const UserDashboard = () => {
       setUnits(list);
     });
     return () => unsubscribeUnits();
+  }, []);
+
+  useEffect(() => {
+    const fetchMaster = async () => {
+      try {
+        const snap = await getDocs(collection(db, "masterCode"));
+        const data = snap.docs.map((doc) => doc.data());
+        setMasterCode(data); // 🔹 Set data masterCode di sini
+      } catch (error) {
+        console.error("❌ Gagal ambil masterCode di UserDashboard:", error);
+      }
+    };
+    fetchMaster();
   }, []);
 
   // 🔹 Import & Export dari hook custom
@@ -200,6 +214,9 @@ const UserDashboard = () => {
           <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
             📊 Dashboard
           </button>
+           <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
+            📊 View Table
+          </button>
         </nav>
       </aside>
 
@@ -228,12 +245,14 @@ const UserDashboard = () => {
 
           <DashboardView
             currentData={currentData}
+            masterCodeData={masterCode}
             selectedYear={selectedYear}
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Piechart
               data={currentData}
+              masterCodeData={masterCode}
               selectedMonth={selectedMonth}
               setSelectedMonth={setSelectedMonth}
               selectedYear={selectedYear}

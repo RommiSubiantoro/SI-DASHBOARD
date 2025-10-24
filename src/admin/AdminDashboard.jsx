@@ -649,7 +649,6 @@ function AdminDashboard() {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      alert("Kategori berhasil ditambahkan");
     } catch (err) {
       console.error("handleAddCategory err:", err);
       alert("Gagal menambahkan kategori: " + err.message);
@@ -667,7 +666,6 @@ function AdminDashboard() {
         name: category.name.trim(),
         updatedAt: new Date(),
       });
-      alert("Kategori berhasil diupdate");
     } catch (err) {
       console.error("handleEditCategory err:", err);
       alert("Gagal update kategori: " + err.message);
@@ -748,7 +746,6 @@ function AdminDashboard() {
         createdAt: new Date(),
         updatedAt: new Date(),
       });
-      alert("Code berhasil ditambahkan");
     } catch (err) {
       console.error("handleAddCode err:", err);
       alert("Gagal menambahkan code: " + err.message);
@@ -780,10 +777,8 @@ function AdminDashboard() {
             : "",
         updatedAt: new Date(),
       });
-      alert("Code berhasil diupdate");
     } catch (err) {
       console.error("handleEditCode err:", err);
-      alert("Gagal update code: " + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -795,10 +790,8 @@ function AdminDashboard() {
     try {
       setIsLoading(true);
       await deleteDoc(doc(db, "masterCode", codeObj.id));
-      alert("Code berhasil dihapus");
     } catch (err) {
       console.error("handleDeleteCode err:", err);
-      alert("Gagal hapus code: " + err.message);
     } finally {
       setIsLoading(false);
     }
