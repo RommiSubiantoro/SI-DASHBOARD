@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
-import CreatableSelect from "react-select/creatable"; // 🔹 Import react-select
+import CreatableSelect from "react-select/creatable";
 
 const MasterCode = ({
   codes = [],
@@ -19,6 +19,9 @@ const MasterCode = ({
   const [description, setDescription] = useState("");
   const [libraryCodes, setLibraryCodes] = useState([]);
   const [loadingLibrary, setLoadingLibrary] = useState(false);
+
+  // 🔎 Search
+  const [search, setSearch] = useState("");
 
   // 🔹 Ambil data dari Firestore
   useEffect(() => {
@@ -58,24 +61,18 @@ const MasterCode = ({
     }
   }, [editing]);
 
-  // 🔹 Handle pilih atau ketik code
+  // 🔹 Handle pilih/ketik code
   const handleSelectCode = (selectedOption) => {
     if (!selectedOption) {
       setCode("");
       setAccountName("");
       return;
     }
-
     const selectedCode = selectedOption.value;
     setCode(selectedCode);
 
     const found = libraryCodes.find((item) => item.code === selectedCode);
-    if (found) {
-      setAccountName(found.accountName || "");
-    } else {
-      // Kalau kode baru diketik manual
-      setAccountName("");
-    }
+    setAccountName(found ? found.accountName : "");
   };
 
   const save = async () => {
@@ -91,11 +88,8 @@ const MasterCode = ({
       description: description.trim(),
     };
 
-    if (editing) {
-      await onEditCode({ ...editing, ...payload });
-    } else {
-      await onAddCode(payload);
-    }
+    if (editing) await onEditCode({ ...editing, ...payload });
+    else await onAddCode(payload);
 
     setEditing(null);
     setCode("");
@@ -104,11 +98,18 @@ const MasterCode = ({
     setDescription("");
   };
 
-  // 🔹 Opsi untuk react-select
+  // 🔹 Opsi react-select
   const codeOptions = libraryCodes.map((item) => ({
     value: item.code,
     label: `${item.code} - ${item.accountName}`,
   }));
+
+  // 🔹 Filter SEARCH
+  const filteredCodes = codes.filter((c) =>
+    (c.code + " " + c.accountName + " " + c.category + " " + c.description)
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
     <div className="space-y-6 min-h-screen mt-12">
@@ -117,13 +118,20 @@ const MasterCode = ({
           <h1 className="text-2xl font-bold text-gray-800">Master Code</h1>
         </div>
 
+        {/* 🔍 Search */}
+        <div className="mb-4">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari code / account name / description..."
+            className="w-full md:w-1/3 px-3 py-2 border rounded-lg"
+          />
+        </div>
+
         {/* 🔹 Form input */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
-          {/* Description */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Description
-            </label>
+            <label className="block text-sm text-gray-600 mb-1">Description</label>
             <select
               value={primaryCategory}
               onChange={(e) => setPrimaryCategory(e.target.value)}
@@ -138,7 +146,6 @@ const MasterCode = ({
             </select>
           </div>
 
-          {/* Code - pakai CreatableSelect */}
           <div>
             <label className="block text-sm text-gray-600 mb-1">Code</label>
             <CreatableSelect
@@ -153,11 +160,8 @@ const MasterCode = ({
             />
           </div>
 
-          {/* Account Name */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              Account Name
-            </label>
+            <label className="block text-sm text-gray-600 mb-1">Account Name</label>
             <input
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
@@ -166,11 +170,8 @@ const MasterCode = ({
             />
           </div>
 
-          {/* CATEGORY */}
           <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              CATEGORY
-            </label>
+            <label className="block text-sm text-gray-600 mb-1">CATEGORY</label>
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -181,17 +182,11 @@ const MasterCode = ({
         </div>
 
         <div className="flex gap-2 mb-6">
-          <button
-            onClick={save}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg"
-          >
+          <button onClick={save} className="px-4 py-2 bg-green-600 text-white rounded-lg">
             {editing ? "Update Code" : "Simpan Code"}
           </button>
           {editing && (
-            <button
-              onClick={() => setEditing(null)}
-              className="px-4 py-2 bg-gray-400 text-white rounded-lg"
-            >
+            <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-400 text-white rounded-lg">
               Batal
             </button>
           )}
@@ -212,41 +207,25 @@ const MasterCode = ({
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-6 text-center">
-                    Loading...
-                  </td>
-                </tr>
-              ) : codes.length === 0 ? (
-                <tr>
-                  <td colSpan="6" className="px-4 py-6 text-center">
-                    Belum ada code.
-                  </td>
-                </tr>
+                <tr><td colSpan="6" className="px-4 py-6 text-center">Loading...</td></tr>
+              ) : filteredCodes.length === 0 ? (
+                <tr><td colSpan="6" className="px-4 py-6 text-center">Tidak ditemukan.</td></tr>
               ) : (
-                codes.map((c, i) => (
+                filteredCodes.map((c, i) => (
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">{i + 1}</td>
                     <td className="px-4 py-3 font-medium">{c.category}</td>
                     <td className="px-4 py-3">{c.code}</td>
                     <td className="px-4 py-3">{c.accountName}</td>
                     <td className="px-4 py-3">
-                      {Array.isArray(c.description)
-                        ? c.description.join(", ")
-                        : c.description || "-"}
+                      {Array.isArray(c.description) ? c.description.join(", ") : c.description || "-"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button
-                          onClick={() => setEditing(c)}
-                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded"
-                        >
-                          Edit
-                        </button>
+                        <button onClick={() => setEditing(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>
                         <button
                           onClick={() => {
-                            if (window.confirm(`Hapus code "${c.code}"?`))
-                              onDeleteCode(c);
+                            if (window.confirm(`Hapus code "${c.code}"?`)) onDeleteCode(c);
                           }}
                           className="px-3 py-1 bg-red-100 text-red-700 rounded"
                         >
@@ -260,6 +239,7 @@ const MasterCode = ({
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   );
