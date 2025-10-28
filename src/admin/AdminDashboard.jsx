@@ -74,7 +74,7 @@ function AdminDashboard() {
   // Dashboard states & stats
   // -------------------------
   const [selectedUnit, setSelectedUnit] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("All");
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
 
@@ -871,8 +871,8 @@ function AdminDashboard() {
             <DashboardView
               selectedUnit={selectedUnit}
               setSelectedUnit={setSelectedUnit}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
+              // selectedYear={selectedYear}
+              // setSelectedYear={setSelectedYear}
               units={units}
               currentData={currentData}
               selectedMonth={selectedMonth}

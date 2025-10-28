@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import {
   LineChart,
   Line,
@@ -9,141 +9,156 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { db } from "../firebase";
+import { collection, getDocs } from "firebase/firestore";
 
 const MONTHS = [
-  { key: "JAN", label: "Jan" },
-  { key: "FEB", label: "Feb" },
-  { key: "MAR", label: "Mar" },
-  { key: "APR", label: "Apr" },
-  { key: "MAY", label: "May" },
-  { key: "JUN", label: "Jun" },
-  { key: "JUL", label: "Jul" },
-  { key: "AUG", label: "Aug" },
-  { key: "SEP", label: "Sep" },
-  { key: "OCT", label: "Oct" },
-  { key: "NOV", label: "Nov" },
-  { key: "DEC", label: "Dec" },
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-function getNumericValue(row, keys) {
-  for (const k of keys) {
-    if (!(k in row)) continue;
-    const raw = row[k];
-    if (raw === null || raw === undefined || raw === "") continue;
-    let s = String(raw).trim().replace(/,/g, "");
-    let isNeg = false;
-    if (/^\(.+\)$/.test(s)) {
-      isNeg = true;
-      s = s.replace(/^\(|\)$/g, "");
-    }
-    const n = Number(s);
-    if (!Number.isNaN(n)) return isNeg ? -n : n;
+// 🔹 Helper untuk parsing angka dari Excel (termasuk format (123))
+function parseNumber(raw) {
+  if (raw === null || raw === undefined || raw === "") return 0;
+  let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
+  let isNeg = false;
+  if (/^\(.+\)$/.test(s)) {
+    isNeg = true;
+    s = s.replace(/^\(|\)$/g, "");
   }
-  return 0;
+  let n = Number(s);
+  if (Number.isNaN(n)) n = 0;
+  return isNeg ? -Math.abs(n) : n;
 }
 
-export default function Linechart({ data = [] }) {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+export default function Linechart({
+  data = [],
+  selectedYear = "2025",
+  setSelectedYear = () => {},
+}) {
+  const [masterCode, setMasterCode] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("ALL");
+  const [loading, setLoading] = useState(false);
 
-  // 🔹 Ambil daftar kategori unik dari data
+  // 🔹 Ambil masterCode dari Firestore
+  useEffect(() => {
+    const fetchMasterCode = async () => {
+      try {
+        setLoading(true);
+        const snap = await getDocs(collection(db, "masterCode"));
+        const docs = snap.docs.map((d) => d.data());
+        setMasterCode(docs);
+      } catch (err) {
+        console.error("❌ Gagal ambil masterCode:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchMasterCode();
+  }, [selectedYear]);
+
+  // 🔹 Ambil kategori unik dari masterCode
   const categories = useMemo(() => {
-    if (!Array.isArray(data)) return ["All"];
-    const unique = new Set(
-      data.map(
-        (row) =>
-          row.CATEGORY ??
-          row.category ??
-          row.Category ??
-          row["ACCOUNT NAME"] ??
-          "Unknown"
-      )
-    );
-    return ["All", ...Array.from(unique)];
-  }, [data]);
+    if (masterCode.length === 0) return ["ALL"];
+    const unique = [...new Set(masterCode.map((m) => m.category))];
+    return ["ALL", ...unique];
+  }, [masterCode]);
 
-  // 🔹 Filter data sesuai kategori yang dipilih
-  const filteredData = useMemo(() => {
-    if (selectedCategory === "All") return data;
-    return data.filter((row) => {
-      const cat =
-        row.CATEGORY ??
-        row.category ??
-        row.Category ??
-        row["ACCOUNT NAME"] ??
-        "Unknown";
-      return cat === selectedCategory;
-    });
-  }, [data, selectedCategory]);
-
-  // 🔹 Agregasi total per bulan
+  // 🔹 Hitung total per bulan berdasarkan kategori (pakai masterCode)
   const chartData = useMemo(() => {
-    if (!Array.isArray(filteredData) || filteredData.length === 0) return [];
+    if (!Array.isArray(data) || data.length === 0 || masterCode.length === 0)
+      return [];
 
-    const monthTotals = MONTHS.map((m) => {
-      const total = filteredData.reduce((sum, row) => {
-        const val = getNumericValue(row, [
-          m.key,
-          m.label,
-          m.key.toUpperCase(),
-          m.label.toUpperCase(),
-          m.label.toLowerCase(),
-          m.key.toLowerCase(),
-        ]);
-        return sum + val;
-      }, 0);
-      return { month: m.label, value: total };
+    // Awal nilai per bulan
+    const monthlyTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));
+
+    data.forEach((row) => {
+      const code = String(row.accountCode)?.trim();
+      const match = masterCode.find(
+        (m) => String(m.code).trim() === code
+      );
+      if (!match) return;
+
+      const category = match.category || "Unknown";
+      if (selectedCategory !== "ALL" && category !== selectedCategory) return;
+
+      MONTHS.forEach((month) => {
+        const val = parseNumber(row[month]);
+        monthlyTotals[month] += Math.abs(val);
+      });
     });
 
-    console.log("✅ Final chartData for chart:", monthTotals);
-    return monthTotals;
-  }, [filteredData]);
+    return MONTHS.map((m) => ({
+      month: m,
+      value: monthlyTotals[m],
+    }));
+  }, [data, masterCode, selectedCategory]);
 
   return (
     <div className="p-6 bg-white shadow-lg rounded-2xl">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-semibold text-gray-800">
-          Line Chart Bulanan
+          📈 Line Chart Berdasarkan Kategori & Bulan
         </h3>
 
-        {/* 🔹 Dropdown filter kategori */}
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
-        >
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
-        </select>
+        {/* 🔹 Dropdown filter tahun dan kategori */}
+        <div className="flex gap-3">
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(e.target.value)}
+            className="px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+          >
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+          </select>
+
+          <select
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+            className="px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
-      <ResponsiveContainer width="100%" height={380}>
-        <LineChart
-          data={chartData}
-          margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-          <YAxis tickFormatter={(val) => val.toLocaleString()} />
-          <Tooltip formatter={(v) => v.toLocaleString()} />
-          <Legend />
-          <Line
-            type="monotone"
-            dataKey="value"
-            name={
-              selectedCategory === "All"
-                ? "Total Semua Kategori"
-                : selectedCategory
-            }
-            stroke="#4f46e5"
-            strokeWidth={3}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
-          />
-        </LineChart>
-      </ResponsiveContainer>
+      {loading ? (
+        <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
+      ) : chartData.length > 0 ? (
+        <ResponsiveContainer width="100%" height={380}>
+          <LineChart
+            data={chartData}
+            margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis tickFormatter={(val) => val.toLocaleString()} />
+            <Tooltip formatter={(v) => v.toLocaleString()} />
+            <Legend />
+            <Line
+              type="monotone"
+              dataKey="value"
+              name={
+                selectedCategory === "ALL"
+                  ? "Total Semua Kategori"
+                  : selectedCategory
+              }
+              stroke="#4f46e5"
+              strokeWidth={3}
+              dot={{ r: 4 }}
+              activeDot={{ r: 6 }}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      ) : (
+        <p className="text-center text-gray-500">
+          Tidak ada data untuk kategori ini.
+        </p>
+      )}
     </div>
   );
 }

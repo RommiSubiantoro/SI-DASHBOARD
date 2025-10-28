@@ -48,20 +48,25 @@ export default function Piechart({
   const [masterCode, setMasterCode] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false); // 🔹 loading state
 
-  // 🔹 Ambil masterCode dari Firestore
+  // 🔹 Ambil masterCode dari Firestore setiap kali data berubah (atau tahun berubah)
   useEffect(() => {
     const fetchMaster = async () => {
       try {
+        setIsLoading(true);
         const snap = await getDocs(collection(db, "masterCode"));
         const data = snap.docs.map((doc) => doc.data());
         setMasterCode(data);
       } catch (error) {
         console.error("❌ Gagal ambil masterCode:", error);
+      } finally {
+        setIsLoading(false);
       }
     };
+
     fetchMaster();
-  }, []);
+  }, [selectedYear, data]); // 🔧 ambil ulang setiap tahun/unit/data berubah
 
   // 🔹 Ambil kategori unik
   const categories = useMemo(() => {
@@ -71,9 +76,11 @@ export default function Piechart({
 
   // 🔹 Hitung data berdasarkan dropdown
   useEffect(() => {
-    if (data.length === 0 || masterCode.length === 0) return;
+    if (data.length === 0 || masterCode.length === 0) {
+      setChartData([]);
+      return;
+    }
 
-    // 🧩 Helper: ambil total nilai (semua bulan jika ALL, atau 1 bulan)
     const getValue = (item) => {
       if (selectedMonth === "ALL") {
         return MONTHS.slice(1).reduce(
@@ -85,7 +92,6 @@ export default function Piechart({
     };
 
     if (selectedCategory === "ALL") {
-      // 🟢 Tampilkan total per kategori
       const groupedByCategory = {};
       masterCode.forEach((m) => {
         groupedByCategory[m.category] = 0;
@@ -106,7 +112,6 @@ export default function Piechart({
 
       setChartData(result);
     } else {
-      // 🟣 Tampilkan detail akun di kategori terpilih
       const codes = masterCode
         .filter((m) => m.category === selectedCategory)
         .map((m) => String(m.code).trim());
@@ -137,12 +142,14 @@ export default function Piechart({
     }
   }, [selectedCategory, selectedMonth, data, masterCode]);
 
+  // 🔹 RENDER
   return (
     <div className="p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
       <h2 className="text-xl font-semibold mb-4 text-center">
         📊 Pie Chart: Perbandingan Kategori & Detail
       </h2>
 
+      {/* Dropdown */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div>
           <label className="block mb-1 font-medium">Pilih Kategori</label>
@@ -176,7 +183,10 @@ export default function Piechart({
         </div>
       </div>
 
-      {chartData.length > 0 ? (
+      {/* Chart */}
+      {isLoading ? (
+        <p className="text-gray-500 text-center mt-6">⏳ Memuat data...</p>
+      ) : chartData.length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
           <PieChart>
             <Pie
