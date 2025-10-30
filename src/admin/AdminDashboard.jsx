@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Navbar from "../components/navbar";
+import Header from "../components/Header";
 import DashboardPage from "./DashboardPage";
 import UnitManagement from "./UnitManagement";
 import UserManagement from "./UserManagement";
@@ -77,6 +78,7 @@ function AdminDashboard() {
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
+  const [viewData, setViewData] = useState([]);
 
   const {
     data,
@@ -326,6 +328,50 @@ function AdminDashboard() {
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
+
+  // Realtime data untuk DashboardView (hanya baca, tidak berubah saat tahun diganti)
+  useEffect(() => {
+    if (!selectedUnit) return;
+
+    // default ke tahun 2025 (atau bisa juga tahun terbaru yang tersedia)
+    const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const rawData = snapshot.docs.map((doc) => doc.data());
+      const debitData = rawData.filter((item) => item.type === "Debit");
+      const grouped = {};
+
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setViewData(Object.values(grouped));
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit]);
 
   // -------------------------
   // Auth / Navigation handlers
@@ -852,35 +898,49 @@ function AdminDashboard() {
 
           {/* Dashboard */}
           {activePage === "dashboard" && (
-            <DashboardPage
-              selectedUnit={selectedUnit}
-              setSelectedUnit={setSelectedUnit}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              units={units}
-              currentData={currentData}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              handleExportExcel={handleExportExcel}
-              handleImportData={(e) => handleImportData(e)}
-              handleExportPDF={handleExportPDF}
-            />
+            <>
+              <DashboardPage
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                units={units}
+                currentData={currentData}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                handleExportExcel={handleExportExcel}
+                handleImportData={(e) => handleImportData(e)}
+                handleExportPDF={handleExportPDF}
+              />
+            </>
           )}
 
           {activePage === "dashboardView" && (
-            <DashboardView
-              selectedUnit={selectedUnit}
-              setSelectedUnit={setSelectedUnit}
-              // selectedYear={selectedYear}
-              // setSelectedYear={setSelectedYear}
-              units={units}
-              currentData={currentData}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              handleExportExcel={handleExportExcel}
-              handleImportData={(e) => handleImportData(e)}
-              handleExportPDF={handleExportPDF}
-            />
+            <div style={{ marginTop: "70px" }}>
+              {" "}
+              {/* atur sesuai tinggi Navbar */}
+              <Header
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                units={units.map((u) => u.name)}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                title="View Table"
+              />
+              <DashboardView
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                units={units}
+                currentData={currentData}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+                handleExportExcel={handleExportExcel}
+                handleImportData={(e) => handleImportData(e)}
+                handleExportPDF={handleExportPDF}
+              />
+            </div>
           )}
 
           {/* Unit management */}

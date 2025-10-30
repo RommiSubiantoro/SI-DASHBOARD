@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
 
 // Import komponen
 import Header from "../components/Header";
 import ControlButtons from "../components/ControlButtons";
-import StatsCards from "../components/StatsCards";
 import DataTable from "../components/DataTable";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
@@ -26,6 +25,7 @@ const UserDashboard = () => {
   const [units, setUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [masterCode, setMasterCode] = useState([]);
+  const [activeMenu, setActiveMenu] = useState("dashboard"); // 🔹 Menu aktif
 
   // 🔹 Ambil unit bisnis user berdasarkan auth
   useEffect(() => {
@@ -52,7 +52,7 @@ const UserDashboard = () => {
     return () => unsubscribeAuth();
   }, [selectedUnit]);
 
-  // 🔹 Ambil daftar semua unit (opsional, bisa untuk dropdown)
+  // 🔹 Ambil daftar semua unit
   useEffect(() => {
     const unsubscribeUnits = onSnapshot(collection(db, "units"), (snapshot) => {
       const list = snapshot.docs.map((doc) => ({
@@ -64,12 +64,13 @@ const UserDashboard = () => {
     return () => unsubscribeUnits();
   }, []);
 
+  // 🔹 Ambil masterCode
   useEffect(() => {
     const fetchMaster = async () => {
       try {
         const snap = await getDocs(collection(db, "masterCode"));
         const data = snap.docs.map((doc) => doc.data());
-        setMasterCode(data); // 🔹 Set data masterCode di sini
+        setMasterCode(data);
       } catch (error) {
         console.error("❌ Gagal ambil masterCode di UserDashboard:", error);
       }
@@ -80,7 +81,7 @@ const UserDashboard = () => {
   // 🔹 Import & Export dari hook custom
   const { exportToExcel, importFromExcelToFirebase } = useDataManagement({});
 
-  // 🔹 Listener realtime Firestore sesuai struktur baru
+  // 🔹 Listener realtime Firestore
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -91,13 +92,9 @@ const UserDashboard = () => {
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // 🔹 Hanya ambil Debit
       const debitData = rawData.filter((item) => item.type === "Debit");
 
-      // 🔹 Kelompokkan berdasarkan account dan bulan
       const grouped = {};
-
       debitData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
         if (!grouped[key]) {
@@ -124,14 +121,13 @@ const UserDashboard = () => {
         grouped[key][item.month] += item.docValue;
       });
 
-      setCurrentData(Object.values(grouped)); // untuk DataTable
+      setCurrentData(Object.values(grouped));
     });
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
 
   // ====== HANDLERS ======
-
   const handleLogout = async () => {
     try {
       setIsLoading(true);
@@ -185,10 +181,7 @@ const UserDashboard = () => {
       try {
         setIsLoading(true);
         await importFromExcelToFirebase(selectedUnit, file, selectedYear);
-
-        // Jangan setCurrentData() di sini
         console.log("🔥 Import selesai, data Firestore akan update otomatis");
-
         alert("✅ Data berhasil diimport dan chart diperbarui!");
         event.target.value = "";
       } catch (error) {
@@ -211,11 +204,22 @@ const UserDashboard = () => {
           </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
-          <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
+          <button
+            onClick={() => setActiveMenu("dashboard")}
+            className={`w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm transition-all ${
+              activeMenu === "dashboard" ? "bg-red-600" : "hover:bg-red-600"
+            }`}
+          >
             📊 Dashboard
           </button>
-           <button className="w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm hover:bg-red-600 transition-all">
-            📊 View Table
+
+          <button
+            onClick={() => setActiveMenu("viewTable")}
+            className={`w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm transition-all ${
+              activeMenu === "viewTable" ? "bg-red-600" : "hover:bg-red-600"
+            }`}
+          >
+            📑 View Table
           </button>
         </nav>
       </aside>
@@ -231,7 +235,9 @@ const UserDashboard = () => {
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
             units={assignedUnits}
-            title="User Dashboard"
+            title={
+              activeMenu === "dashboard" ? "User Dashboard" : "View Table"
+            }
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
           />
@@ -243,35 +249,46 @@ const UserDashboard = () => {
             showExportButtons
           />
 
-          <DashboardView
-            currentData={currentData}
-            masterCodeData={masterCode}
-            selectedYear={selectedYear}
-          />
+          {activeMenu === "dashboard" && (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Piechart
+                  data={currentData}
+                  masterCodeData={masterCode}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  selectedYear={selectedYear}
+                />
+                <Barchart data={currentData} selectedYear={selectedYear} />
+                <Linechart data={currentData} />
+              </div>
+            </>
+          )}
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Piechart
-              data={currentData}
-              masterCodeData={masterCode}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-              selectedYear={selectedYear}
-            />
-            <Barchart data={currentData} selectedYear={selectedYear} />
-            <Linechart data={currentData} />
-          </div>
+          {activeMenu === "viewTable" && (
+            <>
+              {/* 🔹 DashboardView dipindah ke sini */}
+              <DashboardView
+                currentData={currentData}
+                masterCodeData={masterCode}
+                selectedYear={selectedYear}
+                selectedUnit={selectedUnit}
+              />
 
-          <div className="bg-white p-6 rounded-xl shadow">
-            <DataTable
-              data={currentData}
-              columns={columns}
-              title={`Data ${selectedUnit} - ${selectedYear}`}
-              showFilters
-              showPagination
-              rowsPerPage={25}
-            />
-          </div>
+              <div className="bg-white p-6 rounded-xl shadow">
+                <DataTable
+                  data={currentData}
+                  columns={columns}
+                  title={`Data ${selectedUnit} - ${selectedYear}`}
+                  showFilters
+                  showPagination
+                  rowsPerPage={25}
+                />
+              </div>
+            </>
+          )}
         </main>
+        
       </div>
     </div>
   );
