@@ -17,9 +17,11 @@ import UnitManagement from "./UnitManagement";
 import UserManagement from "./UserManagement";
 import UnitModal from "./UnitModal";
 import UserModal from "./UserModal";
+import Header from "../components/Header";
+import DashboardMultiUnit from "../components/DashboardMultiUnit";
 
 function ManagerDashboard() {
-  const [activePage, setActivePage] = useState("dashboard");
+  const [activePage, setActivePage] = useState("");
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
@@ -36,6 +38,7 @@ function ManagerDashboard() {
   const [codes, setCodes] = useState([]);
   const [loadingCodes, setLoadingCodes] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const [viewData, setViewData] = useState([]);
   const auth = getAuth();
 
   // Ambil data Units (realtime)
@@ -183,6 +186,51 @@ function ManagerDashboard() {
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
+
+  // Realtime data untuk DashboardView (hanya baca, tidak berubah saat tahun diganti)
+  useEffect(() => {
+    if (!selectedUnit) return;
+
+    // default ke tahun 2025 (atau bisa juga tahun terbaru yang tersedia)
+    const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const rawData = snapshot.docs.map((doc) => doc.data());
+      const debitData = rawData.filter((item) => item.type === "Debit");
+      const grouped = {};
+
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setViewData(Object.values(grouped));
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit]);
+
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -247,11 +295,21 @@ function ManagerDashboard() {
     }
   };
 
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    localStorage.setItem("activePage", page);
+  };
+  useEffect(() => {
+    const saved = localStorage.getItem("activePage");
+    if (saved) setActivePage(saved);
+    else setActivePage("dashboard");
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Sidebar
         activePage={activePage}
-        onChangePage={setActivePage}
+        onChangePage={handlePageChange}
         onLogout={handleLogout}
       />
 
@@ -292,6 +350,13 @@ function ManagerDashboard() {
             isLoading={isLoading}
             setShowUserModal={setShowUserModal}
             setEditingUser={setEditingUser}
+          />
+        )}
+
+        {activePage === "TableView" && (
+          <DashboardMultiUnit
+            selectedYear={selectedYear}
+            currentData={currentData}
           />
         )}
       </div>
