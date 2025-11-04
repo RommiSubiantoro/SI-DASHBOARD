@@ -1,7 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
-import { collection, query, where, onSnapshot, getDocs } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  getDocs,
+  addDoc,
+} from "firebase/firestore";
+import * as XLSX from "xlsx";
 
 // Import komponen
 import Header from "../components/Header";
@@ -25,6 +33,9 @@ const UserDashboard = () => {
   const [units, setUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [masterCode, setMasterCode] = useState([]);
+  const [budgetData, setBudgetData] = useState([]); // ✅ tambahkan ini
+  const [budgetFile, setBudgetFile] = useState(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [activeMenu, setActiveMenu] = useState("dashboard"); // 🔹 Menu aktif
 
   // 🔹 Ambil unit bisnis user berdasarkan auth
@@ -79,7 +90,8 @@ const UserDashboard = () => {
   }, []);
 
   // 🔹 Import & Export dari hook custom
-  const { exportToExcel, importFromExcelToFirebase } = useDataManagement({});
+  const { exportToExcel, importFromExcelToFirebase, importBudgetFromExcel } =
+    useDataManagement({});
 
   // 🔹 Listener realtime Firestore
   useEffect(() => {
@@ -125,6 +137,26 @@ const UserDashboard = () => {
     });
 
     return () => unsubscribe();
+  }, [selectedUnit, selectedYear]);
+
+  // 🔹 Ambil data budget dari Firestore
+  useEffect(() => {
+    const fetchBudget = async () => {
+      if (!selectedUnit || !selectedYear) return;
+      try {
+        const colRef = collection(
+          db,
+          `unitData/${selectedUnit}/${selectedYear}/budget/items`
+        );
+        const snap = await getDocs(colRef);
+        const data = snap.docs.map((doc) => doc.data());
+        console.log("✅ Budget data fetched:", data);
+        setBudgetData(data);
+      } catch (error) {
+        console.error("❌ Gagal ambil data budget:", error);
+      }
+    };
+    fetchBudget();
   }, [selectedUnit, selectedYear]);
 
   // ====== HANDLERS ======
@@ -193,6 +225,41 @@ const UserDashboard = () => {
     }
   };
 
+  const handleImportBudget = async (event) => {
+    const file = event.target.files[0];
+    if (!file)
+      return alert("⚠️ Harap pilih file Excel Budget terlebih dahulu!");
+    if (!selectedUnit || !selectedYear)
+      return alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu!");
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        // Simpan semua data ke Firestore
+        const colRef = collection(
+          db,
+          `unitData/${selectedUnit}/${selectedYear}/budget/items`
+        );
+
+        for (const row of rows) {
+          await addDoc(colRef, row);
+        }
+
+        alert("✅ Semua data budget berhasil di-upload ke Firestore!");
+      };
+
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("❌ Gagal upload budget:", error);
+      alert("Gagal upload: " + error.message);
+    }
+  };
+
   // ====== RENDER ======
   return (
     <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
@@ -235,15 +302,14 @@ const UserDashboard = () => {
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
             units={assignedUnits}
-            title={
-              activeMenu === "dashboard" ? "User Dashboard" : "View Table"
-            }
+            title={activeMenu === "dashboard" ? "User Dashboard" : "View Table"}
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
           />
 
           <ControlButtons
             onImportData={handleImportData}
+            onImportBudget={handleImportBudget}
             onExportExcel={handleExportExcel}
             showImportButton
             showExportButtons
@@ -271,6 +337,7 @@ const UserDashboard = () => {
               <DashboardView
                 currentData={currentData}
                 masterCodeData={masterCode}
+                budgetData={budgetData}
                 selectedYear={selectedYear}
                 selectedUnit={selectedUnit}
               />
@@ -288,7 +355,6 @@ const UserDashboard = () => {
             </>
           )}
         </main>
-        
       </div>
     </div>
   );

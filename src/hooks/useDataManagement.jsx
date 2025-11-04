@@ -118,6 +118,56 @@ export const useDataManagement = (initialData = {}) => {
   };
 
   // =====================================================
+  // 🔹 IMPORT BUDGET DARI EXCEL KE FIRESTORE
+  // =====================================================
+  // =====================================================
+  // 🔹 IMPORT SEMUA DATA BUDGET DARI EXCEL KE FIRESTORE
+  // =====================================================
+  const importBudgetFromExcel = async (selectedUnit, file, selectedYear) => {
+    if (!file) throw new Error("Tidak ada file yang dipilih.");
+    if (!selectedUnit || !selectedYear)
+      throw new Error("Unit dan Tahun harus dipilih.");
+
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        try {
+          const workbook = XLSX.read(e.target.result, { type: "binary" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+
+          // Simpan semua isi baris ke Firestore tanpa ubah nama header
+          for (const row of rows) {
+            await addDoc(
+              collection(
+                db,
+                "unitData",
+                selectedUnit,
+                selectedYear,
+                "budget",
+                "items"
+              ),
+              {
+                ...row, // simpan semua kolom sesuai header Excel
+                createdAt: new Date(),
+              }
+            );
+          }
+
+          resolve(true);
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      reader.onerror = (err) => reject(err);
+      reader.readAsBinaryString(file);
+    });
+  };
+
+  // =====================================================
   // 3️⃣ EXPORT KE EXCEL (dengan header baru)
   // =====================================================
   const exportToExcel = (selectedUnit, unitData) => {
@@ -278,6 +328,7 @@ export const useDataManagement = (initialData = {}) => {
     data,
     isLoading,
     importFromExcelToFirebase,
+    importBudgetFromExcel,
     exportToExcel,
     updateDataInFirebase,
     deleteDataFromFirebase,

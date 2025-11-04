@@ -27,13 +27,13 @@ const UnitManagement = ({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-red-500 border-b border-gray-200 ">
                 <tr>
                   {["No", "Nama Unit", "Jumlah User", "Data Upload", "Aksi"].map(
                     (head) => (
                       <th
                         key={head}
-                        className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider"
+                        className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider"
                       >
                         {head}
                       </th>

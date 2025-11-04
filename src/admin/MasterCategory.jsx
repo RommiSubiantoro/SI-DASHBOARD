@@ -98,13 +98,13 @@ const MasterCategory = ({
         {/* 🔹 Tabel dengan kolom tambahan Account Name */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 border-b">
+            <thead className="bg-red-500 border-b">
               <tr>
-                <th className="px-4 py-2 text-left">No</th>
-                <th className="px-4 py-2 text-left">Nama Kategori</th>
-                <th className="px-4 py-2 text-left">Daftar Code</th>
-                <th className="px-4 py-2 text-left">Account Name</th>
-                <th className="px-4 py-2 text-left">Aksi</th>
+                <th className="px-4 py-2 text-left text-white">No</th>
+                <th className="px-4 py-2 text-left text-white">Nama Kategori</th>
+                <th className="px-4 py-2 text-left text-white">Daftar Code</th>
+                <th className="px-4 py-2 text-left text-white">Account Name</th>
+                <th className="px-4 py-2 text-left text-white">Aksi</th>
               </tr>
             </thead>
             <tbody>

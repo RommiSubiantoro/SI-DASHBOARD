@@ -3,36 +3,56 @@ import { Download, Upload, FileText } from "lucide-react";
 
 const ControlButtons = ({
   onImportData,
+  onImportBudget, // ✅ tombol tambahan
   onExportExcel,
   onExportPDF,
   showImportButton = true,
   showExportButtons = true,
 }) => {
-  // handle import langsung tanpa pilih unit
-  const handleFileChange = (e) => {
-    onImportData(e); // kirim file ke parent
+  // Handle Import Data
+  const handleFileChangeData = (e) => {
+    onImportData(e);
+    e.target.value = ""; // reset input supaya bisa upload file yang sama lagi
+  };
+
+  // Handle Import Budget
+  const handleFileChangeBudget = (e) => {
+    onImportBudget(e);
     e.target.value = ""; // reset input supaya bisa upload file yang sama lagi
   };
 
   return (
     <div className="bg-gradient-to-r from-gray-50 to-white rounded-xl shadow-md border border-gray-100 p-5 mb-6">
       <div className="flex flex-wrap gap-4 items-center justify-center sm:justify-start">
-
-        {/* Tombol Import Excel */}
+        {/* 🔹 Tombol Import Data (Actual) */}
         {showImportButton && (
-          <label className="flex items-center gap-3 px-6 py-3 bg-green-50 hover:bg-green-100 text-green-700 font-semibold text-sm rounded-lg transition-all duration-300 border border-green-200 hover:border-green-300 shadow-sm hover:shadow-md cursor-pointer">
-            <Upload size={22} className="text-green-600" />
-            Import Excel
-            <input
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileChange}
-              className="hidden"
-            />
-          </label>
+          <>
+            <label className="flex items-center gap-3 px-6 py-3 bg-green-50 hover:bg-green-100 text-green-700 font-semibold text-sm rounded-lg transition-all duration-300 border border-green-200 hover:border-green-300 shadow-sm hover:shadow-md cursor-pointer">
+              <Upload size={22} className="text-green-600" />
+              Import Act
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChangeData}
+                className="hidden"
+              />
+            </label>
+
+            {/* 🔹 Tombol Import Budget */}
+            <label className="flex items-center gap-3 px-6 py-3 bg-blue-50 hover:bg-blue-100 text-blue-700 font-semibold text-sm rounded-lg transition-all duration-300 border border-blue-200 hover:border-blue-300 shadow-sm hover:shadow-md cursor-pointer">
+              <Upload size={22} className="text-blue-600" />
+              Import Budget
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileChangeBudget}
+                className="hidden"
+              />
+            </label>
+          </>
         )}
 
-        {/* Tombol Export */}
+        {/* 🔹 Tombol Export */}
         {showExportButtons && (
           <>
             <button

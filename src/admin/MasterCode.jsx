@@ -195,14 +195,14 @@ const MasterCode = ({
         {/* 🔹 Table */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-100 border-b">
+            <thead className="bg-red-500 border-b">
               <tr>
-                <th className="px-4 py-2 text-left">No</th>
-                <th className="px-4 py-2 text-left">Description</th>
-                <th className="px-4 py-2 text-left">Code</th>
-                <th className="px-4 py-2 text-left">Account Name</th>
-                <th className="px-4 py-2 text-left">CATEGORY</th>
-                <th className="px-4 py-2 text-left">Aksi</th>
+                <th className="px-4 py-2 text-left text-white">No</th>
+                <th className="px-4 py-2 text-left text-white">Description</th>
+                <th className="px-4 py-2 text-left text-white">Code</th>
+                <th className="px-4 py-2 text-left text-white">Account Name</th>
+                <th className="px-4 py-2 text-left text-white">CATEGORY</th>
+                <th className="px-4 py-2 text-left text-white">Aksi</th>
               </tr>
             </thead>
             <tbody>

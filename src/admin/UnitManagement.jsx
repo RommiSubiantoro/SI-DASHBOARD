@@ -48,13 +48,13 @@ const UnitManagement = ({
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-100 border-b border-gray-200">
+              <thead className="bg-red-500 text-white border-b border-gray-200">
                 <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">No</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Nama Unit</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Jumlah User</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Data Upload</th>
-                  <th className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider">Aksi</th>
+                  <th className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider">No</th>
+                  <th className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider">Nama Unit</th>
+                  <th className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider">Jumlah User</th>
+                  <th className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider">Data Upload</th>
+                  <th className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider">Aksi</th>
                 </tr>
               </thead>
 

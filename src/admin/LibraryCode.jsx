@@ -111,7 +111,7 @@ const LibraryCode = () => {
 
       <div className="overflow-x-auto mt-4">
         <table className="min-w-full border border-gray-300 text-sm">
-          <thead className="bg-gray-200 text-gray-700">
+          <thead className="bg-red-500 text-white">
             <tr>
               <th className="border px-3 py-2">Code</th>
               <th className="border px-3 py-2">Name</th>

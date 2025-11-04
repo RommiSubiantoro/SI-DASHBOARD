@@ -12,7 +12,7 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
             { id: "dashboard", label: "📊 Dashboard" },
             { id: "unit", label: "🏢 Manage Unit Bisnis" },
             { id: "user", label: "👥 Manage User" },
-            { id: "TableView", label: "View Table" },
+            { id: "TableView", label: "Table" },
           ].map((item) => (
             <button
               key={item.id}

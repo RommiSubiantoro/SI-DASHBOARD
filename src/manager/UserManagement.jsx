@@ -74,13 +74,13 @@ const UserManagement = ({
 
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-100">
+          <thead className="bg-red-500">
             <tr>
               {["No", "Nama", "Email", "Role", "Unit Bisnis", "Aksi"].map(
                 (head) => (
                   <th
                     key={head}
-                    className="px-4 py-3 text-left font-semibold text-gray-700 text-xs uppercase tracking-wider"
+                    className="px-4 py-3 text-left font-semibold text-white text-xs uppercase tracking-wider"
                   >
                     {head}
                   </th>
