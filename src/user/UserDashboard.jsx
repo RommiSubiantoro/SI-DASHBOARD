@@ -33,7 +33,7 @@ const UserDashboard = () => {
   const [units, setUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [masterCode, setMasterCode] = useState([]);
-  const [budgetData, setBudgetData] = useState([]); // ✅ tambahkan ini
+  const [budgetData, setBudgetData] = useState([]);
   const [budgetFile, setBudgetFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeMenu, setActiveMenu] = useState("dashboard"); // 🔹 Menu aktif
@@ -95,7 +95,7 @@ const UserDashboard = () => {
 
   // 🔹 Listener realtime Firestore
   useEffect(() => {
-    if (!selectedUnit || !selectedYear) return;
+    if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
 
     const colRef = collection(
       db,
@@ -104,8 +104,23 @@ const UserDashboard = () => {
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-      const debitData = rawData.filter((item) => item.type === "Debit");
 
+      // ✅ Filter hanya yang "Debit"
+      let debitData = rawData.filter((item) => item.type === "Debit");
+
+      // ✅ Filter berdasarkan kode yang valid di masterCode
+      const validCodes = new Set(
+        masterCode.map((m) => String(m.code).toLowerCase().trim())
+      );
+
+      debitData = debitData.filter((item) => {
+        const code = String(item.accountCode || "")
+          .toLowerCase()
+          .trim();
+        return validCodes.has(code);
+      });
+
+      // ✅ Kelompokkan per akun
       const grouped = {};
       debitData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
@@ -137,27 +152,44 @@ const UserDashboard = () => {
     });
 
     return () => unsubscribe();
-  }, [selectedUnit, selectedYear]);
+  }, [selectedUnit, selectedYear, masterCode]);
 
-  // 🔹 Ambil data budget dari Firestore
   useEffect(() => {
     const fetchBudget = async () => {
-      if (!selectedUnit || !selectedYear) return;
+      if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
       try {
         const colRef = collection(
           db,
           `unitData/${selectedUnit}/${selectedYear}/budget/items`
         );
         const snap = await getDocs(colRef);
-        const data = snap.docs.map((doc) => doc.data());
-        console.log("✅ Budget data fetched:", data);
+        let data = snap.docs.map((doc) => doc.data());
+
+        // ✅ Normalisasi dan filter berdasarkan code dari masterCode
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
+        data = data.filter((item) => {
+          const rowCode = String(
+            item.accountCode ||
+              item.AccountCode ||
+              item.account_code ||
+              item["ACCOUNT CODE"] ||
+              ""
+          )
+            .toLowerCase()
+            .trim();
+          return validCodes.has(rowCode);
+        });
+
+        console.log("✅ Budget data fetched & filtered:", data);
         setBudgetData(data);
       } catch (error) {
         console.error("❌ Gagal ambil data budget:", error);
       }
     };
     fetchBudget();
-  }, [selectedUnit, selectedYear]);
+  }, [selectedUnit, selectedYear, masterCode]);
 
   // ====== HANDLERS ======
   const handleLogout = async () => {

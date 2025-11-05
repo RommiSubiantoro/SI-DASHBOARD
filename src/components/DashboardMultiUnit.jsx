@@ -15,7 +15,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   const [loading, setLoading] = useState(true);
 
   const [selectedYear, setSelectedYear] = useState(initialYear || new Date().getFullYear());
-  const [selectedMonth, setSelectedMonth] = useState("Sep"); // default bulan September
+  const [selectedMonth, setSelectedMonth] = useState("All"); // default semua bulan
 
   // 🔹 Ambil daftar unit
   useEffect(() => {
@@ -59,12 +59,14 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           const snap = await getDocs(collection(db, path));
           const docs = snap.docs.map((doc) => doc.data());
 
-          // Filter hanya data bulan terpilih & tipe Debit
+          // 🔹 Filter hanya tipe Debit, dan bulan jika bukan "All"
           const filtered = docs.filter(
-            (d) => d.month === selectedMonth && d.type === "Debit"
+            (d) =>
+              d.type === "Debit" &&
+              (selectedMonth === "All" || d.month === selectedMonth)
           );
 
-          // Loop tiap kategori di masterCode
+          // 🔹 Loop tiap kategori di masterCode
           masterCode.forEach((m) => {
             const cat = m.category || "Lainnya";
             const code = String(m.code).trim();
@@ -72,6 +74,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             const catItems = filtered.filter(
               (d) => String(d.accountCode).trim() === code
             );
+
             const total = catItems.reduce(
               (sum, d) => sum + (parseFloat(d.docValue) || 0),
               0
@@ -105,7 +108,8 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   return (
     <div className="p-6 bg-white rounded-xl shadow-md w-full max-w-4xl mx-auto mt-10">
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
-        📊 Laporan Unit Bisnis per Kategori - {selectedMonth} {selectedYear}
+        📊 Laporan Unit Bisnis per Kategori -{" "}
+        {selectedMonth === "All" ? "Semua Bulan" : selectedMonth} {selectedYear}
       </h2>
 
       {/* 🔹 Filter Tahun & Bulan */}
@@ -136,6 +140,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           >
+            <option value="All">Semua Bulan</option>
             {MONTHS.map((m) => (
               <option key={m} value={m}>
                 {m}
@@ -163,7 +168,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
                   colSpan={unitList.length}
                   className="border px-3 py-2 font-semibold bg-yellow-400"
                 >
-                  {selectedMonth} {selectedYear}
+                  {selectedMonth === "All" ? "Semua Bulan" : selectedMonth} {selectedYear}
                 </th>
                 <th
                   rowSpan="2"
@@ -191,7 +196,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
                     colSpan={unitList.length + 2}
                     className="text-center py-4 text-gray-500"
                   >
-                    Tidak ada data untuk bulan ini.
+                    Tidak ada data untuk periode ini.
                   </td>
                 </tr>
               ) : (

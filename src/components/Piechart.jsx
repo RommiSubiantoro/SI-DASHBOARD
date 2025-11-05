@@ -6,6 +6,7 @@ import {
   ResponsiveContainer,
   Cell,
   Legend,
+  LabelList,
 } from "recharts";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
@@ -48,9 +49,8 @@ export default function Piechart({
   const [masterCode, setMasterCode] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
-  const [isLoading, setIsLoading] = useState(false); // 🔹 loading state
+  const [isLoading, setIsLoading] = useState(false);
 
-  // 🔹 Ambil masterCode dari Firestore setiap kali data berubah (atau tahun berubah)
   useEffect(() => {
     const fetchMaster = async () => {
       try {
@@ -66,15 +66,13 @@ export default function Piechart({
     };
 
     fetchMaster();
-  }, [selectedYear, data]); // 🔧 ambil ulang setiap tahun/unit/data berubah
+  }, [selectedYear, data]);
 
-  // 🔹 Ambil kategori unik
   const categories = useMemo(() => {
     const unique = [...new Set(masterCode.map((m) => m.category))];
     return unique;
   }, [masterCode]);
 
-  // 🔹 Hitung data berdasarkan dropdown
   useEffect(() => {
     if (data.length === 0 || masterCode.length === 0) {
       setChartData([]);
@@ -106,8 +104,19 @@ export default function Piechart({
         }
       });
 
+      // 🔹 Hitung total dan persentase
+      const total = Object.values(groupedByCategory).reduce(
+        (sum, val) => sum + val,
+        0
+      );
+
       const result = Object.entries(groupedByCategory)
-        .map(([category, value]) => ({ name: category, value }))
+        .map(([category, value]) => ({
+          name: category,
+          value,
+          percentage:
+            total > 0 ? ((value / total) * 100).toFixed(1) + "%" : "0%",
+        }))
         .filter((d) => d.value > 0);
 
       setChartData(result);
@@ -142,7 +151,6 @@ export default function Piechart({
     }
   }, [selectedCategory, selectedMonth, data, masterCode]);
 
-  // 🔹 RENDER
   return (
     <div className="p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
       <h2 className="text-xl font-semibold mb-4 text-center">
@@ -154,7 +162,7 @@ export default function Piechart({
         <div>
           <label className="block mb-1 font-medium">Pilih Kategori</label>
           <select
-            className="border px-3 py-2 rounded-lg w-full"
+            className="border px-3 py-2 rounded-lg w-full text-sm"
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
           >
@@ -170,7 +178,7 @@ export default function Piechart({
         <div>
           <label className="block mb-1 font-medium">Pilih Bulan</label>
           <select
-            className="border px-3 py-2 rounded-lg w-full"
+            className="border px-3 py-2 rounded-lg w-full text-sm"
             value={selectedMonth}
             onChange={(e) => setSelectedMonth(e.target.value)}
           >
@@ -187,7 +195,7 @@ export default function Piechart({
       {isLoading ? (
         <p className="text-gray-500 text-center mt-6">⏳ Memuat data...</p>
       ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={400}>
+        <ResponsiveContainer width="100%" height={380}>
           <PieChart>
             <Pie
               data={chartData}
@@ -196,14 +204,24 @@ export default function Piechart({
               cx="50%"
               cy="50%"
               outerRadius={150}
-              label={({ name, value }) => `${name}: ${value.toLocaleString()}`}
+              
             >
               {chartData.map((_, index) => (
                 <Cell key={index} fill={COLORS[index % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(value) => `Rp ${value.toLocaleString()}`} />
-            <Legend />
+            <Tooltip
+              formatter={(value, name, props) =>
+                selectedCategory === "ALL"
+                  ? [
+                      `Rp ${value.toLocaleString()} (${props.payload.percentage})`,
+                      name,
+                    ]
+                  : [`Rp ${value.toLocaleString()}`, name]
+              }
+              contentStyle={{ fontSize: "10px" }}
+            />
+            <Legend wrapperStyle={{ fontSize: "10px" }} iconSize={10} />
           </PieChart>
         </ResponsiveContainer>
       ) : (
@@ -211,12 +229,6 @@ export default function Piechart({
           Tidak ada data untuk pilihan ini.
         </p>
       )}
-
-      {selectedCategory === "ALL" && (
-        <p className="text-sm text-gray-500 text-center mt-4">
-          💡 Pilih kategori untuk melihat rincian akun di dalamnya.
-        </p>
-      )}
     </div>
   );
-} 
+}
