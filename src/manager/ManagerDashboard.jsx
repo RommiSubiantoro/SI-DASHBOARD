@@ -18,6 +18,7 @@ import UserManagement from "./UserManagement";
 import UnitModal from "./UnitModal";
 import UserModal from "./UserModal";
 import Header from "../components/Header";
+import DashboardView from "../components/DashboardView";
 import DashboardMultiUnit from "../components/DashboardMultiUnit";
 
 function ManagerDashboard() {
@@ -40,6 +41,10 @@ function ManagerDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [viewData, setViewData] = useState([]);
   const auth = getAuth();
+  const [masterCode, setMasterCode] = useState([]);
+  const [budgetData, setBudgetData] = useState([]);
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
+
 
   // Ambil data Units (realtime)
   useEffect(() => {
@@ -280,6 +285,67 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
 
+  // 🔹 Listener realtime Firestore
+  useEffect(() => {
+    if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
+
+    const colRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
+
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      const rawData = snapshot.docs.map((doc) => doc.data());
+
+      // ✅ Filter hanya yang "Debit"
+      let debitData = rawData.filter((item) => item.type === "Debit");
+
+      // ✅ Filter berdasarkan kode yang valid di masterCode
+      const validCodes = new Set(
+        masterCode.map((m) => String(m.code).toLowerCase().trim())
+      );
+
+      debitData = debitData.filter((item) => {
+        const code = String(item.accountCode || "")
+          .toLowerCase()
+          .trim();
+        return validCodes.has(code);
+      });
+
+      // ✅ Kelompokkan per akun
+      const grouped = {};
+      debitData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName,
+            accountCode: item.accountCode,
+            category: item.category,
+            area: item.area,
+            businessLine: item.businessLine,
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
+        }
+        grouped[key][item.month] += item.docValue;
+      });
+
+      setCurrentData(Object.values(grouped));
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit, selectedYear, masterCode]);
+
   // Logout
   const handleLogout = async () => {
     try {
@@ -358,6 +424,31 @@ function ManagerDashboard() {
             selectedYear={selectedYear}
             currentData={currentData}
           />
+        )}
+
+        {activePage === "Performance" && (
+          <div style={{ marginTop: "70px" }}>
+            {" "}
+            {/* atur sesuai tinggi Navbar */}
+            <Header
+              selectedUnit={selectedUnit}
+              setSelectedUnit={setSelectedUnit}
+              units={units.map((u) => u.name)}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              title="View Table"
+            />
+            <DashboardView
+              selectedUnit={selectedUnit}
+              setSelectedUnit={setSelectedUnit}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              units={units}
+              currentData={currentData}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+            />
+          </div>
         )}
       </div>
 

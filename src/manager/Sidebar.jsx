@@ -10,9 +10,10 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
         <nav className="space-y-2">
           {[
             { id: "dashboard", label: "📊 Dashboard" },
+            { id: "TableView", label: "Table" },
+             { id: "Performance", label: "Performance" },
             { id: "unit", label: "🏢 Manage Unit Bisnis" },
             { id: "user", label: "👥 Manage User" },
-            { id: "TableView", label: "Table" },
           ].map((item) => (
             <button
               key={item.id}
