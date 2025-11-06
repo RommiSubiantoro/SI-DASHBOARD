@@ -6,6 +6,7 @@ import AdminDashPages from "./pages/AdminDashPages";
 import ManagerDashPages from "./pages/ManagerDashPages";
 import SupervisorDashPages from "./pages/SupervisorDashPages";
 import UserDashPages from "./pages/UserDashPages";
+import GAFSDashPages from "./pages/GAFSDashPages";
 
 function App() {
     return (
@@ -54,6 +55,17 @@ function App() {
                         </ProtectedRoute>
                     }
                 />
+
+                <Route
+                    path="/gafs"
+                    element={
+                        <ProtectedRoute allowedRoles={["ga/fs"]}>
+                            <GAFSDashPages />
+                        </ProtectedRoute>
+                    }
+                /> 
+
+
             </Routes>
         </Router>
     );

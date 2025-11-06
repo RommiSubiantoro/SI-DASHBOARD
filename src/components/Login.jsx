@@ -114,6 +114,10 @@ const Login = () => {
         navigate("/supervisor");
       } else if (role === "user") {
         navigate("/user");
+      } else if (role === "operation") {
+        navigate("/operation");
+      } else if (role === "ga/fs") {
+        navigate("/gafs");
       } else {
         setError(`Role tidak dikenali: ${role}`);
       }
