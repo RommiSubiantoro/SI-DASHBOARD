@@ -22,7 +22,7 @@ import DashboardView from "../components/DashboardView";
 import DashboardMultiUnit from "../components/DashboardMultiUnit";
 
 function ManagerDashboard() {
-  const [activePage, setActivePage] = useState("");
+  const [activePage, setActivePage] = useState("dashboard");
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
@@ -44,7 +44,6 @@ function ManagerDashboard() {
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
-
 
   // Ambil data Units (realtime)
   useEffect(() => {
@@ -361,15 +360,15 @@ function ManagerDashboard() {
     }
   };
 
+  useEffect(() => {
+    const saved = localStorage.getItem("dashboard");
+    if (saved) setActivePage(saved);
+  }, []);
+
   const handlePageChange = (page) => {
     setActivePage(page);
-    localStorage.setItem("activePage", page);
+    localStorage.setItem("dashboard", page);
   };
-  useEffect(() => {
-    const saved = localStorage.getItem("activePage");
-    if (saved) setActivePage(saved);
-    else setActivePage("dashboard");
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-100 flex">

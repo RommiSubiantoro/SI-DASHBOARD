@@ -34,29 +34,21 @@ import { initializeApp } from "firebase/app";
 import { useDataManagement } from "../hooks/useDataManagement";
 
 function AdminDashboard() {
-  // -------------------------
   // General UI / loading state
-  // -------------------------
-  const [activePage, setActivePage] = useState("");
+  const [activePage, setActivePage] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(false);
 
-  // -------------------------
   // Units & uploads
-  // -------------------------
   const [units, setUnits] = useState([]);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
   const [loadingUploads, setLoadingUploads] = useState(false);
 
-  // -------------------------
   // Users
-  // -------------------------
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
 
-  // -------------------------
   // Modals & forms
-  // -------------------------
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
   const [unitForm, setUnitForm] = useState({ name: "" });
@@ -71,9 +63,7 @@ function AdminDashboard() {
     unitBisnis: [],
   });
 
-  // -------------------------
   // Dashboard states & stats
-  // -------------------------
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState("2025");
@@ -96,32 +86,23 @@ function AdminDashboard() {
     "Samudera Kendari Logistik": [],
   });
 
-  // -------------------------
   // User search & pagination
-  // -------------------------
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
   const [unitFilter, setUnitFilter] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const usersPerPage = 10;
 
-  // -------------------------
   // Master Category & Code
-  // -------------------------
   const [categories, setCategories] = useState([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-
   const [codes, setCodes] = useState([]);
   const [loadingCodes, setLoadingCodes] = useState(true);
 
-  // -------------------------
   // Firebase Auth
-  // -------------------------
   const auth = getAuth();
 
-  // =========================
   // Firebase listeners
-  // =========================
 
   // Units
   useEffect(() => {
@@ -392,20 +373,17 @@ function AdminDashboard() {
     }
   };
 
-  const handlePageChange = (page) => {
-    setActivePage(page);
-    localStorage.setItem("activePage", page);
-  };
-
   useEffect(() => {
-    const saved = localStorage.getItem("activePage");
+    const saved = localStorage.getItem("dashboard");
     if (saved) setActivePage(saved);
-    else setActivePage("dashboard");
   }, []);
 
-  // =========================
+  const handlePageChange = (page) => {
+    setActivePage(page);
+    localStorage.setItem("dashboard", page);
+  };
+
   // Unit handlers (CRUD)
-  // =========================
   const handleAddUnit = () => {
     setEditingUnit(null);
     setUnitForm({ name: "" });
@@ -511,9 +489,7 @@ function AdminDashboard() {
     }
   };
 
-  // =========================
   // User handlers (CRUD)
-  // =========================
   const handleAddUser = () => {
     setEditingUser(null);
     setUserForm({
@@ -613,9 +589,7 @@ function AdminDashboard() {
     }
   };
 
-  // =========================
   // Export helpers (CSV / Excel / PDF stub)
-  // =========================
   const handleExportUnits = () => {
     const csv =
       "data:text/csv;charset=utf-8," +
@@ -680,9 +654,7 @@ function AdminDashboard() {
     }
   };
 
-  // =========================
   // Master Category CRUD
-  // =========================
   const handleAddCategory = async ({ name }) => {
     if (!name || !name.trim())
       return alert("Nama kategori tidak boleh kosong.");
@@ -767,9 +739,6 @@ function AdminDashboard() {
     }
   };
 
-  // =========================
-  // Master Code CRUD
-  // =========================
   // Tambah data Master Code
   const handleAddCode = async ({
     code,
@@ -843,9 +812,7 @@ function AdminDashboard() {
     }
   };
 
-  // =========================
   // User filters & pagination helpers
-  // =========================
   const getFilteredUsers = () => {
     return users.filter((user) => {
       const matchesSearch =

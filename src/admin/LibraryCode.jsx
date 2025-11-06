@@ -88,7 +88,7 @@ const LibraryCode = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6 rounded-lg mt-6 shadow-md">
       <h2 className="text-2xl font-semibold mb-4 text-gray-700">📚 Library Code</h2>
 
       <div className="flex gap-4 mb-6">

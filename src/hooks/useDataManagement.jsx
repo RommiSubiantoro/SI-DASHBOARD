@@ -12,16 +12,12 @@ import {
 import { db } from "../firebase";
 import * as XLSX from "xlsx";
 
-// =====================================================
 // 🔹 Custom Hook untuk Manajemen Data dari Excel
-// =====================================================
 export const useDataManagement = (initialData = {}) => {
   const [data, setData] = useState(initialData);
   const [isLoading, setIsLoading] = useState(false);
 
-  // =====================================================
   // 1️⃣ REALTIME LISTENER
-  // =====================================================
   useEffect(() => {
     if (!initialData || Object.keys(initialData).length === 0) return;
 
@@ -59,7 +55,6 @@ export const useDataManagement = (initialData = {}) => {
     return () => unsubscribers.forEach((unsub) => unsub());
   }, [JSON.stringify(Object.keys(initialData))]);
 
-  // =====================================================
   // 2️⃣ IMPORT DARI EXCEL (otomatis ubah header lama → baru)
   const importFromExcelToFirebase = async (
     selectedUnit,
@@ -117,12 +112,7 @@ export const useDataManagement = (initialData = {}) => {
     });
   };
 
-  // =====================================================
-  // 🔹 IMPORT BUDGET DARI EXCEL KE FIRESTORE
-  // =====================================================
-  // =====================================================
   // 🔹 IMPORT SEMUA DATA BUDGET DARI EXCEL KE FIRESTORE
-  // =====================================================
   const importBudgetFromExcel = async (selectedUnit, file, selectedYear) => {
     if (!file) throw new Error("Tidak ada file yang dipilih.");
     if (!selectedUnit || !selectedYear)
@@ -167,9 +157,7 @@ export const useDataManagement = (initialData = {}) => {
     });
   };
 
-  // =====================================================
   // 3️⃣ EXPORT KE EXCEL (dengan header baru)
-  // =====================================================
   const exportToExcel = (selectedUnit, unitData) => {
     const ws = XLSX.utils.json_to_sheet(unitData);
     const wb = XLSX.utils.book_new();
@@ -177,9 +165,7 @@ export const useDataManagement = (initialData = {}) => {
     XLSX.writeFile(wb, `${selectedUnit}_data.xlsx`);
   };
 
-  // =====================================================
   // 4️⃣ RESET DATA TAHUN
-  // =====================================================
   const resetYearData = async (selectedUnit, selectedYear) => {
     try {
       setIsLoading(true);
@@ -212,9 +198,7 @@ export const useDataManagement = (initialData = {}) => {
     }
   };
 
-  // =====================================================
   // 5️⃣ DATA PIE CHART (berdasarkan Category dan Bulan)
-  // =====================================================
   const getPieChartData = (unitData, selectedMonth) => {
     if (!unitData) return [];
     return unitData.map((row) => ({
@@ -223,9 +207,7 @@ export const useDataManagement = (initialData = {}) => {
     }));
   };
 
-  // =====================================================
   // 6️⃣ UPDATE & HAPUS DATA SATUAN
-  // =====================================================
   const updateDataInFirebase = async (
     selectedUnit,
     selectedYear,

@@ -292,6 +292,16 @@ const UserDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    const saved = localStorage.getItem("dashboard");
+    if (saved) setActiveMenu(saved);
+  }, []);
+
+  const handlePageChange = (page) => {
+    setActiveMenu(page);
+    localStorage.setItem("dashboard", page);
+  };
+
   // ====== RENDER ======
   return (
     <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
@@ -304,7 +314,7 @@ const UserDashboard = () => {
         </div>
         <nav className="flex-1 p-4 space-y-2">
           <button
-            onClick={() => setActiveMenu("dashboard")}
+            onClick={() => handlePageChange("dashboard")}
             className={`w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm transition-all ${
               activeMenu === "dashboard" ? "bg-red-600" : "hover:bg-red-600"
             }`}
@@ -313,7 +323,7 @@ const UserDashboard = () => {
           </button>
 
           <button
-            onClick={() => setActiveMenu("viewTable")}
+            onClick={() => handlePageChange("viewTable")}
             className={`w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm transition-all ${
               activeMenu === "viewTable" ? "bg-red-600" : "hover:bg-red-600"
             }`}

@@ -96,13 +96,13 @@ function SupervisorDashboard() {
 
   // 🔹 Simpan halaman aktif ke localStorage
   useEffect(() => {
-    const saved = localStorage.getItem("activePage");
+    const saved = localStorage.getItem("dashboard");
     if (saved) setActivePage(saved);
   }, []);
 
   const handlePageChange = (page) => {
     setActivePage(page);
-    localStorage.setItem("activePage", page);
+    localStorage.setItem("dashboard", page);
   };
 
   return (
