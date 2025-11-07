@@ -8,7 +8,7 @@ const MasterCategory = ({
   onAddCategory,
   onEditCategory,
   onDeleteCategory,
-  maxCategories = 6,
+  maxCategories = 7,
 }) => {
   const [editing, setEditing] = useState(null);
   const [name, setName] = useState("");

@@ -40,7 +40,7 @@ const DataTable = ({
     fetchMasterCode();
   }, []);
 
-  // 🔹 Ambil daftar kategori dari masterCode (bukan dari data)
+  // 🔹 Ambil daftar kategori dari masterCode
   const categories = useMemo(() => {
     if (masterCodeData.length === 0) return [];
     const unique = [
@@ -53,16 +53,12 @@ const DataTable = ({
     return unique;
   }, [masterCodeData]);
 
-  // 🔹 Ambil daftar Business Line & Account Code dari data transaksi
+  // 🔹 Ambil daftar Business Line dari data transaksi
   const businessLines = useMemo(() => {
     return [...new Set(data.map((item) => item.businessLine))].filter(Boolean);
   }, [data]);
 
-  const accountCodes = useMemo(() => {
-    return [...new Set(data.map((item) => item.accountCode))].filter(Boolean);
-  }, [data]);
-
-  // 🔹 Filter data sesuai dropdown yang dipilih
+  // 🔹 Filter data sesuai dropdown & input teks
   const filteredData = useMemo(() => {
     return data.filter((item) => {
       const matchCategory =
@@ -77,16 +73,28 @@ const DataTable = ({
         !businessLineFilter || item.businessLine === businessLineFilter;
 
       const matchAccountCode =
-        !accountCodeFilter || item.accountCode === accountCodeFilter;
+        !accountCodeFilter ||
+        String(item.accountCode)
+          .toLowerCase()
+          .includes(accountCodeFilter.toLowerCase());
 
       return matchCategory && matchBusinessLine && matchAccountCode;
     });
-  }, [data, categoryFilter, businessLineFilter, accountCodeFilter, masterCodeData]);
+  }, [
+    data,
+    categoryFilter,
+    businessLineFilter,
+    accountCodeFilter,
+    masterCodeData,
+  ]);
 
   // 🔹 Pagination
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
   const paginatedData = showPagination
-    ? filteredData.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage)
+    ? filteredData.slice(
+        (currentPage - 1) * rowsPerPage,
+        currentPage * rowsPerPage
+      )
     : filteredData;
 
   return (
@@ -98,7 +106,7 @@ const DataTable = ({
       {/* 🔹 Filter Bar */}
       {showFilters && (
         <div className="flex flex-wrap gap-4 mb-4">
-          {/* 🔹 Category (berdasarkan masterCode) */}
+          {/* 🔹 Category (dropdown) */}
           <select
             value={categoryFilter}
             onChange={(e) => {
@@ -119,7 +127,7 @@ const DataTable = ({
             )}
           </select>
 
-          {/* 🔹 Business Line */}
+          {/* 🔹 Business Line (dropdown) */}
           <select
             value={businessLineFilter}
             onChange={(e) => {
@@ -136,22 +144,17 @@ const DataTable = ({
             ))}
           </select>
 
-          {/* 🔹 Account Code */}
-          <select
+          {/* 🔹 Account Code (input teks) */}
+          <input
+            type="text"
+            placeholder="🔍 Search Account Code..."
             value={accountCodeFilter}
             onChange={(e) => {
               setAccountCodeFilter(e.target.value);
               setCurrentPage(1);
             }}
             className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">💾 All Account Codes</option>
-            {accountCodes.map((code, i) => (
-              <option key={`ac-${i}`} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+          />
         </div>
       )}
 

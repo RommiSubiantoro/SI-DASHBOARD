@@ -659,7 +659,7 @@ function AdminDashboard() {
     if (!name || !name.trim())
       return alert("Nama kategori tidak boleh kosong.");
     // limit check: optional (front-end enforces too)
-    if (categories.length >= 6) return alert("Maksimal 6 kategori.");
+    if (categories.length >= 7) return alert("Maksimal 6 kategori.");
     try {
       setIsLoading(true);
       await addDoc(collection(db, "masterCategory"), {

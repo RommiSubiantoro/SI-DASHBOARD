@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
-import { ArrowUp, ArrowDown } from "lucide-react"; // 🔹 Ikon panah
+import { ArrowUp, ArrowDown } from "lucide-react";
 
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [masterCode, setMasterCode] = useState([]);
@@ -134,7 +134,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     return currentData;
   }, [currentData, selectedUnit]);
 
-  // 🔹 Simpan actual 2024 (sekali saja)
+  // 🔹 Simpan actual 2024
   useEffect(() => {
     if (selectedYear === "2024" && filteredData.length > 0) {
       setActData2024(filteredData);
@@ -178,7 +178,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
 
     const budgetForYear = budgetData[selectedYear] || [];
 
-    const newSummary = categories.map((cat) => {
+    let newSummary = categories.map((cat) => {
       const totalAct2024 = actData2024
         .filter((item) => {
           const rowCode = String(
@@ -215,12 +215,10 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         })
         .reduce((sum, row) => sum + (Number(row.totalBudget) || 0), 0);
 
-      // A vs C → ACT 2024 vs ACT 2025
       const aVsCValue = totalActThisYear - totalAct2024;
       const aVsCPercent =
         totalAct2024 !== 0 ? (totalActThisYear / totalAct2024 - 1) * 100 : null;
 
-      // B vs C → BDGT 2025 vs ACT 2025
       const bVsCValue = totalActThisYear - totalBudget;
       const bVsCPercent =
         totalBudget !== 0 ? (totalActThisYear / totalBudget - 1) * 100 : null;
@@ -255,6 +253,74 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       };
     });
 
+    // 🔹 Tambahkan Gross Profit manual = Service Revenue - Cost Of Service
+    const serviceRevRow = newSummary.find(
+      (r) => r.description === "Service Revenue"
+    );
+    const costServiceRow = newSummary.find(
+      (r) => r.description === "Cost Of Service"
+    );
+
+    if (serviceRevRow && costServiceRow) {
+      const grossAct2024 =
+        Number(serviceRevRow.act2024.replace(/,/g, "")) -
+        Number(costServiceRow.act2024.replace(/,/g, ""));
+      const grossAct2025 =
+        Number(serviceRevRow.act2025.replace(/,/g, "")) -
+        Number(costServiceRow.act2025.replace(/,/g, ""));
+      const grossBdgt =
+        Number(serviceRevRow.bdgt2025.replace(/,/g, "")) -
+        Number(costServiceRow.bdgt2025.replace(/,/g, ""));
+
+      newSummary.push({
+        description: "Gross Profit",
+        act2024: grossAct2024.toLocaleString("en-US"),
+        bdgt2025: grossBdgt.toLocaleString("en-US"),
+        act2025: grossAct2025.toLocaleString("en-US"),
+        aVsC: {
+          value: grossAct2025 - grossAct2024,
+          percent:
+            grossAct2024 !== 0 ? (grossAct2025 / grossAct2024 - 1) * 100 : null,
+          text: `${
+            grossAct2024 !== 0
+              ? ((grossAct2025 / grossAct2024 - 1) * 100 >= 0 ? "+" : "") +
+                ((grossAct2025 / grossAct2024 - 1) * 100).toFixed(1) +
+                "%"
+              : "-"
+          } (${(grossAct2025 - grossAct2024).toLocaleString("en-US")})`,
+        },
+        bVsC: {
+          value: grossAct2025 - grossBdgt,
+          percent:
+            grossBdgt !== 0 ? (grossAct2025 / grossBdgt - 1) * 100 : null,
+          text: `${
+            grossBdgt !== 0
+              ? ((grossAct2025 / grossBdgt - 1) * 100 >= 0 ? "+" : "") +
+                ((grossAct2025 / grossBdgt - 1) * 100).toFixed(1) +
+                "%"
+              : "-"
+          } (${(grossAct2025 - grossBdgt).toLocaleString("en-US")})`,
+        },
+      });
+    }
+
+    // 🔹 Tambah urutan manual (tanpa ubah data)
+    const order = [
+      "Service Revenue",
+      "Cost Of Service",
+      "Gross Profit",
+      "General & Administration Expense",
+      "Other Income (Expenses)",
+    ];
+    newSummary.sort((a, b) => {
+      const idxA = order.indexOf(a.description);
+      const idxB = order.indexOf(b.description);
+      if (idxA === -1 && idxB === -1) return 0;
+      if (idxA === -1) return 1;
+      if (idxB === -1) return -1;
+      return idxA - idxB;
+    });
+
     setSummaryData(newSummary);
   }, [
     filteredData,
@@ -264,6 +330,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     selectedYear,
     categories,
     codeMap,
+    months,
   ]);
 
   return (
