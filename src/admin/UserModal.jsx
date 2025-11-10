@@ -2,6 +2,15 @@
 import React from "react";
 import Select from "react-select";
 
+const roleOptions = [
+  { value: "GA/FS", label: "GA/FS" },
+  { value: "Operation", label: "Operation" },
+  { value: "User", label: "User" },
+  { value: "Supervisor", label: "Supervisor" },
+  { value: "Manager", label: "Manager" },
+  { value: "Super Admin", label: "Super Admin" },
+];
+
 const UserModal = ({
   show,
   onClose,
@@ -26,6 +35,7 @@ const UserModal = ({
           </h2>
 
           <div className="space-y-4">
+            {/* Nama */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Nama:
@@ -40,6 +50,7 @@ const UserModal = ({
               />
             </div>
 
+            {/* Email dan Password hanya muncul saat tambah */}
             {!editing && (
               <>
                 <div>
@@ -75,26 +86,30 @@ const UserModal = ({
               </>
             )}
 
+            {/* Multi Role */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Role:
               </label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm({ ...form, role: e.target.value })}
-                disabled={loading}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
-              >
-                <option value="">Pilih Role</option>
-                <option value="GA/FS">GA/FS</option>
-                <option value="Operation">Operation</option>
-                <option value="User">User</option>
-                <option value="Supervisor">Supervisor</option>
-                <option value="Manager">Manager</option>
-                <option value="Super Admin">Super Admin</option>
-              </select>
+              <Select
+                isMulti
+                options={roleOptions}
+                value={(form.role || []).map((r) => ({
+                  value: r,
+                  label: r,
+                }))}
+                onChange={(selected) =>
+                  setForm({
+                    ...form,
+                    role: selected.map((s) => s.value),
+                  })
+                }
+                isDisabled={loading}
+                className="text-sm"
+              />
             </div>
 
+            {/* Pilih Unit Bisnis */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Pilih Unit Bisnis:
@@ -118,6 +133,7 @@ const UserModal = ({
             </div>
           </div>
 
+          {/* Tombol Aksi */}
           <div className="flex gap-3 mt-6">
             <button
               onClick={onSave}

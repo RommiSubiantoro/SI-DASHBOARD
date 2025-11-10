@@ -18,6 +18,7 @@ const GAFSDashboard = () => {
   const [activeMenu, setActiveMenu] = useState("daily");
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+  const [units, setUnits] = useState([]);
   const [assignedUnits, setAssignedUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [userName, setUserName] = useState("");
@@ -33,6 +34,22 @@ const GAFSDashboard = () => {
       }
     });
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(
+      collection(db, "units"),
+      (snap) => {
+        const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setUnits(list);
+        setLoadingUnits(false);
+      },
+      (err) => {
+        console.error("listen units err:", err);
+        setLoadingUnits(false);
+      }
+    );
+    return () => unsubscribe();
   }, []);
 
   // === AMBIL DATA DARI FIRESTORE (Contoh) ===
@@ -148,7 +165,7 @@ const GAFSDashboard = () => {
           <Header
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
-            units={assignedUnits}
+            units={units.map((u) => u.name)}
             title={
               activeMenu === "dashboard" ? "GA/FS DASHBOARD" : "View Table"
             }
@@ -160,13 +177,6 @@ const GAFSDashboard = () => {
           {activeMenu === "daily" && (
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-lg font-semibold mb-4">Daily OB/CS Report</h3>
-              <DataTable
-                data={dataOB}
-                columns={columnsOB}
-                title="Data Daily OB/CS"
-                showPagination
-                rowsPerPage={20}
-              />
             </div>
           )}
 
@@ -174,13 +184,6 @@ const GAFSDashboard = () => {
           {activeMenu === "driver" && (
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-lg font-semibold mb-4">Driver Report</h3>
-              <DataTable
-                data={dataDriver}
-                columns={columnsDriver}
-                title="Data Driver"
-                showPagination
-                rowsPerPage={20}
-              />
             </div>
           )}
 
@@ -188,13 +191,6 @@ const GAFSDashboard = () => {
           {activeMenu === "atk" && (
             <div className="bg-white p-6 rounded-xl shadow">
               <h3 className="text-lg font-semibold mb-4">ATK / RTG Report</h3>
-              <DataTable
-                data={dataATK}
-                columns={columnsATK}
-                title="Data ATK / RTG"
-                showPagination
-                rowsPerPage={20}
-              />
             </div>
           )}
         </main>

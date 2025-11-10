@@ -10,7 +10,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [budgetData, setBudgetData] = useState({});
   const [actData2024, setActData2024] = useState([]);
 
-  // 🔹 Ambil masterCode
+  // 🟢 Ambil masterCode sekali
   useEffect(() => {
     const fetchMaster = async () => {
       try {
@@ -27,68 +27,50 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     fetchMaster();
   }, []);
 
-  // 🔹 Ambil data budget
+  // 📅 Bulan tetap, tidak perlu dalam dependency
+  const months = useMemo(
+    () => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+    []
+  );
+
+  // 🧩 Map kode untuk pencocokan cepat
+  const codeMap = useMemo(() => {
+    const map = new Map();
+    masterCode.forEach((m) => {
+      if (m.code) map.set(String(m.code).trim(), m);
+    });
+    return map;
+  }, [masterCode]);
+
+  const categories = useMemo(
+    () => [...new Set(masterCode.map((item) => item.category))],
+    [masterCode]
+  );
+
+  // 🟢 Ambil data budget (1x per perubahan unit/tahun/masterCode)
   useEffect(() => {
     const fetchBudget = async () => {
       if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
 
       try {
-        const colRef = collection(
-          db,
-          `unitData/${selectedUnit}/${selectedYear}/budget/items`
-        );
+        const colRef = collection(db, `unitData/${selectedUnit}/${selectedYear}/budget/items`);
         const snap = await getDocs(colRef);
         let data = snap.docs.map((doc) => doc.data());
 
-        const validCodes = new Set(
-          masterCode.map((m) => String(m.code).toLowerCase().trim())
-        );
-
+        // Filter hanya kode yang valid
+        const validCodes = new Set(masterCode.map((m) => String(m.code).toLowerCase().trim()));
         data = data.filter((item) => {
-          const rowCode = String(
-            item.accountCode ||
-              item.AccountCode ||
-              item.account_code ||
-              item["ACCOUNT CODE"] ||
-              ""
-          )
-            .toLowerCase()
-            .trim();
+          const rowCode = String(item.accountCode || item["ACCOUNT CODE"] || "").toLowerCase().trim();
           return validCodes.has(rowCode);
         });
 
-        const months = [
-          "JAN",
-          "FEB",
-          "MAR",
-          "APR",
-          "MAY",
-          "JUN",
-          "JUL",
-          "AUG",
-          "SEP",
-          "OCT",
-          "NOV",
-          "DEC",
-        ];
-
         const grouped = {};
+        const monthsUpper = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
         data.forEach((item) => {
-          const code = String(
-            item.accountCode ||
-              item.AccountCode ||
-              item.account_code ||
-              item["ACCOUNT CODE"] ||
-              ""
-          ).trim();
+          const code = String(item.accountCode || item["ACCOUNT CODE"] || "").trim();
+          if (!grouped[code]) grouped[code] = { accountCode: code, totalBudget: 0 };
 
-          if (!grouped[code])
-            grouped[code] = { accountCode: code, totalBudget: 0 };
-
-          const total = months.reduce(
-            (sum, m) => sum + (Number(item[m]) || 0),
-            0
-          );
+          const total = monthsUpper.reduce((sum, m) => sum + (Number(item[m]) || 0), 0);
           grouped[code].totalBudget += total;
         });
 
@@ -103,133 +85,82 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     fetchBudget();
   }, [selectedUnit, selectedYear, masterCode]);
 
-  // 🔹 Filter data actual
+  // 🔹 Filter data actual berdasarkan unit bisnis
   const filteredData = useMemo(() => {
     if (!currentData.length || !selectedUnit) return [];
-    const normalize = (v) =>
-      String(v || "")
-        .toLowerCase()
-        .trim();
+
+    const normalize = (v) => String(v || "").toLowerCase().trim();
 
     if (normalize(selectedUnit).includes("samudera agencies indonesia gena")) {
-      return currentData.filter(
-        (item) =>
-          item.businessLine && normalize(item.businessLine).includes("age06")
-      );
+      return currentData.filter((i) => i.businessLine && normalize(i.businessLine).includes("age06"));
     }
     if (normalize(selectedUnit).includes("samudera agencies indonesia local")) {
-      return currentData.filter(
-        (item) =>
-          item.businessLine && normalize(item.businessLine).includes("age11")
-      );
+      return currentData.filter((i) => i.businessLine && normalize(i.businessLine).includes("age11"));
     }
     if (normalize(selectedUnit).includes("samudera agencies indonesia")) {
       return currentData.filter(
-        (item) =>
-          item.businessLine &&
-          !normalize(item.businessLine).includes("age06") &&
-          !normalize(item.businessLine).includes("age11")
+        (i) =>
+          i.businessLine &&
+          !normalize(i.businessLine).includes("age06") &&
+          !normalize(i.businessLine).includes("age11")
       );
     }
     return currentData;
   }, [currentData, selectedUnit]);
 
-  // 🔹 Simpan actual 2024
+  // 🔹 Simpan ACT 2024 hanya saat data tahun 2024
   useEffect(() => {
     if (selectedYear === "2024" && filteredData.length > 0) {
       setActData2024(filteredData);
     }
   }, [filteredData, selectedYear]);
 
-  const codeMap = useMemo(() => {
-    const map = new Map();
-    masterCode.forEach((m) => {
-      if (m.code) map.set(String(m.code).trim(), m);
-    });
-    return map;
-  }, [masterCode]);
-
-  const categories = useMemo(
-    () => [...new Set(masterCode.map((item) => item.category))],
-    [masterCode]
-  );
-
-  const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
-  ];
-
-  // 🔹 Hitung summary
+  // 🧮 Hitung summary
   useEffect(() => {
-    if (!masterCode.length) {
-      setSummaryData([]);
-      return;
-    }
+    if (!masterCode.length) return setSummaryData([]);
 
     const budgetForYear = budgetData[selectedYear] || [];
+    const actPrev = actData2024 || [];
 
-    let newSummary = categories.map((cat) => {
-      const totalAct2024 = actData2024
-        .filter((item) => {
-          const rowCode = String(
-            item.accountCode || item.AccountCode || item.account_code || ""
-          ).trim();
-          const match = codeMap.get(rowCode);
-          return match && match.category === cat;
-        })
+    const formatNumber = (num) =>
+      num ? num.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "-";
+
+    const summary = categories.map((cat) => {
+      const matchCat = (row) => {
+        const rowCode = String(row.accountCode || row.AccountCode || "").trim();
+        const match = codeMap.get(rowCode);
+        return match && match.category === cat;
+      };
+
+      const totalActPrev = actPrev
+        .filter(matchCat)
         .reduce(
-          (sum, row) =>
-            sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
+          (sum, row) => sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
           0
         );
 
-      const totalActThisYear = filteredData
-        .filter((item) => {
-          const rowCode = String(
-            item.accountCode || item.AccountCode || item.account_code || ""
-          ).trim();
-          const match = codeMap.get(rowCode);
-          return match && match.category === cat;
-        })
+      const totalActNow = filteredData
+        .filter(matchCat)
         .reduce(
-          (sum, row) =>
-            sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
+          (sum, row) => sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
           0
         );
 
-      const totalBudget = budgetForYear
-        .filter((item) => {
-          const rowCode = String(item.accountCode || "").trim();
-          const match = codeMap.get(rowCode);
-          return match && match.category === cat;
-        })
+      const totalBdgt = budgetForYear
+        .filter(matchCat)
         .reduce((sum, row) => sum + (Number(row.totalBudget) || 0), 0);
 
-      const aVsCValue = totalActThisYear - totalAct2024;
-      const aVsCPercent =
-        totalAct2024 !== 0 ? (totalActThisYear / totalAct2024 - 1) * 100 : null;
+      const aVsCValue = totalActNow - totalActPrev;
+      const bVsCValue = totalActNow - totalBdgt;
 
-      const bVsCValue = totalActThisYear - totalBudget;
-      const bVsCPercent =
-        totalBudget !== 0 ? (totalActThisYear / totalBudget - 1) * 100 : null;
+      const aVsCPercent = totalActPrev ? ((totalActNow / totalActPrev) - 1) * 100 : null;
+      const bVsCPercent = totalBdgt ? ((totalActNow / totalBdgt) - 1) * 100 : null;
 
       return {
         description: cat,
-        act2024: totalAct2024 ? totalAct2024.toLocaleString("en-US") : "-",
-        bdgt2025: totalBudget ? totalBudget.toLocaleString("en-US") : "-",
-        act2025: totalActThisYear
-          ? totalActThisYear.toLocaleString("en-US")
-          : "-",
+        act2024: formatNumber(totalActPrev),
+        bdgt2025: formatNumber(totalBdgt),
+        act2025: formatNumber(totalActNow),
         aVsC:
           aVsCPercent === null
             ? "-"
@@ -238,7 +169,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
                 percent: aVsCPercent,
                 text: `${aVsCPercent >= 0 ? "+" : ""}${aVsCPercent.toFixed(
                   1
-                )}% (${aVsCValue.toLocaleString("en-US")})`,
+                )}% (${formatNumber(aVsCValue)})`,
               },
         bVsC:
           bVsCPercent === null
@@ -248,90 +179,50 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
                 percent: bVsCPercent,
                 text: `${bVsCPercent >= 0 ? "+" : ""}${bVsCPercent.toFixed(
                   1
-                )}% (${bVsCValue.toLocaleString("en-US")})`,
+                )}% (${formatNumber(bVsCValue)})`,
               },
       };
     });
 
-    // 🔹 Tambahkan Gross Profit manual = Service Revenue - Cost Of Service
-    const serviceRevRow = newSummary.find(
-      (r) => r.description === "Service Revenue"
-    );
-    const costServiceRow = newSummary.find(
-      (r) => r.description === "Cost Of Service"
-    );
+    // 🧮 Tambah Gross Profit manual
+    const service = summary.find((r) => r.description === "Service Revenue");
+    const cost = summary.find((r) => r.description === "Cost Of Service");
+    if (service && cost) {
+      const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
+      const act2024 = num(service.act2024) - num(cost.act2024);
+      const act2025 = num(service.act2025) - num(cost.act2025);
+      const bdgt2025 = num(service.bdgt2025) - num(cost.bdgt2025);
 
-    if (serviceRevRow && costServiceRow) {
-      const grossAct2024 =
-        Number(serviceRevRow.act2024.replace(/,/g, "")) -
-        Number(costServiceRow.act2024.replace(/,/g, ""));
-      const grossAct2025 =
-        Number(serviceRevRow.act2025.replace(/,/g, "")) -
-        Number(costServiceRow.act2025.replace(/,/g, ""));
-      const grossBdgt =
-        Number(serviceRevRow.bdgt2025.replace(/,/g, "")) -
-        Number(costServiceRow.bdgt2025.replace(/,/g, ""));
-
-      newSummary.push({
+      summary.push({
         description: "Gross Profit",
-        act2024: grossAct2024.toLocaleString("en-US"),
-        bdgt2025: grossBdgt.toLocaleString("en-US"),
-        act2025: grossAct2025.toLocaleString("en-US"),
+        act2024: formatNumber(act2024),
+        bdgt2025: formatNumber(bdgt2025),
+        act2025: formatNumber(act2025),
         aVsC: {
-          value: grossAct2025 - grossAct2024,
-          percent:
-            grossAct2024 !== 0 ? (grossAct2025 / grossAct2024 - 1) * 100 : null,
-          text: `${
-            grossAct2024 !== 0
-              ? ((grossAct2025 / grossAct2024 - 1) * 100 >= 0 ? "+" : "") +
-                ((grossAct2025 / grossAct2024 - 1) * 100).toFixed(1) +
-                "%"
-              : "-"
-          } (${(grossAct2025 - grossAct2024).toLocaleString("en-US")})`,
+          value: act2025 - act2024,
+          percent: act2024 ? ((act2025 / act2024) - 1) * 100 : null,
+          text: `${act2024 ? ((act2025 / act2024 - 1) * 100).toFixed(1) + "%" : "-"} (${formatNumber(act2025 - act2024)})`,
         },
         bVsC: {
-          value: grossAct2025 - grossBdgt,
-          percent:
-            grossBdgt !== 0 ? (grossAct2025 / grossBdgt - 1) * 100 : null,
-          text: `${
-            grossBdgt !== 0
-              ? ((grossAct2025 / grossBdgt - 1) * 100 >= 0 ? "+" : "") +
-                ((grossAct2025 / grossBdgt - 1) * 100).toFixed(1) +
-                "%"
-              : "-"
-          } (${(grossAct2025 - grossBdgt).toLocaleString("en-US")})`,
+          value: act2025 - bdgt2025,
+          percent: bdgt2025 ? ((act2025 / bdgt2025) - 1) * 100 : null,
+          text: `${bdgt2025 ? ((act2025 / bdgt2025 - 1) * 100).toFixed(1) + "%" : "-"} (${formatNumber(act2025 - bdgt2025)})`,
         },
       });
     }
 
-    // 🔹 Tambah urutan manual (tanpa ubah data)
     const order = [
       "Service Revenue",
       "Cost Of Service",
       "Gross Profit",
       "General & Administration Expense",
       "Other Income (Expenses)",
+      "Pajak",
     ];
-    newSummary.sort((a, b) => {
-      const idxA = order.indexOf(a.description);
-      const idxB = order.indexOf(b.description);
-      if (idxA === -1 && idxB === -1) return 0;
-      if (idxA === -1) return 1;
-      if (idxB === -1) return -1;
-      return idxA - idxB;
-    });
+    summary.sort((a, b) => order.indexOf(a.description) - order.indexOf(b.description));
 
-    setSummaryData(newSummary);
-  }, [
-    filteredData,
-    budgetData,
-    actData2024,
-    masterCode,
-    selectedYear,
-    categories,
-    codeMap,
-    months,
-  ]);
+    setSummaryData(summary);
+  }, [filteredData, budgetData, actData2024, masterCode, selectedYear, categories, codeMap]);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow mt-10">
@@ -342,31 +233,24 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         </h2>
       </div>
 
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse text-sm">
         <thead>
           <tr className="bg-red-500 text-left">
             <th className="border p-2 text-white">DESCRIPTION</th>
             <th className="border p-2 text-right text-white">ACT 2024</th>
-            <th className="border p-2 text-right text-white">
-              BDGT {selectedYear}
-            </th>
-            <th className="border p-2 text-right text-white">
-              ACT {selectedYear}
-            </th>
+            <th className="border p-2 text-right text-white">BDGT {selectedYear}</th>
+            <th className="border p-2 text-right text-white">ACT {selectedYear}</th>
             <th className="border p-2 text-right text-white">A VS C</th>
             <th className="border p-2 text-right text-white">B VS C</th>
           </tr>
         </thead>
-
         <tbody>
-          {summaryData.map((row, idx) => (
-            <tr key={idx} className="hover:bg-gray-50">
+          {summaryData.map((row, i) => (
+            <tr key={i} className="hover:bg-gray-50">
               <td className="border p-2">{row.description}</td>
               <td className="border p-2 text-right">{row.act2024}</td>
               <td className="border p-2 text-right">{row.bdgt2025}</td>
               <td className="border p-2 text-right font-bold">{row.act2025}</td>
-
-              {/* A VS C */}
               <td className="border p-2 text-right">
                 {row.aVsC === "-" ? (
                   "-"
@@ -385,8 +269,6 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
                   </div>
                 )}
               </td>
-
-              {/* B VS C */}
               <td className="border p-2 text-right">
                 {row.bVsC === "-" ? (
                   "-"

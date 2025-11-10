@@ -203,20 +203,38 @@ const UserManagement = ({
                           {user.email || "-"}
                         </td>
                         <td className="px-4 py-3">
-                          <span
-                            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                              user.role === "Super Admin"
-                                ? "bg-red-100 text-red-800"
-                                : user.role === "Manager"
-                                ? "bg-purple-100 text-purple-800"
-                                : user.role === "Supervisor"
-                                ? "bg-blue-100 text-blue-800"
-                                : "bg-gray-100 text-gray-800"
-                            }`}
-                          >
-                            {user.role}
-                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {(Array.isArray(user.roles)
+                              ? user.roles
+                              : [user.role || "-"]
+                            ).map((r, i) => {
+                              const color =
+                                r === "Super Admin"
+                                  ? "bg-red-600 text-white"
+                                  : r === "Manager"
+                                  ? "bg-purple-600 text-white"
+                                  : r === "Supervisor"
+                                  ? "bg-blue-600 text-white"
+                                  : r === "GA/FS"
+                                  ? "bg-orange-500 text-white"
+                                  : r === "Operation"
+                                  ? "bg-green-600 text-white"
+                                  : r === "User"
+                                  ? "bg-yellow-600 text-white"
+                                  : "bg-gray-400 text-white";
+
+                              return (
+                                <span
+                                  key={i}
+                                  className={`px-2 py-1 rounded-full text-xs font-medium ${color}`}
+                                >
+                                  {r}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </td>
+
                         <td className="px-4 py-3 text-gray-700">
                           {Array.isArray(user.unitBisnis)
                             ? user.unitBisnis.join(", ")

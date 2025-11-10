@@ -12,12 +12,16 @@ import MasterCategory from "./MasterCategory";
 import MasterCode from "./MasterCode";
 import LibraryCode from "./LibraryCode";
 import DashboardView from "../components/DashboardView";
+import GAFSATK from "../components/GAFSATK";
+import GAFSDaily from "../components/GAFSDaily";
+import GAFSDriver from "../components/GAFSDriver";
 
 import {
   collection,
   getDocs,
   addDoc,
   updateDoc,
+  getDoc,
   deleteDoc,
   doc,
   onSnapshot,
@@ -28,6 +32,7 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
   signOut,
+  onAuthStateChanged,
 } from "firebase/auth";
 import { db, firebaseConfig } from "../firebase";
 import { initializeApp } from "firebase/app";
@@ -37,6 +42,7 @@ function AdminDashboard() {
   // General UI / loading state
   const [activePage, setActivePage] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(false);
+  const [Loading, setLoading] = useState(false);
 
   // Units & uploads
   const [units, setUnits] = useState([]);
@@ -59,7 +65,7 @@ function AdminDashboard() {
     name: "",
     email: "",
     password: "",
-    role: "",
+    role: [],
     unitBisnis: [],
   });
 
@@ -69,6 +75,10 @@ function AdminDashboard() {
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
   const [viewData, setViewData] = useState([]);
+
+  //gafs
+  const [currentUser, setCurrentUser] = useState(null);
+  const [userRoles, setUserRoles] = useState([]);
 
   const {
     data,
@@ -135,6 +145,25 @@ function AdminDashboard() {
         setLoadingUsers(false);
       }
     );
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userRef = doc(db, "users", user.uid);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const data = { uid: user.uid, ...userSnap.data() };
+          console.log("🔥 CurrentUser dari Firestore:", data);
+          setCurrentUser(data);
+        } else {
+          
+        }
+      }
+      setLoading(false);
+    });
+
     return () => unsubscribe();
   }, []);
 
@@ -496,7 +525,7 @@ function AdminDashboard() {
       name: "",
       email: "",
       password: "",
-      role: "",
+      role: [],
       unitBisnis: [],
     });
     setShowUserModal(true);
@@ -508,7 +537,7 @@ function AdminDashboard() {
       name: user.name || "",
       email: user.email || "",
       password: "",
-      role: user.role || "",
+      role: Array.isArray(user.role) ? user.role : [user.role || ""],
       unitBisnis: user.unitBisnis || [],
     });
     setShowUserModal(true);
@@ -517,27 +546,29 @@ function AdminDashboard() {
   const handleSaveUser = async () => {
     if (
       userForm.name.trim() === "" ||
-      userForm.role.trim() === "" ||
+      userForm.role.length === 0 ||
       userForm.unitBisnis.length === 0 ||
       (!editingUser &&
         (userForm.email.trim() === "" || userForm.password.trim() === ""))
     ) {
-      alert("Semua field harus diisi dan pilih minimal 1 unit bisnis!");
+      alert(
+        "Semua field harus diisi dan pilih minimal 1 role dan unit bisnis!"
+      );
       return;
     }
+
     try {
       setIsLoading(true);
       if (editingUser) {
         const ref = doc(db, "users", editingUser.id);
         await updateDoc(ref, {
           name: userForm.name,
-          role: userForm.role,
+          role: userForm.role, // array
           unitBisnis: userForm.unitBisnis,
           updatedAt: new Date(),
         });
         alert("User berhasil diupdate!");
       } else {
-        // create user using secondary app to keep admin logged in
         const appSecondary = initializeApp(firebaseConfig, "Secondary");
         const secondaryAuth = getAuth(appSecondary);
         const userCredential = await createUserWithEmailAndPassword(
@@ -550,7 +581,7 @@ function AdminDashboard() {
           uid,
           name: userForm.name,
           email: userForm.email,
-          role: userForm.role,
+          role: userForm.role, // array
           unitBisnis: userForm.unitBisnis,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -559,17 +590,9 @@ function AdminDashboard() {
         alert("User baru berhasil ditambahkan");
       }
       setShowUserModal(false);
-      setUserForm({
-        name: "",
-        email: "",
-        password: "",
-        role: "",
-        unitBisnis: [],
-      });
-      setEditingUser(null);
     } catch (err) {
       console.error("handleSaveUser err:", err);
-      alert("Error saving user: " + err.message);
+      alert("Error: " + err.message);
     } finally {
       setIsLoading(false);
     }
@@ -815,18 +838,35 @@ function AdminDashboard() {
   // User filters & pagination helpers
   const getFilteredUsers = () => {
     return users.filter((user) => {
+      // 🔍 Filter pencarian nama/email
       const matchesSearch =
         !searchTerm ||
         (user.name &&
           user.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
         (user.email &&
           user.email.toLowerCase().includes(searchTerm.toLowerCase()));
-      const matchesRole = !roleFilter || user.role === roleFilter;
+
+      // 🧩 Pastikan roles jadi array string aman
+      const userRoles = Array.isArray(user.role)
+        ? user.role.map((r) => (typeof r === "string" ? r.toLowerCase() : ""))
+        : typeof user.role === "string"
+        ? [user.role.toLowerCase()]
+        : [];
+
+      // 🧠 Perbaikan utama: cek jika roleFilter ada di salah satu roles[]
+      const matchesRole =
+        !roleFilter ||
+        userRoles.some((r) =>
+          r.trim().includes(roleFilter.toLowerCase().trim())
+        );
+
+      // 🏢 Filter unit bisnis
       const matchesUnit =
         !unitFilter ||
         (Array.isArray(user.unitBisnis)
           ? user.unitBisnis.includes(unitFilter)
           : user.unitBisnis === unitFilter);
+
       return matchesSearch && matchesRole && matchesUnit;
     });
   };
@@ -846,9 +886,8 @@ function AdminDashboard() {
     setUnitFilter("");
   };
 
-  // =========================
-  // Render
-  // =========================
+  const savedRoles = JSON.parse(localStorage.getItem("userRoles") || "[]");
+
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="flex">
@@ -856,6 +895,7 @@ function AdminDashboard() {
           activePage={activePage}
           onChangePage={handlePageChange}
           onLogout={handleLogout}
+          userRoles={currentUser?.role || savedRoles}
         />
 
         <div className="flex-1 p-6 ml-64">
@@ -987,6 +1027,31 @@ function AdminDashboard() {
               onEditCode={handleEditCode}
               onDeleteCode={handleDeleteCode}
             />
+          )}
+
+          {/* === GA/FS SECTION === */}
+          {activePage === "gafs_daily" && (
+            <div className="bg-white rounded-lg p-6 shadow">
+              <h2 className="text-lg font-semibold mb-4">Daily OB/CS Report</h2>
+              <p>Data laporan harian OB/CS ditampilkan di sini...</p>
+              {<GAFSDaily />}
+            </div>
+          )}
+
+          {activePage === "gafs_driver" && (
+            <div className="bg-white rounded-lg p-6 shadow">
+              <h2 className="text-lg font-semibold mb-4">Driver Report</h2>
+              <p>Data laporan driver ditampilkan di sini...</p>
+              {<GAFSDriver />}
+            </div>
+          )}
+
+          {activePage === "gafs_atk" && (
+            <div className="bg-white rounded-lg p-6 shadow">
+              <h2 className="text-lg font-semibold mb-4">ATK / RTG Report</h2>
+              <p>Data laporan ATK/RTG ditampilkan di sini...</p>
+              {<GAFSATK />}
+            </div>
           )}
         </div>
       </div>

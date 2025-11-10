@@ -12,8 +12,6 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
             { id: "dashboard", label: "📊 Dashboard" },
             { id: "TableView", label: "Table" },
              { id: "Performance", label: "Performance" },
-            { id: "unit", label: "🏢 Manage Unit Bisnis" },
-            { id: "user", label: "👥 Manage User" },
           ].map((item) => (
             <button
               key={item.id}
@@ -28,15 +26,6 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
             </button>
           ))}
         </nav>
-      </div>
-
-      <div className="p-6 border-t border-red-400">
-        <button
-          onClick={onLogout}
-          className="w-full text-left px-4 py-3 rounded-lg font-medium text-sm text-white hover:bg-red-400 transition-all duration-200"
-        >
-          🚪 Logout
-        </button>
       </div>
     </div>
   );

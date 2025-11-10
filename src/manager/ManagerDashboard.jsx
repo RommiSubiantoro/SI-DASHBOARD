@@ -1,20 +1,14 @@
+// src/manager/ManagerDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
-import {
-  collection,
-  getDocs,
-  onSnapshot,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
+import { collection, getDocs, onSnapshot, doc } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
 
 // Komponen utama
 import Sidebar from "./Sidebar";
 import Navbar from "../components/navbar";
 import DashboardPage from "./DashboardPage";
-import UnitManagement from "./UnitManagement";
-import UserManagement from "./UserManagement";
+import DataTable from "../components/DataTable";
 import UnitModal from "./UnitModal";
 import UserModal from "./UserModal";
 import Header from "../components/Header";
@@ -29,7 +23,7 @@ function ManagerDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
   const [loadingUploads, setLoadingUploads] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState("Jan");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
   const [showUnitModal, setShowUnitModal] = useState(false);
@@ -40,12 +34,33 @@ function ManagerDashboard() {
   const [loadingCodes, setLoadingCodes] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [viewData, setViewData] = useState([]);
-  const auth = getAuth();
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
 
-  // Ambil data Units (realtime)
+  const auth = getAuth();
+
+  const columns = [
+    { Header: "Account Name", accessor: "accountName" },
+    { Header: "Account Code", accessor: "accountCode" },
+    { Header: "Category", accessor: "category" },
+    { Header: "Area", accessor: "area" },
+    { Header: "Business Line", accessor: "businessLine" },
+    { Header: "Jan", accessor: "Jan" },
+    { Header: "Feb", accessor: "Feb" },
+    { Header: "Mar", accessor: "Mar" },
+    { Header: "Apr", accessor: "Apr" },
+    { Header: "May", accessor: "May" },
+    { Header: "Jun", accessor: "Jun" },
+    { Header: "Jul", accessor: "Jul" },
+    { Header: "Aug", accessor: "Aug" },
+    { Header: "Sep", accessor: "Sep" },
+    { Header: "Oct", accessor: "Oct" },
+    { Header: "Nov", accessor: "Nov" },
+    { Header: "Dec", accessor: "Dec" },
+  ];
+
+  // 🟢 Ambil data Units (realtime)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "units"), (snapshot) => {
       const unitsList = snapshot.docs.map((doc) => ({
@@ -54,6 +69,7 @@ function ManagerDashboard() {
       }));
       setUnits(unitsList);
       setLoadingUnits(false);
+
       if (unitsList.length > 0 && !selectedUnit) {
         setSelectedUnit(unitsList[0].name);
       }
@@ -61,7 +77,7 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // Ambil data Users (realtime)
+  // 🟢 Ambil data Users (realtime)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
       const usersList = snapshot.docs.map((doc) => ({
@@ -74,12 +90,14 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, []);
 
+  // 🟢 Ambil masterCode
   useEffect(() => {
     const unsubscribe = onSnapshot(
       collection(db, "masterCode"),
       (snap) => {
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setCodes(list);
+        setMasterCode(list);
         setLoadingCodes(false);
       },
       (err) => {
@@ -90,7 +108,7 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, []);
 
-  // Unit uploads counts per year
+  // 🟢 Hitung jumlah upload per unit per tahun
   const fetchUnitUploads = async () => {
     setLoadingUploads(true);
     try {
@@ -105,17 +123,13 @@ function ManagerDashboard() {
             collection(db, `unitData/${unitName}/2024/data/items`)
           );
           total2024 = snap2024.size;
-        } catch (err) {
-          console.warn(`can't fetch ${unitName} 2024`, err);
-        }
+        } catch (_) {}
         try {
           const snap2025 = await getDocs(
             collection(db, `unitData/${unitName}/2025/data/items`)
           );
           total2025 = snap2025.size;
-        } catch (err) {
-          console.warn(`can't fetch ${unitName} 2025`, err);
-        }
+        } catch (_) {}
         counts[unitName] = { 2024: total2024, 2025: total2025 };
       }
       setUnitUploads(counts);
@@ -130,79 +144,16 @@ function ManagerDashboard() {
     fetchUnitUploads();
   }, [units]);
 
-  // Ambil data realtime untuk dashboard
-  useEffect(() => {
-    if (!selectedUnit || !selectedYear) return;
-    const unsub = onSnapshot(
-      collection(db, `unitData/${selectedUnit}/${selectedYear}/data/items`),
-      (snap) =>
-        setCurrentData(snap.docs.map((d) => ({ id: d.id, ...d.data() })))
-    );
-    return () => unsub();
-  }, [selectedUnit, selectedYear]);
-
-  // Realtime chart data for selectedUnit + selectedYear
-  useEffect(() => {
-    if (!selectedUnit || !selectedYear) return;
-
-    const colRef = collection(
-      db,
-      `unitData/${selectedUnit}/${selectedYear}/data/items`
-    );
-
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // 🔹 Hanya ambil Debit
-      const debitData = rawData.filter((item) => item.type === "Debit");
-
-      // 🔹 Kelompokkan berdasarkan account dan bulan
-      const grouped = {};
-
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            accountName: item.accountName,
-            accountCode: item.accountCode,
-            category: item.category,
-            area: item.area,
-            businessLine: item.businessLine,
-            Jan: 0,
-            Feb: 0,
-            Mar: 0,
-            Apr: 0,
-            May: 0,
-            Jun: 0,
-            Jul: 0,
-            Aug: 0,
-            Sep: 0,
-            Oct: 0,
-            Nov: 0,
-            Dec: 0,
-          };
-        }
-        grouped[key][item.month] += item.docValue;
-      });
-
-      setCurrentData(Object.values(grouped)); // untuk DataTable
-    });
-
-    return () => unsubscribe();
-  }, [selectedUnit, selectedYear]);
-
-  // Realtime data untuk DashboardView (hanya baca, tidak berubah saat tahun diganti)
+  // 🟢 Ambil data untuk DashboardView (2025 default)
   useEffect(() => {
     if (!selectedUnit) return;
 
-    // default ke tahun 2025 (atau bisa juga tahun terbaru yang tersedia)
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
-
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
       const debitData = rawData.filter((item) => item.type === "Debit");
-      const grouped = {};
 
+      const grouped = {};
       debitData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
         if (!grouped[key]) {
@@ -226,7 +177,7 @@ function ManagerDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue;
+        grouped[key][item.month] += item.docValue || 0;
       });
 
       setViewData(Object.values(grouped));
@@ -235,6 +186,7 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, [selectedUnit]);
 
+  // 🟢 Realtime currentData (FIXED, gabungan dari efek duplikat)
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -246,72 +198,24 @@ function ManagerDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
-      // 🔹 Hanya ambil Debit
-      const debitData = rawData.filter((item) => item.type === "Debit");
-
-      // 🔹 Kelompokkan berdasarkan account dan bulan
-      const grouped = {};
-
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            accountName: item.accountName,
-            accountCode: item.accountCode,
-            category: item.category,
-            area: item.area,
-            businessLine: item.businessLine,
-            Jan: 0,
-            Feb: 0,
-            Mar: 0,
-            Apr: 0,
-            May: 0,
-            Jun: 0,
-            Jul: 0,
-            Aug: 0,
-            Sep: 0,
-            Oct: 0,
-            Nov: 0,
-            Dec: 0,
-          };
-        }
-        grouped[key][item.month] += item.docValue;
-      });
-
-      setCurrentData(Object.values(grouped)); // untuk DataTable
-    });
-
-    return () => unsubscribe();
-  }, [selectedUnit, selectedYear]);
-
-  // 🔹 Listener realtime Firestore
-  useEffect(() => {
-    if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
-
-    const colRef = collection(
-      db,
-      `unitData/${selectedUnit}/${selectedYear}/data/items`
-    );
-
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ✅ Filter hanya yang "Debit"
+      // Filter hanya Debit
       let debitData = rawData.filter((item) => item.type === "Debit");
 
-      // ✅ Filter berdasarkan kode yang valid di masterCode
-      const validCodes = new Set(
-        masterCode.map((m) => String(m.code).toLowerCase().trim())
-      );
+      // Jika masterCode tersedia, filter sesuai kode valid
+      if (masterCode.length > 0) {
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
+        debitData = debitData.filter((item) =>
+          validCodes.has(
+            String(item.accountCode || "")
+              .toLowerCase()
+              .trim()
+          )
+        );
+      }
 
-      debitData = debitData.filter((item) => {
-        const code = String(item.accountCode || "")
-          .toLowerCase()
-          .trim();
-        return validCodes.has(code);
-      });
-
-      // ✅ Kelompokkan per akun
+      // Group data per akun
       const grouped = {};
       debitData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
@@ -336,7 +240,7 @@ function ManagerDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue;
+        grouped[key][item.month] += item.docValue || 0;
       });
 
       setCurrentData(Object.values(grouped));
@@ -345,7 +249,7 @@ function ManagerDashboard() {
     return () => unsubscribe();
   }, [selectedUnit, selectedYear, masterCode]);
 
-  // Logout
+  // 🟢 Logout
   const handleLogout = async () => {
     try {
       setIsLoading(true);
@@ -360,6 +264,7 @@ function ManagerDashboard() {
     }
   };
 
+  // Simpan halaman terakhir
   useEffect(() => {
     const saved = localStorage.getItem("dashboard");
     if (saved) setActivePage(saved);
@@ -370,6 +275,7 @@ function ManagerDashboard() {
     localStorage.setItem("dashboard", page);
   };
 
+  // 🧱 UI
   return (
     <div className="min-h-screen bg-gray-100 flex">
       <Sidebar
@@ -394,30 +300,6 @@ function ManagerDashboard() {
           />
         )}
 
-        {activePage === "unit" && (
-          <UnitManagement
-            units={units}
-            users={users}
-            unitUploads={unitUploads}
-            loadingUnits={loadingUnits}
-            loadingUploads={loadingUploads}
-            setShowUnitModal={setShowUnitModal}
-            setEditingUnit={setEditingUnit}
-            fetchUnitUploads={fetchUnitUploads}
-            isLoading={isLoading}
-          />
-        )}
-
-        {activePage === "user" && (
-          <UserManagement
-            users={users}
-            units={units}
-            isLoading={isLoading}
-            setShowUserModal={setShowUserModal}
-            setEditingUser={setEditingUser}
-          />
-        )}
-
         {activePage === "TableView" && (
           <DashboardMultiUnit
             selectedYear={selectedYear}
@@ -427,8 +309,6 @@ function ManagerDashboard() {
 
         {activePage === "Performance" && (
           <div style={{ marginTop: "70px" }}>
-            {" "}
-            {/* atur sesuai tinggi Navbar */}
             <Header
               selectedUnit={selectedUnit}
               setSelectedUnit={setSelectedUnit}
@@ -447,6 +327,25 @@ function ManagerDashboard() {
               selectedMonth={selectedMonth}
               setSelectedMonth={setSelectedMonth}
             />
+
+            {/* Wrapper untuk membatasi lebar tabel */}
+            <div
+              className="bg-white p-2 rounded-xl shadow"
+              style={{
+                maxWidth: "900px", // batasi lebar maksimum
+                margin: "20px auto", // posisikan di tengah
+                overflowX: "auto", // biar bisa digeser kalau kolom terlalu banyak
+              }}
+            >
+              <DataTable
+                data={currentData}
+                columns={columns}
+                title={`Data ${selectedUnit} - ${selectedYear}`}
+                showFilters
+                showPagination
+                rowsPerPage={25}
+              />
+            </div>
           </div>
         )}
       </div>

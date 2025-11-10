@@ -96,30 +96,38 @@ const Login = () => {
       const userData = userDoc.data();
 
       console.log("User Data:", userData);
+      // 🔹 Tangani baik string maupun array
+      let roleData = userData.role;
 
-      const role = (userData.role || "").trim().toLowerCase();
-      console.log("Role yang diambil:", role);
+      let roles = [];
+      if (Array.isArray(roleData)) {
+        roles = roleData.map((r) => r.toLowerCase());
+      } else if (typeof roleData === "string" && roleData.trim() !== "") {
+        roles = [roleData.toLowerCase()];
+      }
+
+      console.log("Roles yang diambil:", roles);
 
       // Simpan ke localStorage
       localStorage.setItem("userUid", userDoc.id);
-      localStorage.setItem("userRole", role);
+      localStorage.setItem("userRoles", JSON.stringify(roles)); // simpan sebagai array
       localStorage.setItem("isAuthenticated", "true");
 
-      // Redirect sesuai role
-      if (role === "super admin") {
+      // 🔹 Redirect berdasarkan prioritas role
+      if (roles.includes("super admin")) {
         navigate("/admin");
-      } else if (role === "manager") {
+      } else if (roles.includes("manager")) {
         navigate("/manager");
-      } else if (role === "supervisor") {
+      } else if (roles.includes("supervisor")) {
         navigate("/supervisor");
-      } else if (role === "user") {
+      } else if (roles.includes("user")) {
         navigate("/user");
-      } else if (role === "operation") {
+      } else if (roles.includes("operation")) {
         navigate("/operation");
-      } else if (role === "ga/fs") {
+      } else if (roles.includes("ga/fs")) {
         navigate("/gafs");
       } else {
-        setError(`Role tidak dikenali: ${role}`);
+        setError(`Role tidak dikenali: ${roles.join(", ")}`);
       }
     } catch (err) {
       console.error("Error saat login:", err);
