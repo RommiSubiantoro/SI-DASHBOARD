@@ -1,7 +1,10 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { collection, onSnapshot, addDoc } from "firebase/firestore";
+import { db } from "../firebase";
+import Header from "../components/Header";
 
 const GAFSDaily = ({
-  data = [],
   loading = false,
   onAdd,
   onEdit,
@@ -10,19 +13,87 @@ const GAFSDaily = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUnit, setSelectedUnit] = useState("");
+  const [units, setUnits] = useState([]);
+  const [fetchedData, setFetchedData] = useState([]);
+  const [selectedYear, setSelectedYear] = useState("2025");
   const itemsPerPage = 10;
 
-  // 🔍 Filter data berdasarkan nama / area / tanggal / checklist
+  // 🔄 Ambil data unit dari Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "units"), (snapshot) => {
+      const unitsList = snapshot.docs.map((doc) => doc.data().name);
+      setUnits(unitsList);
+
+      if (unitsList.length > 0 && !selectedUnit) {
+        setSelectedUnit(unitsList[0]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit]);
+
+  // 🔄 Ambil data dari Firestore (koleksi daily_obcs)
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "daily_obcs"), (snapshot) => {
+      const fetched = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      console.log("📥 Data dari Firestore:", fetched);
+      setFetchedData(fetched);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 🟢 Upload File Excel ke Firestore
+  const handleUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: "array" });
+
+      // ✅ Pastikan nama sheet sesuai
+      const sheetName = "Daily OBCS";
+      if (!workbook.Sheets[sheetName]) {
+        alert(`❌ Sheet '${sheetName}' tidak ditemukan di file Excel!`);
+        return;
+      }
+
+      const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+      // 🔹 Simpan setiap baris ke Firestore
+      for (const row of sheet) {
+        await addDoc(collection(db, "daily_obcs"), {
+          namaPetugas: row["Nama Petugas"] || "",
+          areaTugas: row["Area Tugas"] || "",
+          tanggal: row["Tanggal"] || "",
+          checklist: row["Checklist Aktivitas Rutin"] || "",
+          createdAt: new Date(),
+        });
+      }
+
+      alert("✅ Upload berhasil! Data dari sheet 'Daily OB/CS' telah disimpan.");
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  // 🔍 Filter data berdasarkan pencarian
   const filteredData = useMemo(() => {
-    return data.filter(
+    return fetchedData.filter(
       (item) =>
         item.namaPetugas?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.areaTugas?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.checklist?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [data, searchTerm]);
+  }, [fetchedData, searchTerm]);
 
+  // 📄 Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
@@ -31,28 +102,27 @@ const GAFSDaily = ({
 
   return (
     <div className="space-y-4">
-      {/* 🔹 Filter & Aksi */}
-      <div className="flex flex-wrap gap-3 items-center">
+      {/* 🔹 Header dengan tombol Upload */}
+      <Header
+        title="Daily OB/CS Report"
+        selectedUnit={selectedUnit}
+        setSelectedUnit={setSelectedUnit}
+        units={units}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        showUpload={true}
+        onUpload={handleUpload}
+      />
+
+      {/* 🔹 Input pencarian */}
+      <div className="flex justify-end px-4">
         <input
           type="text"
-          placeholder="Cari nama / area / tanggal..."
+          placeholder="Cari data..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-red-400 focus:outline-none"
         />
-        <button
-          onClick={onAdd}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          ➕ Tambah
-        </button>
-        <button
-          onClick={onExport}
-          disabled={data.length === 0}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-        >
-          📊 Ekspor
-        </button>
       </div>
 
       {/* 🔹 Tabel Data */}
@@ -68,7 +138,7 @@ const GAFSDaily = ({
                 <th className="px-4 py-2">Area Tugas</th>
                 <th className="px-4 py-2">Tanggal</th>
                 <th className="px-4 py-2">Checklist Aktivitas Rutin</th>
-                <th className="px-4 py-2">Aksi</th>
+                <th className="px-4 py-2 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -91,15 +161,15 @@ const GAFSDaily = ({
                     <td className="px-4 py-2">{item.areaTugas || "-"}</td>
                     <td className="px-4 py-2">{item.tanggal || "-"}</td>
                     <td className="px-4 py-2">{item.checklist || "-"}</td>
-                    <td className="px-4 py-2 flex gap-2">
+                    <td className="px-4 py-2 flex gap-2 justify-center">
                       <button
-                        onClick={() => onEdit(item)}
+                        onClick={() => onEdit && onEdit(item)}
                         className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs hover:bg-blue-200"
                       >
                         Edit
                       </button>
                       <button
-                        onClick={() => onDelete(item.id)}
+                        onClick={() => onDelete && onDelete(item.id)}
                         className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
                       >
                         Delete

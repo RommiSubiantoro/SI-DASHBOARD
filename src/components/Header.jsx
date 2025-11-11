@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from "react";
 
 const Header = ({
   selectedUnit,
@@ -7,8 +7,15 @@ const Header = ({
   title = "Selamat Datang Didashboard",
   selectedYear,
   setSelectedYear,
+  showUpload = false,
+  onUpload, // handler upload file
 }) => {
   const availableYears = ["2025", "2024"];
+  const fileInputRef = useRef(null); // untuk trigger klik file input
+
+  const handleButtonClick = () => {
+    fileInputRef.current.click(); // buka file picker
+  };
 
   return (
     <div className="flex flex-col md:flex-row items-center justify-between bg-white shadow p-4 rounded-lg mb-6">
@@ -18,7 +25,10 @@ const Header = ({
       <div className="mt-4 md:mt-0 flex flex-col sm:flex-row items-center gap-4">
         {/* Unit selector */}
         <div className="flex items-center space-x-2">
-          <label htmlFor="unitSelect" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="unitSelect"
+            className="text-sm font-medium text-gray-700"
+          >
             Pilih Unit Bisnis:
           </label>
           <select
@@ -40,7 +50,10 @@ const Header = ({
 
         {/* Year selector */}
         <div className="flex items-center space-x-2">
-          <label htmlFor="yearSelect" className="text-sm font-medium text-gray-700">
+          <label
+            htmlFor="yearSelect"
+            className="text-sm font-medium text-gray-700"
+          >
             Tahun:
           </label>
           <select
@@ -56,6 +69,25 @@ const Header = ({
             ))}
           </select>
         </div>
+
+        {/* 🔹 Tombol Upload untuk Daily OB/CS */}
+        {showUpload && (
+          <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept=".xlsx, .xls"
+              onChange={onUpload}
+              className="hidden"
+            />
+            <button
+              onClick={handleButtonClick}
+              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition"
+            >
+              ⬆️ Upload Excel
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -309,7 +309,7 @@ const UserDashboard = () => {
       <aside className="h-screen bg-red-500 border-r shadow-lg flex flex-col">
         <div className="p-4">
           <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">
-            User Panel
+            Finance Report
           </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
@@ -344,7 +344,7 @@ const UserDashboard = () => {
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
             units={assignedUnits}
-            title={activeMenu === "dashboard" ? "User Dashboard" : "View Table"}
+            title={activeMenu === "dashboard" ? "Finance Dashboard" : "View Table"}
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
           />

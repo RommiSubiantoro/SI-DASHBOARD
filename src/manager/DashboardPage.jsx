@@ -23,7 +23,7 @@ const DashboardPage = ({
         units={units.map((unit) => unit.name)}
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
-        title="Manager Dashboard"
+        title="Management Report"
       />
 
       <div className="w-full flex flex-col gap-6">

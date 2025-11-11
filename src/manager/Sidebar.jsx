@@ -5,7 +5,7 @@ const Sidebar = ({ activePage, onChangePage, onLogout }) => {
     <div className="w-64 fixed bg-red-500 shadow-lg border-r border-gray-100 min-h-screen flex flex-col justify-between">
       <div className="p-6">
         <h2 className="text-2xl font-bold text-white mb-8 px-7">
-          Manager Panel
+          Management Report
         </h2>
         <nav className="space-y-2">
           {[

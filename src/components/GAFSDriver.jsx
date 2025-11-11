@@ -1,4 +1,8 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
+import { collection, addDoc, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase";
+import Header from "../components/Header";
 
 const GAFSDriver = ({
   data = [],
@@ -10,7 +14,79 @@ const GAFSDriver = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUnit, setSelectedUnit] = useState("");
+  const [units, setUnits] = useState([]);
+  const [selectedYear, setSelectedYear] = useState("2025");
   const itemsPerPage = 10;
+
+  // 🟢 Upload handler (khusus sheet "Driver Report")
+  const handleUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return alert("❌ Tidak ada file dipilih.");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+
+        console.log("📄 Sheets ditemukan:", workbook.SheetNames);
+
+        const sheet = workbook.Sheets["Driver Report"];
+        if (!sheet) {
+          alert("❌ Sheet 'Driver Report' tidak ditemukan di file Excel!");
+          return;
+        }
+
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        console.log("📊 Data dari sheet:", rows);
+
+        if (rows.length === 0) {
+          alert("❌ Sheet kosong atau format header salah!");
+          return;
+        }
+
+        for (const row of rows) {
+          const docRef = await addDoc(collection(db, "driver_report"), {
+            NamaDriver: row["Nama Driver"] || "",
+            Kendaraan: row["Kendaraan (No. Polisi)"] || "",
+            Tanggal: row["Tanggal"] || "",
+            JamBerangkat: row["Jam Berangkat"] || "",
+            JamKembali: row["Jam Kembali"] || "",
+            KMAwal: row["KM Awal"] || "",
+            KMAkhir: row["KM Akhir"] || "",
+            TujuanPerjalanan: row["Tujuan Perjalanan"] || "",
+            UnitBisnis: row["Unit Bisnis"] || "",
+            Catatan: row["Catatan"] || "",
+            createdAt: new Date(),
+          });
+          console.log("✅ Dokumen berhasil disimpan ID:", docRef.id);
+        }
+
+        alert(
+          "✅ Upload berhasil! Data dari 'Driver Report' tersimpan ke Firestore."
+        );
+      } catch (error) {
+        console.error("❌ Gagal upload:", error);
+        alert("Gagal upload! Cek console untuk detail error.");
+      }
+    };
+
+    reader.readAsArrayBuffer(file);
+  };
+
+  // 🔄 Ambil data unit dari Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "units"), (snapshot) => {
+      const unitsList = snapshot.docs.map((doc) => doc.data().name);
+      setUnits(unitsList);
+      if (unitsList.length > 0 && !selectedUnit) {
+        setSelectedUnit(unitsList[0]);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [selectedUnit]);
 
   // 🔍 Filter berdasarkan nama driver, kendaraan, atau tujuan
   const filteredData = useMemo(() => {
@@ -18,11 +94,14 @@ const GAFSDriver = ({
       (item) =>
         item.NamaDriver?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.Kendaraan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.TujuanPerjalanan?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.TujuanPerjalanan?.toLowerCase().includes(
+          searchTerm.toLowerCase()
+        ) ||
         item.UnitBisnis?.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [data, searchTerm]);
 
+  // 📄 Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
@@ -31,29 +110,26 @@ const GAFSDriver = ({
 
   return (
     <div className="space-y-4">
-      {/* 🔹 Filter & Tombol Aksi */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <input
-          type="text"
-          placeholder="Cari driver / kendaraan / tujuan..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          onClick={onAdd}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          ➕ Tambah
-        </button>
-        <button
-          onClick={onExport}
-          disabled={data.length === 0}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-        >
-          📊 Ekspor
-        </button>
-      </div>
+      {/* 🔹 Header dengan tombol Upload */}
+      <Header
+        title="Driver Report"
+        selectedUnit={selectedUnit}
+        setSelectedUnit={setSelectedUnit}
+        units={units}
+        selectedYear={selectedYear}
+        setSelectedYear={setSelectedYear}
+        showUpload={true}
+        onUpload={() => document.getElementById("driverUpload").click()}
+      />
+
+      {/* 🔹 Input file tersembunyi */}
+      <input
+        id="driverUpload"
+        type="file"
+        accept=".xlsx, .xls"
+        onChange={handleUpload}
+        className="hidden"
+      />
 
       {/* 🔹 Tabel Data */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
@@ -80,7 +156,10 @@ const GAFSDriver = ({
             <tbody className="divide-y divide-gray-200">
               {paginatedData.length === 0 ? (
                 <tr>
-                  <td colSpan="12" className="px-4 py-6 text-center text-gray-500">
+                  <td
+                    colSpan="12"
+                    className="px-4 py-6 text-center text-gray-500"
+                  >
                     Tidak ada data.
                   </td>
                 </tr>
@@ -97,7 +176,9 @@ const GAFSDriver = ({
                     <td className="px-4 py-2">{item.JamKembali || "-"}</td>
                     <td className="px-4 py-2">{item.KMAwal || "-"}</td>
                     <td className="px-4 py-2">{item.KMAkhir || "-"}</td>
-                    <td className="px-4 py-2">{item.TujuanPerjalanan || "-"}</td>
+                    <td className="px-4 py-2">
+                      {item.TujuanPerjalanan || "-"}
+                    </td>
                     <td className="px-4 py-2">{item.UnitBisnis || "-"}</td>
                     <td className="px-4 py-2">{item.Catatan || "-"}</td>
                     <td className="px-4 py-2 flex gap-2">
