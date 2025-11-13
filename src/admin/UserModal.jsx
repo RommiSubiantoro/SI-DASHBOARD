@@ -4,6 +4,7 @@ import Select from "react-select";
 
 const roleOptions = [
   { value: "GA/FS", label: "GA/FS" },
+  { value: "Marketing", label: "Marketing" },
   { value: "Operation", label: "Operation" },
   { value: "User", label: "User" },
   { value: "Supervisor", label: "Supervisor" },

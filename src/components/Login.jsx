@@ -94,8 +94,7 @@ const Login = () => {
 
       const userDoc = emailSnapshot.docs[0];
       const userData = userDoc.data();
-
-      console.log("User Data:", userData);
+      
       // 🔹 Tangani baik string maupun array
       let roleData = userData.role;
 
@@ -105,8 +104,6 @@ const Login = () => {
       } else if (typeof roleData === "string" && roleData.trim() !== "") {
         roles = [roleData.toLowerCase()];
       }
-
-      console.log("Roles yang diambil:", roles);
 
       // Simpan ke localStorage
       localStorage.setItem("userUid", userDoc.id);
@@ -124,8 +121,8 @@ const Login = () => {
         navigate("/user");
       } else if (roles.includes("operation")) {
         navigate("/operation");
-      } else if (roles.includes("ga/fs")) {
-        navigate("/gafs");
+      } else if (roles.includes("marketing")) {
+        navigate("/marketing");
       } else {
         setError(`Role tidak dikenali: ${roles.join(", ")}`);
       }

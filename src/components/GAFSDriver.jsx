@@ -30,8 +30,6 @@ const GAFSDriver = ({
         const data = new Uint8Array(e.target.result);
         const workbook = XLSX.read(data, { type: "array" });
 
-        console.log("📄 Sheets ditemukan:", workbook.SheetNames);
-
         const sheet = workbook.Sheets["Driver Report"];
         if (!sheet) {
           alert("❌ Sheet 'Driver Report' tidak ditemukan di file Excel!");
@@ -39,7 +37,6 @@ const GAFSDriver = ({
         }
 
         const rows = XLSX.utils.sheet_to_json(sheet);
-        console.log("📊 Data dari sheet:", rows);
 
         if (rows.length === 0) {
           alert("❌ Sheet kosong atau format header salah!");
@@ -60,7 +57,6 @@ const GAFSDriver = ({
             Catatan: row["Catatan"] || "",
             createdAt: new Date(),
           });
-          console.log("✅ Dokumen berhasil disimpan ID:", docRef.id);
         }
 
         alert(

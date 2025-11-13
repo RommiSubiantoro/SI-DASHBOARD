@@ -27,6 +27,7 @@ import {
   onSnapshot,
   query,
   where,
+  limit,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -74,6 +75,7 @@ function AdminDashboard() {
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
+  const [masterCode, setMasterCode] = useState([]);
   const [viewData, setViewData] = useState([]);
 
   //gafs
@@ -158,7 +160,6 @@ function AdminDashboard() {
           console.log("🔥 CurrentUser dari Firestore:", data);
           setCurrentUser(data);
         } else {
-          
         }
       }
       setLoading(false);
@@ -490,25 +491,30 @@ function AdminDashboard() {
       alert("Unit atau tahun tidak valid");
       return;
     }
-    if (!window.confirm(`Yakin hapus semua data ${unitName} tahun ${year}?`))
+
+    if (!window.confirm(`⚠️ Yakin hapus semua data ${unitName} tahun ${year}?`))
       return;
+
+    setIsLoading(true);
     try {
-      setIsLoading(true);
-      const itemsRef = collection(
-        db,
-        `unitData/${unitName}/${year}/data/items`
-      );
-      const snap = await getDocs(itemsRef);
-      if (snap.empty) {
-        alert("Tidak ada data ditemukan.");
-        setIsLoading(false);
-        return;
-      }
-      const delPromises = snap.docs.map((d) =>
-        deleteDoc(doc(db, `unitData/${unitName}/${year}/data/items`, d.id))
-      );
-      await Promise.all(delPromises);
-      alert(`Semua data ${unitName} tahun ${year} telah dihapus.`);
+      const deleteAllDocs = async (path) => {
+        const colRef = collection(db, path);
+        const snap = await getDocs(colRef);
+
+        if (snap.empty) return;
+
+        console.log(`Menghapus ${snap.size} dokumen dari ${path}...`);
+
+        // 🔥 langsung hapus semuanya sekaligus
+        await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, path, d.id))));
+
+        console.log(`✅ Selesai hapus ${snap.size} dokumen dari ${path}`);
+      };
+
+      await deleteAllDocs(`unitData/${unitName}/${year}/data/items`);
+      await deleteAllDocs(`unitData/${unitName}/${year}/budget/items`);
+
+      alert(`✅ Semua data ${unitName} tahun ${year} berhasil dihapus.`);
       fetchUnitUploads();
     } catch (err) {
       console.error("handleDeleteAllRecords err:", err);
@@ -887,6 +893,75 @@ function AdminDashboard() {
   };
 
   const savedRoles = JSON.parse(localStorage.getItem("userRoles") || "[]");
+  // 🟢 Ambil data semua tahun (tanpa perlu pilih di header)
+  useEffect(() => {
+    const fetchAllBudgets = async () => {
+      if (!selectedUnit || masterCode.length === 0) return;
+
+      try {
+        const years = ["2024", "2025"]; // 🔸 kamu bisa tambah tahun lain di sini kalau perlu
+        const monthsUpper = [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC",
+        ];
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
+
+        let allBudgets = {};
+
+        for (const year of years) {
+          const colRef = collection(
+            db,
+            `unitData/${selectedUnit}/${year}/budget/items`
+          );
+          const snap = await getDocs(colRef);
+
+          let data = snap.docs.map((doc) => doc.data());
+          data = data.filter((item) => {
+            const rowCode = String(
+              item.accountCode || item["ACCOUNT CODE"] || ""
+            )
+              .toLowerCase()
+              .trim();
+            return validCodes.has(rowCode);
+          });
+
+          const grouped = {};
+          data.forEach((item) => {
+            const code = String(
+              item.accountCode || item["ACCOUNT CODE"] || ""
+            ).trim();
+            if (!grouped[code])
+              grouped[code] = { accountCode: code, totalBudget: 0 };
+            const total = monthsUpper.reduce(
+              (sum, m) => sum + (Number(item[m]) || 0),
+              0
+            );
+            grouped[code].totalBudget += total;
+          });
+
+          allBudgets[year] = Object.values(grouped);
+        }
+
+        setBudgetData(allBudgets);
+      } catch (error) {
+        console.error("❌ Gagal ambil data semua tahun:", error);
+      }
+    };
+
+    fetchAllBudgets();
+  }, [selectedUnit, masterCode]);
 
   return (
     <div className="min-h-screen bg-gray-100">

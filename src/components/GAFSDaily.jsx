@@ -13,25 +13,9 @@ const GAFSDaily = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedUnit, setSelectedUnit] = useState("");
-  const [units, setUnits] = useState([]);
   const [fetchedData, setFetchedData] = useState([]);
   const [selectedYear, setSelectedYear] = useState("2025");
   const itemsPerPage = 10;
-
-  // 🔄 Ambil data unit dari Firestore
-  useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "units"), (snapshot) => {
-      const unitsList = snapshot.docs.map((doc) => doc.data().name);
-      setUnits(unitsList);
-
-      if (unitsList.length > 0 && !selectedUnit) {
-        setSelectedUnit(unitsList[0]);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [selectedUnit]);
 
   // 🔄 Ambil data dari Firestore (koleksi daily_obcs)
   useEffect(() => {
@@ -40,7 +24,6 @@ const GAFSDaily = ({
         id: doc.id,
         ...doc.data(),
       }));
-      console.log("📥 Data dari Firestore:", fetched);
       setFetchedData(fetched);
     });
     return () => unsubscribe();
@@ -102,12 +85,9 @@ const GAFSDaily = ({
 
   return (
     <div className="space-y-4">
-      {/* 🔹 Header dengan tombol Upload */}
+      {/* 🔹 Header dengan filter Tahun dan Upload */}
       <Header
         title="Daily OB/CS Report"
-        selectedUnit={selectedUnit}
-        setSelectedUnit={setSelectedUnit}
-        units={units}
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
         showUpload={true}

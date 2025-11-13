@@ -25,8 +25,6 @@ const GAFSATK = ({ onAdd, onEdit, onDelete, onExport }) => {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: "array" });
 
-      console.log("📄 Sheets ditemukan:", workbook.SheetNames);
-
       // ✅ Pastikan sheet "ATKRTG Report" ada
       if (!workbook.Sheets["ATKRTG Report"]) {
         alert("❌ Sheet 'ATKRTG Report' tidak ditemukan di file Excel!");
@@ -35,7 +33,6 @@ const GAFSATK = ({ onAdd, onEdit, onDelete, onExport }) => {
 
       // 🔹 Ambil data dari sheet "ATKRTG Report"
       const sheet = XLSX.utils.sheet_to_json(workbook.Sheets["ATKRTG Report"]);
-      console.log("📊 Data dari sheet:", sheet);
 
       if (sheet.length === 0) {
         alert("⚠️ Sheet 'ATKRTG Report' kosong, tidak ada data yang disimpan.");
@@ -92,7 +89,6 @@ const GAFSATK = ({ onAdd, onEdit, onDelete, onExport }) => {
           id: doc.id,
           ...doc.data(),
         }));
-        console.log("📥 Data dari Firestore:", fetched);
         setFetchedData(fetched);
       }
     );

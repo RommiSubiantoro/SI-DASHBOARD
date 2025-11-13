@@ -46,6 +46,7 @@ const UserManagement = ({
             >
               <option value="">Semua Role</option>
               <option value="GA/FS">GA/FS</option>
+              <option value="Marketing">Marketing</option>
               <option value="Operation">Operation</option>
               <option value="User">User</option>
               <option value="Supervisor">Supervisor</option>
@@ -221,6 +222,8 @@ const UserManagement = ({
                                   ? "bg-green-600 text-white"
                                   : r === "User"
                                   ? "bg-yellow-600 text-white"
+                                   : r === "Marketing"
+                                  ? "bg-purple-600 text-white"
                                   : "bg-gray-400 text-white";
 
                               return (

@@ -45,7 +45,7 @@ const LibraryCode = () => {
         const sheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(sheet);
 
-        console.log("Excel data:", jsonData);
+        // console.log("Excel data:", jsonData);
 
         for (const row of jsonData) {
           const newData = {

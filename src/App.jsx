@@ -56,9 +56,9 @@ function App() {
         />
 
         <Route
-          path="/gafs"
+          path="/marketing"
           element={
-            <ProtectedRoute allowedRoles={["ga/fs", "Super Admin"]}>
+            <ProtectedRoute allowedRoles={["marketing"]}>
               <GAFSDashPages />
             </ProtectedRoute>
           }

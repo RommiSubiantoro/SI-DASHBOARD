@@ -2,15 +2,17 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
 
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [masterCode, setMasterCode] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
   const [budgetData, setBudgetData] = useState({});
   const [actData2024, setActData2024] = useState([]);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [loadingReload, setLoadingReload] = useState(false); // 🔹 indikator loading
 
-  // 🟢 Ambil masterCode sekali
+  // 🟢 Ambil masterCode
   useEffect(() => {
     const fetchMaster = async () => {
       try {
@@ -27,13 +29,24 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     fetchMaster();
   }, []);
 
-  // 📅 Bulan tetap, tidak perlu dalam dependency
   const months = useMemo(
-    () => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+    () => [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
     []
   );
 
-  // 🧩 Map kode untuk pencocokan cepat
   const codeMap = useMemo(() => {
     const map = new Map();
     masterCode.forEach((m) => {
@@ -47,55 +60,95 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     [masterCode]
   );
 
-  // 🟢 Ambil data budget (1x per perubahan unit/tahun/masterCode)
+  // 🟢 Ambil data budget
+  // 🟢 Ambil data semua tahun (tanpa perlu pilih di header)
   useEffect(() => {
-    const fetchBudget = async () => {
-      if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
+    const fetchAllBudgets = async () => {
+      if (!selectedUnit || masterCode.length === 0) return;
 
       try {
-        const colRef = collection(db, `unitData/${selectedUnit}/${selectedYear}/budget/items`);
-        const snap = await getDocs(colRef);
-        let data = snap.docs.map((doc) => doc.data());
+        const years = ["2024", "2025"]; // 🔸 kamu bisa tambah tahun lain di sini kalau perlu
+        const monthsUpper = [
+          "JAN",
+          "FEB",
+          "MAR",
+          "APR",
+          "MAY",
+          "JUN",
+          "JUL",
+          "AUG",
+          "SEP",
+          "OCT",
+          "NOV",
+          "DEC",
+        ];
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
 
-        // Filter hanya kode yang valid
-        const validCodes = new Set(masterCode.map((m) => String(m.code).toLowerCase().trim()));
-        data = data.filter((item) => {
-          const rowCode = String(item.accountCode || item["ACCOUNT CODE"] || "").toLowerCase().trim();
-          return validCodes.has(rowCode);
-        });
+        let allBudgets = {};
 
-        const grouped = {};
-        const monthsUpper = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-        data.forEach((item) => {
-          const code = String(item.accountCode || item["ACCOUNT CODE"] || "").trim();
-          if (!grouped[code]) grouped[code] = { accountCode: code, totalBudget: 0 };
+        for (const year of years) {
+          const colRef = collection(
+            db,
+            `unitData/${selectedUnit}/${year}/budget/items`
+          );
+          const snap = await getDocs(colRef);
 
-          const total = monthsUpper.reduce((sum, m) => sum + (Number(item[m]) || 0), 0);
-          grouped[code].totalBudget += total;
-        });
+          let data = snap.docs.map((doc) => doc.data());
+          data = data.filter((item) => {
+            const rowCode = String(
+              item.accountCode || item["ACCOUNT CODE"] || ""
+            )
+              .toLowerCase()
+              .trim();
+            return validCodes.has(rowCode);
+          });
 
-        setBudgetData((prev) => ({
-          ...prev,
-          [selectedYear]: Object.values(grouped),
-        }));
+          const grouped = {};
+          data.forEach((item) => {
+            const code = String(
+              item.accountCode || item["ACCOUNT CODE"] || ""
+            ).trim();
+            if (!grouped[code])
+              grouped[code] = { accountCode: code, totalBudget: 0 };
+            const total = monthsUpper.reduce(
+              (sum, m) => sum + (Number(item[m]) || 0),
+              0
+            );
+            grouped[code].totalBudget += total;
+          });
+
+          allBudgets[year] = Object.values(grouped);
+        }
+
+        setBudgetData(allBudgets);
       } catch (error) {
-        console.error("❌ Gagal ambil data budget:", error);
+        console.error("❌ Gagal ambil data semua tahun:", error);
       }
     };
-    fetchBudget();
-  }, [selectedUnit, selectedYear, masterCode]);
 
-  // 🔹 Filter data actual berdasarkan unit bisnis
+    fetchAllBudgets();
+  }, [selectedUnit, masterCode]);
+
+  // 🔹 Filter data actual berdasarkan unit
   const filteredData = useMemo(() => {
     if (!currentData.length || !selectedUnit) return [];
 
-    const normalize = (v) => String(v || "").toLowerCase().trim();
+    const normalize = (v) =>
+      String(v || "")
+        .toLowerCase()
+        .trim();
 
     if (normalize(selectedUnit).includes("samudera agencies indonesia gena")) {
-      return currentData.filter((i) => i.businessLine && normalize(i.businessLine).includes("age06"));
+      return currentData.filter(
+        (i) => i.businessLine && normalize(i.businessLine).includes("age06")
+      );
     }
     if (normalize(selectedUnit).includes("samudera agencies indonesia local")) {
-      return currentData.filter((i) => i.businessLine && normalize(i.businessLine).includes("age11"));
+      return currentData.filter(
+        (i) => i.businessLine && normalize(i.businessLine).includes("age11")
+      );
     }
     if (normalize(selectedUnit).includes("samudera agencies indonesia")) {
       return currentData.filter(
@@ -108,16 +161,21 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     return currentData;
   }, [currentData, selectedUnit]);
 
-  // 🔹 Simpan ACT 2024 hanya saat data tahun 2024
+  // 🔹 Simpan ACT 2024
   useEffect(() => {
     if (selectedYear === "2024" && filteredData.length > 0) {
       setActData2024(filteredData);
+    } else if (selectedYear === "2024" && filteredData.length === 0) {
+      setActData2024([]); // kosongkan jika belum ada data
     }
   }, [filteredData, selectedYear]);
 
-  // 🧮 Hitung summary
+  // 🧮 Hitung summary (termasuk trigger reload)
   useEffect(() => {
     if (!masterCode.length) return setSummaryData([]);
+
+    setLoadingReload(true); // 🔹 mulai animasi loading
+    const timeout = setTimeout(() => setLoadingReload(false), 800); // 🔹 stop animasi setelah sedikit waktu
 
     const budgetForYear = budgetData[selectedYear] || [];
     const actPrev = actData2024 || [];
@@ -135,14 +193,16 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       const totalActPrev = actPrev
         .filter(matchCat)
         .reduce(
-          (sum, row) => sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
+          (sum, row) =>
+            sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
           0
         );
 
       const totalActNow = filteredData
         .filter(matchCat)
         .reduce(
-          (sum, row) => sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
+          (sum, row) =>
+            sum + months.reduce((acc, m) => acc + (Number(row[m]) || 0), 0),
           0
         );
 
@@ -153,8 +213,12 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       const aVsCValue = totalActNow - totalActPrev;
       const bVsCValue = totalActNow - totalBdgt;
 
-      const aVsCPercent = totalActPrev ? ((totalActNow / totalActPrev) - 1) * 100 : null;
-      const bVsCPercent = totalBdgt ? ((totalActNow / totalBdgt) - 1) * 100 : null;
+      const aVsCPercent = totalActPrev
+        ? (totalActNow / totalActPrev - 1) * 100
+        : null;
+      const bVsCPercent = totalBdgt
+        ? (totalActNow / totalBdgt - 1) * 100
+        : null;
 
       return {
         description: cat,
@@ -184,7 +248,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       };
     });
 
-    // 🧮 Tambah Gross Profit manual
+    // 🧮 Gross Profit
     const service = summary.find((r) => r.description === "Service Revenue");
     const cost = summary.find((r) => r.description === "Cost Of Service");
     if (service && cost) {
@@ -200,13 +264,17 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         act2025: formatNumber(act2025),
         aVsC: {
           value: act2025 - act2024,
-          percent: act2024 ? ((act2025 / act2024) - 1) * 100 : null,
-          text: `${act2024 ? ((act2025 / act2024 - 1) * 100).toFixed(1) + "%" : "-"} (${formatNumber(act2025 - act2024)})`,
+          percent: act2024 ? (act2025 / act2024 - 1) * 100 : null,
+          text: `${
+            act2024 ? ((act2025 / act2024 - 1) * 100).toFixed(1) + "%" : "-"
+          } (${formatNumber(act2025 - act2024)})`,
         },
         bVsC: {
           value: act2025 - bdgt2025,
-          percent: bdgt2025 ? ((act2025 / bdgt2025) - 1) * 100 : null,
-          text: `${bdgt2025 ? ((act2025 / bdgt2025 - 1) * 100).toFixed(1) + "%" : "-"} (${formatNumber(act2025 - bdgt2025)})`,
+          percent: bdgt2025 ? (act2025 / bdgt2025 - 1) * 100 : null,
+          text: `${
+            bdgt2025 ? ((act2025 / bdgt2025 - 1) * 100).toFixed(1) + "%" : "-"
+          } (${formatNumber(act2025 - bdgt2025)})`,
         },
       });
     }
@@ -219,10 +287,22 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       "Other Income (Expenses)",
       "Pajak",
     ];
-    summary.sort((a, b) => order.indexOf(a.description) - order.indexOf(b.description));
+    summary.sort(
+      (a, b) => order.indexOf(a.description) - order.indexOf(b.description)
+    );
 
     setSummaryData(summary);
-  }, [filteredData, budgetData, actData2024, masterCode, selectedYear, categories, codeMap]);
+    return () => clearTimeout(timeout);
+  }, [
+    filteredData,
+    budgetData,
+    actData2024,
+    masterCode,
+    selectedYear,
+    categories,
+    codeMap,
+    reloadKey,
+  ]);
 
   return (
     <div className="bg-white p-6 rounded-xl shadow mt-10">
@@ -231,6 +311,22 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           Summary Dashboard —{" "}
           <span className="text-blue-600">{selectedYear || "Pilih Tahun"}</span>
         </h2>
+
+        {/* 🔄 Tombol Reload */}
+        <button
+          onClick={() => setReloadKey(Date.now())}
+          disabled={loadingReload}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition ${
+            loadingReload
+              ? "bg-gray-400 cursor-not-allowed text-white"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
+        >
+          <RefreshCcw
+            className={`w-4 h-4 ${loadingReload ? "animate-spin" : ""}`}
+          />
+          {loadingReload ? "Loading..." : "Reload Data"}
+        </button>
       </div>
 
       <table className="w-full border-collapse text-sm">
@@ -238,8 +334,12 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           <tr className="bg-red-500 text-left">
             <th className="border p-2 text-white">DESCRIPTION</th>
             <th className="border p-2 text-right text-white">ACT 2024</th>
-            <th className="border p-2 text-right text-white">BDGT {selectedYear}</th>
-            <th className="border p-2 text-right text-white">ACT {selectedYear}</th>
+            <th className="border p-2 text-right text-white">
+              BDGT {selectedYear}
+            </th>
+            <th className="border p-2 text-right text-white">
+              ACT {selectedYear}
+            </th>
             <th className="border p-2 text-right text-white">A VS C</th>
             <th className="border p-2 text-right text-white">B VS C</th>
           </tr>
