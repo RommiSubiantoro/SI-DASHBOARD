@@ -259,20 +259,35 @@ const UserDashboard = () => {
 
   const handleImportBudget = async (event) => {
     const file = event.target.files[0];
-    if (!file)
-      return alert("⚠️ Harap pilih file Excel Budget terlebih dahulu!");
+    if (!file) return alert("⚠️ Harap pilih file Excel Budget!");
+    if (!file.name.endsWith(".xlsx"))
+      return alert("❌ Harap upload file .xlsx yang valid!");
+
     if (!selectedUnit || !selectedYear)
-      return alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu!");
+      return alert("⚠️ Pilih Unit & Tahun dulu!");
 
     try {
       const reader = new FileReader();
+
       reader.onload = async (e) => {
         const data = new Uint8Array(e.target.result);
-        const workbook = XLSX.read(data, { type: "array" });
+
+        if (data.length < 50) {
+          alert("❌ File Excel corrupt atau tidak valid ZIP!");
+          return;
+        }
+
+        const workbook = XLSX.read(data, {
+          type: "array",
+          cellDates: true,
+          cellNF: false,
+          cellFormula: false,
+          cellText: false,
+        });
+
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet);
 
-        // Simpan semua data ke Firestore
         const colRef = collection(
           db,
           `unitData/${selectedUnit}/${selectedYear}/budget/items`
@@ -282,13 +297,13 @@ const UserDashboard = () => {
           await addDoc(colRef, row);
         }
 
-        alert("✅ Semua data budget berhasil di-upload ke Firestore!");
+        alert("✅ Semua data budget berhasil di-upload!");
       };
 
       reader.readAsArrayBuffer(file);
     } catch (error) {
       console.error("❌ Gagal upload budget:", error);
-      alert("Gagal upload: " + error.message);
+      alert("❌ Error: " + error.message);
     }
   };
 
@@ -309,7 +324,7 @@ const UserDashboard = () => {
       <aside className="h-screen bg-red-500 border-r shadow-lg flex flex-col">
         <div className="p-4">
           <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">
-            Finance Report
+            User Panel
           </h2>
         </div>
         <nav className="flex-1 p-4 space-y-2">
@@ -344,7 +359,7 @@ const UserDashboard = () => {
             selectedUnit={selectedUnit}
             setSelectedUnit={setSelectedUnit}
             units={assignedUnits}
-            title={activeMenu === "dashboard" ? "Finance Dashboard" : "View Table"}
+            title={activeMenu === "dashboard" ? "User Dashboard" : "View Table"}
             selectedYear={selectedYear}
             setSelectedYear={setSelectedYear}
           />

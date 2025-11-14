@@ -139,7 +139,7 @@ export default function Barchart({
 
       {/* Chart */}
       {isLoading ? (
-        <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
+        <p className="text-center text-gray-500">⏳ Memuat data...</p>
       ) : chartData.length > 0 ? (
         <div className="w-full h-120 bg-gray-50 rounded-lg p-4">
           <ResponsiveContainer width="100%" height="100%">
