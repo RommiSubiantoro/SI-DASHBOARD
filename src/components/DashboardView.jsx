@@ -60,31 +60,38 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     [masterCode]
   );
 
-  // 🟢 Ambil data budget
+  // 🟢 Ambil data semua tahun (tanpa perlu pilih di header)
   // 🟢 Ambil data semua tahun (tanpa perlu pilih di header)
   useEffect(() => {
     const fetchAllBudgets = async () => {
       if (!selectedUnit || masterCode.length === 0) return;
 
       try {
-        const years = ["2024", "2025"]; // 🔸 kamu bisa tambah tahun lain di sini kalau perlu
-        const monthsUpper = [
-          "JAN",
-          "FEB",
-          "MAR",
-          "APR",
-          "MAY",
-          "JUN",
-          "JUL",
-          "AUG",
-          "SEP",
-          "OCT",
-          "NOV",
-          "DEC",
-        ];
+        const years = ["2024", "2025"]; // Bisa ditambah bila perlu
+
+        // Normalisasi kode dari masterCode
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
         );
+
+        // Helper untuk ambil kode dari item budget
+        const extractCode = (item) =>
+          String(
+            item.accountCode ||
+              item["ACCOUNT CODE"] ||
+              item["AccountCode"] ||
+              item["account_code"] ||
+              item["Code"] ||
+              ""
+          )
+            .toLowerCase()
+            .trim();
+
+        // Helper ambil nilai bulan
+        const getMonthValue = (item, m) =>
+          Number(
+            item[m] || item[m.toLowerCase()] || item[m.toUpperCase()] || 0
+          );
 
         let allBudgets = {};
 
@@ -96,26 +103,38 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           const snap = await getDocs(colRef);
 
           let data = snap.docs.map((doc) => doc.data());
-          data = data.filter((item) => {
-            const rowCode = String(
-              item.accountCode || item["ACCOUNT CODE"] || ""
-            )
-              .toLowerCase()
-              .trim();
-            return validCodes.has(rowCode);
-          });
 
+          // Filter hanya kode yang ada di masterCode
+          data = data.filter((item) => validCodes.has(extractCode(item)));
+
+          // Group per akun
           const grouped = {};
           data.forEach((item) => {
-            const code = String(
-              item.accountCode || item["ACCOUNT CODE"] || ""
-            ).trim();
+            const code = extractCode(item);
             if (!grouped[code])
               grouped[code] = { accountCode: code, totalBudget: 0 };
+
+            const monthsUpper = [
+              "JAN",
+              "FEB",
+              "MAR",
+              "APR",
+              "MAY",
+              "JUN",
+              "JUL",
+              "AUG",
+              "SEP",
+              "OCT",
+              "NOV",
+              "DEC",
+            ];
+
+            // Hitung total
             const total = monthsUpper.reduce(
-              (sum, m) => sum + (Number(item[m]) || 0),
+              (sum, m) => sum + getMonthValue(item, m),
               0
             );
+
             grouped[code].totalBudget += total;
           });
 
@@ -132,6 +151,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   }, [selectedUnit, masterCode]);
 
   // 🔹 Filter data actual berdasarkan unit
+  // 🔹 Filter data actual berdasarkan unit (tanpa lagi GEN99 dan AGE11)
   const filteredData = useMemo(() => {
     if (!currentData.length || !selectedUnit) return [];
 
@@ -140,24 +160,8 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .toLowerCase()
         .trim();
 
-    if (normalize(selectedUnit).includes("samudera agencies indonesia gena")) {
-      return currentData.filter(
-        (i) => i.businessLine && normalize(i.businessLine).includes("age06")
-      );
-    }
-    if (normalize(selectedUnit).includes("samudera agencies indonesia local")) {
-      return currentData.filter(
-        (i) => i.businessLine && normalize(i.businessLine).includes("age11")
-      );
-    }
-    if (normalize(selectedUnit).includes("samudera agencies indonesia")) {
-      return currentData.filter(
-        (i) =>
-          i.businessLine &&
-          !normalize(i.businessLine).includes("age06") &&
-          !normalize(i.businessLine).includes("age11")
-      );
-    }
+    // Tidak ada lagi filter berdasarkan businessLine GEN99 / AGE11
+    // Jika future ingin filter berdasarkan unitName → logic bisa ditambah di sini
     return currentData;
   }, [currentData, selectedUnit]);
 

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// src/pages/UserDashboard.jsx
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
 import {
@@ -24,6 +25,11 @@ import DashboardView from "../components/DashboardView";
 // Custom hook
 import { useDataManagement } from "../hooks/useDataManagement";
 
+/**
+ * Helper: cek apakah string valid (bukan null/undefined/empty/whitespace)
+ */
+const isValidString = (s) => typeof s === "string" && s.trim() !== "";
+
 const UserDashboard = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedMonth, setSelectedMonth] = useState("Jan");
@@ -36,159 +42,318 @@ const UserDashboard = () => {
   const [budgetData, setBudgetData] = useState([]);
   const [budgetFile, setBudgetFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeMenu, setActiveMenu] = useState("dashboard"); // 🔹 Menu aktif
+  const [activeMenu, setActiveMenu] = useState("dashboard");
 
-  // 🔹 Ambil unit bisnis user berdasarkan auth
+  // refs to keep track of active unsubscribes and mounted state
+  const listenersRef = useRef({
+    userListener: null,
+    unitsListener: null,
+    dataListener: null,
+  });
+  const isMountedRef = useRef(true);
+
+  // Custom hook import/export
+  const { exportToExcel, importFromExcelToFirebase, importBudgetFromExcel } =
+    useDataManagement({});
+
+  // --- AUTH: ambil assignedUnits dari dokumen users ---
   useEffect(() => {
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (user) {
-        const q = query(collection(db, "users"), where("uid", "==", user.uid));
+    isMountedRef.current = true;
 
-        const unsubscribeUser = onSnapshot(q, (snapshot) => {
-          if (!snapshot.empty) {
-            const userData = snapshot.docs[0].data();
-            const units = Array.isArray(userData.unitBisnis)
+    // subscribe auth state one time
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      // clear previous user listener if any
+      if (listenersRef.current.userListener) {
+        listenersRef.current.userListener();
+        listenersRef.current.userListener = null;
+      }
+
+      if (!user) {
+        setAssignedUnits([]);
+        // don't force redirect here - keep UI simple
+        return;
+      }
+
+      try {
+        const q = query(collection(db, "users"), where("uid", "==", user.uid));
+        const unsub = onSnapshot(
+          q,
+          (snapshot) => {
+            if (!isMountedRef.current) return;
+            if (snapshot.empty) {
+              setAssignedUnits([]);
+              return;
+            }
+            const doc = snapshot.docs[0];
+            const userData = doc.data() || {};
+            const unitsFromUser = Array.isArray(userData.unitBisnis)
               ? userData.unitBisnis
               : [];
 
-            setAssignedUnits(units);
-            if (units.length > 0 && !selectedUnit) setSelectedUnit(units[0]);
-          }
-        });
+            setAssignedUnits(unitsFromUser);
 
-        return () => unsubscribeUser();
+            // set selectedUnit only if not set or invalid
+            setSelectedUnit((prev) => {
+              if (!isValidString(prev) && unitsFromUser.length > 0) {
+                return unitsFromUser[0];
+              }
+              // If prev is valid and exists in assigned list, keep it.
+              if (isValidString(prev) && unitsFromUser.includes(prev)) return prev;
+              // Otherwise fallback to first if available
+              return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
+            });
+          },
+          (error) => {
+            console.error("❌ users onSnapshot error:", error);
+          }
+        );
+
+        listenersRef.current.userListener = unsub;
+      } catch (error) {
+        console.error("❌ Error setting user listener:", error);
       }
     });
 
-    return () => unsubscribeAuth();
-  }, [selectedUnit]);
+    listenersRef.current.unitsListener = null; // will be set in next effect
 
-  // 🔹 Ambil daftar semua unit
+    return () => {
+      isMountedRef.current = false;
+      if (listenersRef.current.userListener) listenersRef.current.userListener();
+      unsubscribeAuth();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // run once on mount
+
+  // --- Ambil daftar semua unit (static list) ---
   useEffect(() => {
-    const unsubscribeUnits = onSnapshot(collection(db, "units"), (snapshot) => {
-      const list = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setUnits(list);
-    });
-    return () => unsubscribeUnits();
+    const colRef = collection(db, "units");
+    const unsub = onSnapshot(
+      colRef,
+      (snapshot) => {
+        if (!isMountedRef.current) return;
+        const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setUnits(list);
+      },
+      (error) => {
+        console.error("❌ units onSnapshot error:", error);
+      }
+    );
+    listenersRef.current.unitsListener = unsub;
+    return () => {
+      if (listenersRef.current.unitsListener) {
+        listenersRef.current.unitsListener();
+        listenersRef.current.unitsListener = null;
+      }
+    };
   }, []);
 
-  // 🔹 Ambil masterCode
+  // --- Ambil masterCode (cached fetch sekali, safe) ---
   useEffect(() => {
+    let cancelled = false;
     const fetchMaster = async () => {
       try {
         const snap = await getDocs(collection(db, "masterCode"));
-        const data = snap.docs.map((doc) => doc.data());
-        setMasterCode(data);
+        if (cancelled) return;
+        const data = snap.docs.map((doc) => doc.data() || {});
+        // normalisasi: pastikan code ada dan string
+        const normalized = data
+          .filter((d) => d && (d.code || d.code === 0))
+          .map((d) => ({ ...d, code: String(d.code).trim() }));
+        if (isMountedRef.current) setMasterCode(normalized);
       } catch (error) {
         console.error("❌ Gagal ambil masterCode di UserDashboard:", error);
       }
     };
     fetchMaster();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // 🔹 Import & Export dari hook custom
-  const { exportToExcel, importFromExcelToFirebase, importBudgetFromExcel } =
-    useDataManagement({});
+  // --- Realtime listener untuk data (protected by strict validation) ---
+  const setupDataListener = useCallback(() => {
+    // cleanup previous data listener
+    if (listenersRef.current.dataListener) {
+      listenersRef.current.dataListener();
+      listenersRef.current.dataListener = null;
+    }
 
-  // 🔹 Listener realtime Firestore
-  useEffect(() => {
-    if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
+    if (!isValidString(selectedUnit)) {
+     
+      return;
+    }
+    if (!isValidString(selectedYear)) {
+      
+      return;
+    }
+    if (!Array.isArray(masterCode) || masterCode.length === 0) {
+      
+      return;
+    }
 
-    const colRef = collection(
-      db,
-      `unitData/${selectedUnit}/${selectedYear}/data/items`
-    );
+    // double-check path segments are safe (no slashes, no empty)
+    if (selectedUnit.includes("/") || selectedYear.includes("/")) {
+      console.error("❌ Invalid characters in selectedUnit/selectedYear");
+      return;
+    }
 
-    const unsubscribe = onSnapshot(colRef, (snapshot) => {
-      const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ✅ Filter hanya yang "Debit"
-      let debitData = rawData.filter((item) => item.type === "Debit");
-
-      // ✅ Filter berdasarkan kode yang valid di masterCode
-      const validCodes = new Set(
-        masterCode.map((m) => String(m.code).toLowerCase().trim())
+    try {
+      const colRef = collection(
+        db,
+        `unitData/${selectedUnit}/${selectedYear}/data/items`
       );
 
-      debitData = debitData.filter((item) => {
-        const code = String(item.accountCode || "")
-          .toLowerCase()
-          .trim();
-        return validCodes.has(code);
-      });
+      const unsub = onSnapshot(
+        colRef,
+        (snapshot) => {
+          if (!isMountedRef.current) return;
+          const rawData = snapshot.docs.map((doc) => doc.data() || {});
 
-      // ✅ Kelompokkan per akun
-      const grouped = {};
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
-        if (!grouped[key]) {
-          grouped[key] = {
-            accountName: item.accountName,
-            accountCode: item.accountCode,
-            category: item.category,
-            area: item.area,
-            businessLine: item.businessLine,
-            Jan: 0,
-            Feb: 0,
-            Mar: 0,
-            Apr: 0,
-            May: 0,
-            Jun: 0,
-            Jul: 0,
-            Aug: 0,
-            Sep: 0,
-            Oct: 0,
-            Nov: 0,
-            Dec: 0,
-          };
+          // Filter hanya yang "Debit"
+          let debitData = rawData.filter((item) => item.type === "Debit");
+
+          // Filter berdasarkan kode yang valid di masterCode
+          const validCodes = new Set(
+            masterCode.map((m) => String(m.code).toLowerCase().trim())
+          );
+
+          debitData = debitData.filter((item) => {
+            const code = String(item.accountCode || "").toLowerCase().trim();
+            return validCodes.has(code);
+          });
+
+          // Kelompokkan per akun
+          const grouped = {};
+          debitData.forEach((item) => {
+            const key = `${item.accountCode || ""}-${
+              item.category || ""
+            }-${item.area || ""}-${item.businessLine || ""}`.trim();
+            if (!grouped[key]) {
+              grouped[key] = {
+                accountName: item.accountName || "",
+                accountCode: item.accountCode || "",
+                category: item.category || "",
+                area: item.area || "",
+                businessLine: item.businessLine || "",
+                Jan: 0,
+                Feb: 0,
+                Mar: 0,
+                Apr: 0,
+                May: 0,
+                Jun: 0,
+                Jul: 0,
+                Aug: 0,
+                Sep: 0,
+                Oct: 0,
+                Nov: 0,
+                Dec: 0,
+              };
+            }
+            // guard against invalid month names
+            const month = String(item.month || "").trim();
+            if (grouped[key].hasOwnProperty(month)) {
+              grouped[key][month] += Number(item.docValue) || 0;
+            }
+          });
+
+          setCurrentData(Object.values(grouped));
+        },
+        (error) => {
+          console.error("❌ data onSnapshot error:", error);
+          // if Firestore returns 400 Bad Request, this will surface here.
+          // We're not auto-alerting user every time to avoid spam.
         }
-        grouped[key][item.month] += item.docValue;
-      });
+      );
 
-      setCurrentData(Object.values(grouped));
-    });
-
-    return () => unsubscribe();
+      listenersRef.current.dataListener = unsub;
+    } catch (error) {
+      console.error("❌ Exception creating data listener:", error);
+    }
   }, [selectedUnit, selectedYear, masterCode]);
 
+  // call setupDataListener when deps change
   useEffect(() => {
+    setupDataListener();
+    // cleanup on unmount handled inside setupDataListener via listenersRef
+    return () => {
+      // leave cleanup to setupDataListener next invocation or unmount
+    };
+  }, [setupDataListener]);
+
+  // --- Fetch budget data (one-time per selectedUnit/selectedYear when masterCode ready) ---
+  useEffect(() => {
+    let cancelled = false;
     const fetchBudget = async () => {
-      if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
+      if (!isValidString(selectedUnit) || !isValidString(selectedYear)) return;
+      if (!Array.isArray(masterCode) || masterCode.length === 0) return;
       try {
         const colRef = collection(
           db,
           `unitData/${selectedUnit}/${selectedYear}/budget/items`
         );
         const snap = await getDocs(colRef);
-        let data = snap.docs.map((doc) => doc.data());
+        if (cancelled || !isMountedRef.current) return;
 
-        // ✅ Normalisasi dan filter berdasarkan code dari masterCode
+        let data = snap.docs.map((doc) => doc.data() || {});
+
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
         );
-        data = data.filter((item) => {
-          const rowCode = String(
+
+        const getCode = (item) =>
+          String(
             item.accountCode ||
               item.AccountCode ||
-              item.account_code ||
               item["ACCOUNT CODE"] ||
+              item.account_code ||
+              item.Code ||
               ""
           )
             .toLowerCase()
             .trim();
-          return validCodes.has(rowCode);
-        });
 
-        console.log("✅ Budget data fetched & filtered:", data);
-        setBudgetData(data);
+        const calcTotal = (item) => {
+          let total = 0;
+          for (const key in item) {
+            const low = key.toLowerCase();
+            if (
+              low.includes("jan") ||
+              low.includes("feb") ||
+              low.includes("mar") ||
+              low.includes("apr") ||
+              low.includes("may") ||
+              low.includes("jun") ||
+              low.includes("jul") ||
+              low.includes("aug") ||
+              low.includes("sep") ||
+              low.includes("oct") ||
+              low.includes("nov") ||
+              low.includes("dec")
+            ) {
+              total += Number(item[key]) || 0;
+            }
+          }
+          return total;
+        };
+
+        data = data.filter((item) => validCodes.has(getCode(item)));
+
+        const final = data.map((item) => ({
+          accountCode: getCode(item),
+          totalBudget: calcTotal(item),
+        }));
+
+        setBudgetData(final);
       } catch (error) {
         console.error("❌ Gagal ambil data budget:", error);
       }
     };
+
     fetchBudget();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedUnit, selectedYear, masterCode]);
 
   // ====== HANDLERS ======
@@ -228,7 +393,7 @@ const UserDashboard = () => {
   ];
 
   const handleExportExcel = () => {
-    if (!selectedUnit || !selectedYear) {
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
       alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum export!");
       return;
     }
@@ -237,7 +402,7 @@ const UserDashboard = () => {
 
   const handleImportData = async (event) => {
     const file = event.target.files[0];
-    if (!selectedUnit || !selectedYear) {
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
       alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum import!");
       return;
     }
@@ -263,7 +428,7 @@ const UserDashboard = () => {
     if (!file.name.endsWith(".xlsx"))
       return alert("❌ Harap upload file .xlsx yang valid!");
 
-    if (!selectedUnit || !selectedYear)
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear))
       return alert("⚠️ Pilih Unit & Tahun dulu!");
 
     try {
@@ -317,6 +482,15 @@ const UserDashboard = () => {
     localStorage.setItem("dashboard", page);
   };
 
+  // Cleanup on unmount: unsubscribe any leftover listeners
+  useEffect(() => {
+    return () => {
+      if (listenersRef.current.userListener) listenersRef.current.userListener();
+      if (listenersRef.current.unitsListener) listenersRef.current.unitsListener();
+      if (listenersRef.current.dataListener) listenersRef.current.dataListener();
+    };
+  }, []);
+
   // ====== RENDER ======
   return (
     <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
@@ -357,11 +531,18 @@ const UserDashboard = () => {
         <main className="flex-1 p-6 space-y-6 pt-20">
           <Header
             selectedUnit={selectedUnit}
-            setSelectedUnit={setSelectedUnit}
+            setSelectedUnit={(u) => {
+              // safe setter: only accept valid strings
+              if (!isValidString(u)) return;
+              setSelectedUnit(u);
+            }}
             units={assignedUnits}
             title={activeMenu === "dashboard" ? "User Dashboard" : "View Table"}
             selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
+            setSelectedYear={(y) => {
+              if (!isValidString(y)) return;
+              setSelectedYear(y);
+            }}
           />
 
           <ControlButtons
@@ -390,7 +571,6 @@ const UserDashboard = () => {
 
           {activeMenu === "viewTable" && (
             <>
-              {/* 🔹 DashboardView dipindah ke sini */}
               <DashboardView
                 currentData={currentData}
                 masterCodeData={masterCode}
