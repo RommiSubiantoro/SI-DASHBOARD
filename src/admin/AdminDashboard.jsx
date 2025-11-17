@@ -672,14 +672,85 @@ function AdminDashboard() {
   };
 
   const handleImportData = async (event) => {
-    const file = event.target.files ? event.target.files[0] : event;
-    if (!file) return;
+    const file = event.target.files[0];
+
+    // ✅ Fungsi pengecekan string valid
+    const isValidString = (str) => typeof str === "string" && str.trim() !== "";
+
+    // ⚠️ Validasi input sebelum import
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
+      alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum import!");
+      return;
+    }
+
+    if (file) {
+      try {
+        setIsLoading(true); // menampilkan loading
+
+        // Import data dari Excel ke Firebase
+        await importFromExcelToFirebase(selectedUnit, file, selectedYear);
+
+        console.log("🔥 Import selesai, data Firestore akan update otomatis");
+        alert("✅ Data berhasil diimport dan chart diperbarui!");
+
+        // Reset input file agar bisa import ulang file yang sama
+        event.target.value = "";
+      } catch (error) {
+        console.error("Import failed:", error);
+        alert("❌ Gagal import data: " + error.message);
+      } finally {
+        setIsLoading(false); // hilangkan loading
+      }
+    }
+  };
+
+  const handleImportBudget = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return alert("⚠️ Harap pilih file Excel Budget!");
+    if (!file.name.endsWith(".xlsx"))
+      return alert("❌ Harap upload file .xlsx yang valid!");
+
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear))
+      return alert("⚠️ Pilih Unit & Tahun dulu!");
+
     try {
-      const message = await importFromExcelToFirebase(selectedUnit, file);
-      alert("✅ " + message);
-      if (event.target) event.target.value = "";
-    } catch (err) {
-      alert("❌ " + err);
+      const reader = new FileReader();
+
+      reader.onload = async (e) => {
+        const data = new Uint8Array(e.target.result);
+
+        if (data.length < 50) {
+          alert("❌ File Excel corrupt atau tidak valid ZIP!");
+          return;
+        }
+
+        const workbook = XLSX.read(data, {
+          type: "array",
+          cellDates: true,
+          cellNF: false,
+          cellFormula: false,
+          cellText: false,
+        });
+
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+
+        const colRef = collection(
+          db,
+          `unitData/${selectedUnit}/${selectedYear}/budget/items`
+        );
+
+        for (const row of rows) {
+          await addDoc(colRef, row);
+        }
+
+        alert("✅ Semua data budget berhasil di-upload!");
+      };
+
+      reader.readAsArrayBuffer(file);
+    } catch (error) {
+      console.error("❌ Gagal upload budget:", error);
+      alert("❌ Error: " + error.message);
     }
   };
 
@@ -1020,6 +1091,7 @@ function AdminDashboard() {
                 setSelectedMonth={setSelectedMonth}
                 handleExportExcel={handleExportExcel}
                 handleImportData={(e) => handleImportData(e)}
+                handleImportBudget={handleImportBudget}
                 handleExportPDF={handleExportPDF}
               />
             </div>

@@ -1,13 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import {
-  PieChart,
-  Pie,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-  Legend,
-  LabelList,
-} from "recharts";
+import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -45,13 +37,59 @@ export default function Piechart({
   selectedYear,
   selectedMonth,
   setSelectedMonth,
+  mode = "default",
 }) {
   const [masterCode, setMasterCode] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
+  // =======================================
+  // FORMAT RUPIAH
+  // =======================================
+  const formatRupiah = (value) =>
+    "Rp " + Number(value).toLocaleString("id-ID");
+
+  // =======================================
+  // MODE ATK (langsung proses data)
+  // =======================================
   useEffect(() => {
+    if (mode !== "atk") return;
+
+    const grouped = {};
+
+    data.forEach((item) => {
+      const name =
+        item.Barang_yang_Diminta ||
+        item.nama_barang ||
+        item.Barang ||
+        "Unknown";
+
+      const value =
+        Number(item.Jumlah_Diminta) ||
+        Number(item.jumlah) ||
+        Number(item.total) ||
+        0;
+
+      if (value > 0) {
+        grouped[name] = (grouped[name] || 0) + value;
+      }
+    });
+
+    const result = Object.entries(grouped).map(([name, value]) => ({
+      name,
+      value,
+    }));
+
+    setChartData(result);
+  }, [data, mode]);
+
+  // =======================================
+  // MODE LAMA — MASTER CODE
+  // =======================================
+  useEffect(() => {
+    if (mode === "atk") return;
+
     const fetchMaster = async () => {
       try {
         setIsLoading(true);
@@ -66,14 +104,19 @@ export default function Piechart({
     };
 
     fetchMaster();
-  }, [selectedYear, data]);
+  }, [selectedYear, data, mode]);
 
   const categories = useMemo(() => {
-    const unique = [...new Set(masterCode.map((m) => m.category))];
-    return unique;
-  }, [masterCode]);
+    if (mode === "atk") return [];
+    return [...new Set(masterCode.map((m) => m.category))];
+  }, [masterCode, mode]);
 
+  // =======================================
+  // PROSES DATA PIE — MODE LAMA
+  // =======================================
   useEffect(() => {
+    if (mode === "atk") return;
+
     if (data.length === 0 || masterCode.length === 0) {
       setChartData([]);
       return;
@@ -104,7 +147,6 @@ export default function Piechart({
         }
       });
 
-      // 🔹 Hitung total dan persentase
       const total = Object.values(groupedByCategory).reduce(
         (sum, val) => sum + val,
         0
@@ -138,7 +180,7 @@ export default function Piechart({
           match?.description ||
           match?.accountName ||
           item.accountName ||
-          "Unknown Account";
+          "Unknown";
         const value = getValue(item);
         grouped[name] = (grouped[name] || 0) + Math.abs(value);
       });
@@ -149,83 +191,86 @@ export default function Piechart({
 
       setChartData(result);
     }
-  }, [selectedCategory, selectedMonth, data, masterCode]);
+  }, [selectedCategory, selectedMonth, data, masterCode, mode]);
+
+  const showFilters = mode !== "atk";
+
+  const renderLabel = ({ name, percent }) => {
+    return `${name} (${(percent * 100).toFixed(0)}%)`;
+  };
 
   return (
     <div className="p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
-      <h2 className="text-xl font-semibold mb-4 text-center">
-        📊 Pie Chart: Perbandingan Kategori & Detail
-      </h2>
-
-      {/* Dropdown */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div>
-          <label className="block mb-1 font-medium">Pilih Kategori</label>
-          <select
-            className="border px-3 py-2 rounded-lg w-full text-sm"
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            <option value="ALL">Semua Kategori</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block mb-1 font-medium">Pilih Bulan</label>
-          <select
-            className="border px-3 py-2 rounded-lg w-full text-sm"
-            value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
-          >
-            {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {m === "ALL" ? "Semua Bulan" : m}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      {/* Chart */}
-      {isLoading ? (
-        <p className="text-gray-500 text-center mt-6">⏳ Memuat data...</p>
-      ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={380}>
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              cx="50%"
-              cy="50%"
-              outerRadius={150}
-              
+      {showFilters && (
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div>
+            <label className="block mb-1 font-medium">Pilih Kategori</label>
+            <select
+              className="border px-3 py-2 rounded-lg w-full text-sm"
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
             >
-              {chartData.map((_, index) => (
-                <Cell key={index} fill={COLORS[index % COLORS.length]} />
+              <option value="ALL">Semua Kategori</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
-            </Pie>
-            <Tooltip
-              formatter={(value, name, props) =>
-                selectedCategory === "ALL"
-                  ? [
-                      `Rp ${value.toLocaleString()} (${props.payload.percentage})`,
-                      name,
-                    ]
-                  : [`Rp ${value.toLocaleString()}`, name]
-              }
-              contentStyle={{ fontSize: "10px" }}
-            />
-            <Legend wrapperStyle={{ fontSize: "10px" }} iconSize={10} />
-          </PieChart>
-        </ResponsiveContainer>
-      ) : (
-        <p className="text-gray-500 text-center mt-6">
+            </select>
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">Pilih Bulan</label>
+            <select
+              className="border px-3 py-2 rounded-lg w-full text-sm"
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+            >
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m === "ALL" ? "Semua Bulan" : m}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* ======================== CHART ======================== */}
+      <ResponsiveContainer width="100%" height={500}>
+        <PieChart>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={150}
+          >
+            {chartData.map((_, i) => (
+              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            ))}
+          </Pie>
+
+          {/* Tooltip format rupiah */}
+          <Tooltip formatter={(value) => formatRupiah(value)} />
+
+          {/* Legend format rupiah + kecil */}
+          <Legend
+            formatter={(value, entry) =>
+              `${value} (${formatRupiah(entry.payload.value)})`
+            }
+            wrapperStyle={{
+              fontSize: "6px",
+              marginBottom: "1px",
+              paddingTop: "7px",
+            }}
+          />
+        </PieChart>
+      </ResponsiveContainer>
+
+      {chartData.length === 0 && (
+        <p className="text-gray-500 text-center mt-4">
           Tidak ada data untuk pilihan ini.
         </p>
       )}

@@ -5,6 +5,7 @@ import ExporttableChart from "../components/ExporttableChart";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
+import ControlButtons from "../components/ControlButtons";
 
 const DashboardPage = ({
   selectedUnit,
@@ -17,6 +18,7 @@ const DashboardPage = ({
   setSelectedMonth,
   handleExportExcel,
   handleImportData,
+  handleImportBudget,
   handleExportPDF,
 }) => {
   return (
@@ -28,6 +30,13 @@ const DashboardPage = ({
         selectedYear={selectedYear}
         setSelectedYear={setSelectedYear}
         title="Admin Dashboard"
+      />
+      <ControlButtons
+        onImportData={handleImportData}
+        onImportBudget={handleImportBudget}
+        onExportExcel={handleExportExcel}
+        showImportButton
+        showExportButtons
       />
 
       <div className="w-full flex flex-col gap-6">
@@ -58,7 +67,7 @@ const DashboardPage = ({
 
           <div className="w-full mt-6">
             <div className="p-2 shadow rounded-lg bg-white">
-              <Linechart data={currentData} />
+              <Linechart data={currentData} SelectedYear={selectedYear} />
             </div>
           </div>
         </ExporttableChart>

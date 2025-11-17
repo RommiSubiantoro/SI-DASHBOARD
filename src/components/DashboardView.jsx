@@ -160,8 +160,6 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .toLowerCase()
         .trim();
 
-    // Tidak ada lagi filter berdasarkan businessLine GEN99 / AGE11
-    // Jika future ingin filter berdasarkan unitName → logic bisa ditambah di sini
     return currentData;
   }, [currentData, selectedUnit]);
 

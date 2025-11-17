@@ -98,7 +98,8 @@ const UserDashboard = () => {
                 return unitsFromUser[0];
               }
               // If prev is valid and exists in assigned list, keep it.
-              if (isValidString(prev) && unitsFromUser.includes(prev)) return prev;
+              if (isValidString(prev) && unitsFromUser.includes(prev))
+                return prev;
               // Otherwise fallback to first if available
               return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
             });
@@ -118,7 +119,8 @@ const UserDashboard = () => {
 
     return () => {
       isMountedRef.current = false;
-      if (listenersRef.current.userListener) listenersRef.current.userListener();
+      if (listenersRef.current.userListener)
+        listenersRef.current.userListener();
       unsubscribeAuth();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -131,7 +133,10 @@ const UserDashboard = () => {
       colRef,
       (snapshot) => {
         if (!isMountedRef.current) return;
-        const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        const list = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setUnits(list);
       },
       (error) => {
@@ -172,26 +177,15 @@ const UserDashboard = () => {
 
   // --- Realtime listener untuk data (protected by strict validation) ---
   const setupDataListener = useCallback(() => {
-    // cleanup previous data listener
     if (listenersRef.current.dataListener) {
       listenersRef.current.dataListener();
       listenersRef.current.dataListener = null;
     }
 
-    if (!isValidString(selectedUnit)) {
-     
-      return;
-    }
-    if (!isValidString(selectedYear)) {
-      
-      return;
-    }
-    if (!Array.isArray(masterCode) || masterCode.length === 0) {
-      
-      return;
-    }
+    if (!isValidString(selectedUnit)) return;
+    if (!isValidString(selectedYear)) return;
+    if (!Array.isArray(masterCode) || masterCode.length === 0) return;
 
-    // double-check path segments are safe (no slashes, no empty)
     if (selectedUnit.includes("/") || selectedYear.includes("/")) {
       console.error("❌ Invalid characters in selectedUnit/selectedYear");
       return;
@@ -209,25 +203,29 @@ const UserDashboard = () => {
           if (!isMountedRef.current) return;
           const rawData = snapshot.docs.map((doc) => doc.data() || {});
 
-          // Filter hanya yang "Debit"
-          let debitData = rawData.filter((item) => item.type === "Debit");
+          // Ambil data Debit & Credit
+          let filteredData = rawData.filter(
+            (item) => item.type === "Debit" || item.type === "Credit"
+          );
 
-          // Filter berdasarkan kode yang valid di masterCode
+          // Filter berdasarkan masterCode
           const validCodes = new Set(
             masterCode.map((m) => String(m.code).toLowerCase().trim())
           );
 
-          debitData = debitData.filter((item) => {
-            const code = String(item.accountCode || "").toLowerCase().trim();
+          filteredData = filteredData.filter((item) => {
+            const code = String(item.accountCode || "")
+              .toLowerCase()
+              .trim();
             return validCodes.has(code);
           });
 
-          // Kelompokkan per akun
+          // Grouping
           const grouped = {};
-          debitData.forEach((item) => {
-            const key = `${item.accountCode || ""}-${
-              item.category || ""
-            }-${item.area || ""}-${item.businessLine || ""}`.trim();
+          filteredData.forEach((item) => {
+            const key = `${item.accountCode || ""}-${item.category || ""}-${
+              item.area || ""
+            }-${item.businessLine || ""}`.trim();
             if (!grouped[key]) {
               grouped[key] = {
                 accountName: item.accountName || "",
@@ -249,10 +247,13 @@ const UserDashboard = () => {
                 Dec: 0,
               };
             }
-            // guard against invalid month names
+
             const month = String(item.month || "").trim();
             if (grouped[key].hasOwnProperty(month)) {
-              grouped[key][month] += Number(item.docValue) || 0;
+              // Jika Debit dan Credit sama-sama ditambahkan, gunakan ini:
+              const value = Number(item.docValue) || 0;
+
+              grouped[key][month] += value;
             }
           });
 
@@ -260,8 +261,6 @@ const UserDashboard = () => {
         },
         (error) => {
           console.error("❌ data onSnapshot error:", error);
-          // if Firestore returns 400 Bad Request, this will surface here.
-          // We're not auto-alerting user every time to avoid spam.
         }
       );
 
@@ -485,9 +484,12 @@ const UserDashboard = () => {
   // Cleanup on unmount: unsubscribe any leftover listeners
   useEffect(() => {
     return () => {
-      if (listenersRef.current.userListener) listenersRef.current.userListener();
-      if (listenersRef.current.unitsListener) listenersRef.current.unitsListener();
-      if (listenersRef.current.dataListener) listenersRef.current.dataListener();
+      if (listenersRef.current.userListener)
+        listenersRef.current.userListener();
+      if (listenersRef.current.unitsListener)
+        listenersRef.current.unitsListener();
+      if (listenersRef.current.dataListener)
+        listenersRef.current.dataListener();
     };
   }, []);
 
@@ -564,7 +566,10 @@ const UserDashboard = () => {
                   selectedYear={selectedYear}
                 />
                 <Barchart data={currentData} selectedYear={selectedYear} />
-                <Linechart data={currentData} />
+              </div>
+
+              <div className="p-2 shadow rounded-lg bg-white">
+                <Linechart data={currentData} selectedYear={selectedYear} />
               </div>
             </>
           )}

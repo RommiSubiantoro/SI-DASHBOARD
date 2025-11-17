@@ -63,6 +63,7 @@ export const useDataManagement = (initialData = {}) => {
   ) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
+
       reader.onload = async (e) => {
         try {
           const workbook = XLSX.read(e.target.result, { type: "binary" });
@@ -71,8 +72,11 @@ export const useDataManagement = (initialData = {}) => {
           const data = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
           for (const row of data) {
-            if (row["Dr/Cr"] !== "Debit") continue;
+            // Hanya ambil baris Debit atau Credit
+            const typeValue = row["Dr/Cr"];
+            if (typeValue !== "Debit" && typeValue !== "Credit") continue;
 
+            // Convert Excel timestamp to JS date
             const jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
             const month = jsDate.toLocaleString("en-US", { month: "short" });
             const cleanValue = parseFloat(row["Doc Value"]) || 0;
@@ -92,14 +96,14 @@ export const useDataManagement = (initialData = {}) => {
                   accountCode: row["Account Code"] || "-",
                   category: row["El4 short name"] || "-",
                   area: row["Location"] || "-",
-                  businessLine: row["Business Line"] || ["Alocation"] || [""],
+                  businessLine: row["Business Line"] || "-",
                   month,
                   docValue: cleanValue,
-                  type: row["Dr/Cr"],
+                  type: typeValue, // Debit / Credit
                 }
               );
             } catch (err) {
-              console.warn("Lewati data duplikat:", err.message);
+              console.warn("Lewati karena error / duplikat:", err.message);
             }
           }
 
@@ -108,6 +112,7 @@ export const useDataManagement = (initialData = {}) => {
           reject(error);
         }
       };
+
       reader.readAsBinaryString(file);
     });
   };

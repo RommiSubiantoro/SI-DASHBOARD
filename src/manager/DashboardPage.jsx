@@ -51,7 +51,9 @@ const DashboardPage = ({
 
           <div className="w-full mt-6">
             <div className="p-2 shadow rounded-lg bg-white">
-              <Linechart data={currentData} />
+              <Linechart
+               data={currentData} 
+               selectedYear={selectedYear}/>
             </div>
           </div>
         </ExporttableChart>
