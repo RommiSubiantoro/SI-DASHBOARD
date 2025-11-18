@@ -250,10 +250,12 @@ const UserDashboard = () => {
 
             const month = String(item.month || "").trim();
             if (grouped[key].hasOwnProperty(month)) {
-              // Jika Debit dan Credit sama-sama ditambahkan, gunakan ini:
-              const value = Number(item.docValue) || 0;
+              // applies to Admin, Manager, Supervisor, User
+              const value = parseFloat(item.docValue) || 0;
+              const signedValue =
+                item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
 
-              grouped[key][month] += value;
+              grouped[key][item.month] += signedValue;
             }
           });
 

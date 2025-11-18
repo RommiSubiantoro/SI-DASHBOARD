@@ -182,7 +182,11 @@ function ManagerDashboard() {
           };
         }
 
-        grouped[key][item.month] += item.docValue || 0;
+        const value = parseFloat(item.docValue) || 0;
+        const signedValue =
+          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
+
+        grouped[key][item.month] += signedValue;
       });
 
       setViewData(Object.values(grouped));
@@ -203,15 +207,16 @@ function ManagerDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
-      // Filter hanya Debit
-      let debitData = rawData.filter((item) => item.type === "Debit");
+      // ⛔ Tidak filter type → Debit + Kredit
+      let data = rawData;
 
-      // Jika masterCode tersedia, filter sesuai kode valid
+      // Jika ada masterCode → filter berdasarkan accountCode
       if (masterCode.length > 0) {
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
         );
-        debitData = debitData.filter((item) =>
+
+        data = data.filter((item) =>
           validCodes.has(
             String(item.accountCode || "")
               .toLowerCase()
@@ -220,10 +225,12 @@ function ManagerDashboard() {
         );
       }
 
-      // Group data per akun
+      // Grouping
       const grouped = {};
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
+      data.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -231,6 +238,7 @@ function ManagerDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type, // ⬅️ Penting supaya Debit & Kredit terpisah
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -245,7 +253,12 @@ function ManagerDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue || 0;
+
+        const value = parseFloat(item.docValue) || 0;
+        const signedValue =
+          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
+
+        grouped[key][item.month] += signedValue;
       });
 
       setCurrentData(Object.values(grouped));
