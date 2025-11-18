@@ -149,13 +149,16 @@ function ManagerDashboard() {
     if (!selectedUnit) return;
 
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
+
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-      const debitData = rawData.filter((item) => item.type === "Debit");
 
+      // ⛔ Tidak ada filter Debit lagi → Debit + Kredit akan diambil
       const grouped = {};
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
+      rawData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -163,6 +166,7 @@ function ManagerDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type, // ⬅️ Simpan jenis transaksi
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -177,6 +181,7 @@ function ManagerDashboard() {
             Dec: 0,
           };
         }
+
         grouped[key][item.month] += item.docValue || 0;
       });
 

@@ -76,16 +76,20 @@ const MasterCode = ({
   };
 
   const save = async () => {
+    const trimmedCode = (code || "").trim();
+    const trimmedAccountName = (accountName || "").trim();
+    const trimmedDescription = (description || "").trim();
+
     if (!primaryCategory) return alert("Pilih kategori utama");
-    if (!code.trim()) return alert("Pilih atau isi kode");
-    if (!accountName.trim()) return alert("Account Name tidak boleh kosong");
-    if (!description.trim()) return alert("Deskripsi tidak boleh kosong");
+    if (!trimmedCode) return alert("Pilih atau isi kode");
+    if (!trimmedAccountName) return alert("Account Name tidak boleh kosong");
+    if (!trimmedDescription) return alert("Deskripsi tidak boleh kosong");
 
     const payload = {
       category: primaryCategory,
-      code: code.trim(),
-      accountName: accountName.trim(),
-      description: description.trim(),
+      code: trimmedCode,
+      accountName: trimmedAccountName,
+      description: trimmedDescription,
     };
 
     if (editing) await onEditCode({ ...editing, ...payload });
@@ -131,7 +135,9 @@ const MasterCode = ({
         {/* 🔹 Form input */}
         <div className="mb-6 grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Description</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              Description
+            </label>
             <select
               value={primaryCategory}
               onChange={(e) => setPrimaryCategory(e.target.value)}
@@ -161,7 +167,9 @@ const MasterCode = ({
           </div>
 
           <div>
-            <label className="block text-sm text-gray-600 mb-1">Account Name</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              Account Name
+            </label>
             <input
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
@@ -182,11 +190,17 @@ const MasterCode = ({
         </div>
 
         <div className="flex gap-2 mb-6">
-          <button onClick={save} className="px-4 py-2 bg-green-600 text-white rounded-lg">
+          <button
+            onClick={save}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg"
+          >
             {editing ? "Update Code" : "Simpan Code"}
           </button>
           {editing && (
-            <button onClick={() => setEditing(null)} className="px-4 py-2 bg-gray-400 text-white rounded-lg">
+            <button
+              onClick={() => setEditing(null)}
+              className="px-4 py-2 bg-gray-400 text-white rounded-lg"
+            >
               Batal
             </button>
           )}
@@ -207,9 +221,17 @@ const MasterCode = ({
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan="6" className="px-4 py-6 text-center">Loading...</td></tr>
+                <tr>
+                  <td colSpan="6" className="px-4 py-6 text-center">
+                    Loading...
+                  </td>
+                </tr>
               ) : filteredCodes.length === 0 ? (
-                <tr><td colSpan="6" className="px-4 py-6 text-center">Tidak ditemukan.</td></tr>
+                <tr>
+                  <td colSpan="6" className="px-4 py-6 text-center">
+                    Tidak ditemukan.
+                  </td>
+                </tr>
               ) : (
                 filteredCodes.map((c, i) => (
                   <tr key={c.id} className="hover:bg-gray-50">
@@ -218,14 +240,22 @@ const MasterCode = ({
                     <td className="px-4 py-3">{c.code}</td>
                     <td className="px-4 py-3">{c.accountName}</td>
                     <td className="px-4 py-3">
-                      {Array.isArray(c.description) ? c.description.join(", ") : c.description || "-"}
+                      {Array.isArray(c.description)
+                        ? c.description.join(", ")
+                        : c.description || "-"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-2">
-                        <button onClick={() => setEditing(c)} className="px-3 py-1 bg-blue-100 text-blue-700 rounded">Edit</button>
+                        <button
+                          onClick={() => setEditing(c)}
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded"
+                        >
+                          Edit
+                        </button>
                         <button
                           onClick={() => {
-                            if (window.confirm(`Hapus code "${c.code}"?`)) onDeleteCode(c);
+                            if (window.confirm(`Hapus code "${c.code}"?`))
+                              onDeleteCode(c);
                           }}
                           className="px-3 py-1 bg-red-100 text-red-700 rounded"
                         >
@@ -239,7 +269,6 @@ const MasterCode = ({
             </tbody>
           </table>
         </div>
-
       </div>
     </div>
   );

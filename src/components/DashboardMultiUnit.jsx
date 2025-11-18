@@ -4,13 +4,33 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 const MONTH_MAP = {
-  Jan: 1, Feb: 2, Mar: 3, Apr: 4, May: 5, Jun: 6,
-  Jul: 7, Aug: 8, Sep: 9, Oct: 10, Nov: 11, Dec: 12,
+  Jan: 1,
+  Feb: 2,
+  Mar: 3,
+  Apr: 4,
+  May: 5,
+  Jun: 6,
+  Jul: 7,
+  Aug: 8,
+  Sep: 9,
+  Oct: 10,
+  Nov: 11,
+  Dec: 12,
 };
 
 // Urutan kategori tetap
@@ -29,7 +49,7 @@ const CATEGORY_MAP = {
   "Cost Of Service": "Cost of Service",
   "General & Administration Expense": "General & Administration Expenses",
   "Other Income (Expenses)": "Other Income/Expense",
-  "Pajak": "Pajak",
+  Pajak: "Pajak",
 };
 
 const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
@@ -38,7 +58,9 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   const [summaryData, setSummaryData] = useState({});
   const [loading, setLoading] = useState(true);
 
-  const [selectedYear, setSelectedYear] = useState(initialYear || new Date().getFullYear());
+  const [selectedYear, setSelectedYear] = useState(
+    initialYear || new Date().getFullYear()
+  );
   const [selectedMonth, setSelectedMonth] = useState("All");
 
   // 🔹 Ambil daftar unit
@@ -83,15 +105,16 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           const snap = await getDocs(collection(db, path));
           const docs = snap.docs.map((doc) => doc.data());
 
-          // 🔹 Filter hanya tipe Debit, dan bulan jika bukan "All"
+          // 🔹 Ambil semua transaksi (Debit + Kredit)
           const filtered = docs.filter((d) => {
-            if (d.type !== "Debit") return false;
+            // Filter bulan jika bukan "All"
             if (selectedMonth === "All") return true;
+
             const monthNumber = MONTH_MAP[selectedMonth];
             return Number(d.month) === monthNumber;
           });
 
-          // 🔹 Loop tiap kategori di masterCode
+          // 🔹 Loop setiap kategori masterCode
           masterCode.forEach((m) => {
             const cat = CATEGORY_MAP[m.category] || m.category || "Lainnya";
             const code = String(m.code).trim();
@@ -100,6 +123,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
               (d) => String(d.accountCode).trim() === code
             );
 
+            // 🔹 Total Debit + Kredit
             const total = catItems.reduce(
               (sum, d) => sum + (parseFloat(d.docValue) || 0),
               0
@@ -164,7 +188,9 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             onChange={(e) => setSelectedYear(e.target.value)}
           >
             {[2023, 2024, 2025, 2026].map((year) => (
-              <option key={year} value={year}>{year}</option>
+              <option key={year} value={year}>
+                {year}
+              </option>
             ))}
           </select>
         </div>
@@ -180,7 +206,9 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           >
             <option value="All">Semua Bulan</option>
             {MONTHS.map((m) => (
-              <option key={m} value={m}>{m}</option>
+              <option key={m} value={m}>
+                {m}
+              </option>
             ))}
           </select>
         </div>
@@ -194,25 +222,52 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           <table className="w-full border-collapse text-sm text-center">
             <thead>
               <tr className="bg-yellow-400">
-                <th rowSpan="2" className="border px-3 py-2 text-left font-semibold bg-yellow-400">Description</th>
-                <th colSpan={unitList.length} className="border px-3 py-2 font-semibold bg-yellow-400">
-                  {selectedMonth === "All" ? "Semua Bulan" : selectedMonth} {selectedYear}
+                <th
+                  rowSpan="2"
+                  className="border px-3 py-2 text-left font-semibold bg-yellow-400"
+                >
+                  Description
                 </th>
-                <th rowSpan="2" className="border px-3 py-2 font-semibold bg-yellow-400">Total</th>
+                <th
+                  colSpan={unitList.length}
+                  className="border px-3 py-2 font-semibold bg-yellow-400"
+                >
+                  {selectedMonth === "All" ? "Semua Bulan" : selectedMonth}{" "}
+                  {selectedYear}
+                </th>
+                <th
+                  rowSpan="2"
+                  className="border px-3 py-2 font-semibold bg-yellow-400"
+                >
+                  Total
+                </th>
               </tr>
               <tr>
                 {unitList.map((unit) => (
-                  <th key={unit.id} className="border px-3 py-2 font-semibold bg-cyan-300">{unit.name}</th>
+                  <th
+                    key={unit.id}
+                    className="border px-3 py-2 font-semibold bg-cyan-300"
+                  >
+                    {unit.name}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {CUSTOM_ORDER.map((cat) => (
-                <tr key={cat} className="hover:bg-gray-50 transition duration-150">
-                  <td className="border px-3 py-2 text-left font-semibold">{cat}</td>
+                <tr
+                  key={cat}
+                  className="hover:bg-gray-50 transition duration-150"
+                >
+                  <td className="border px-3 py-2 text-left font-semibold">
+                    {cat}
+                  </td>
 
                   {unitList.map((unit) => (
-                    <td key={unit.id} className="border px-3 py-2 text-right text-gray-700">
+                    <td
+                      key={unit.id}
+                      className="border px-3 py-2 text-right text-gray-700"
+                    >
                       {getValue(cat, unit.name).toLocaleString("id-ID")}
                     </td>
                   ))}

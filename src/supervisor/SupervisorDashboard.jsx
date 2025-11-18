@@ -149,13 +149,16 @@ function SupervisorDashboard() {
     if (!selectedUnit) return;
 
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
+
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-      const debitData = rawData.filter((item) => item.type === "Debit");
 
+      // ⛔ Tidak ada filter Debit lagi → Debit + Kredit akan diambil
       const grouped = {};
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
+      rawData.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -163,6 +166,7 @@ function SupervisorDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type, // ⬅️ Simpan jenis transaksi
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -177,6 +181,7 @@ function SupervisorDashboard() {
             Dec: 0,
           };
         }
+
         grouped[key][item.month] += item.docValue || 0;
       });
 
@@ -198,15 +203,16 @@ function SupervisorDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
-      // Filter hanya Debit
-      let debitData = rawData.filter((item) => item.type === "Debit");
+      // ⛔ Tidak filter type → Debit + Kredit
+      let data = rawData;
 
-      // Jika masterCode tersedia, filter sesuai kode valid
+      // Jika ada masterCode → filter berdasarkan accountCode
       if (masterCode.length > 0) {
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
         );
-        debitData = debitData.filter((item) =>
+
+        data = data.filter((item) =>
           validCodes.has(
             String(item.accountCode || "")
               .toLowerCase()
@@ -215,10 +221,12 @@ function SupervisorDashboard() {
         );
       }
 
-      // Group data per akun
+      // Grouping
       const grouped = {};
-      debitData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
+      data.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -226,6 +234,7 @@ function SupervisorDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type, // ⬅️ Penting supaya Debit & Kredit terpisah
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -240,6 +249,7 @@ function SupervisorDashboard() {
             Dec: 0,
           };
         }
+
         grouped[key][item.month] += item.docValue || 0;
       });
 

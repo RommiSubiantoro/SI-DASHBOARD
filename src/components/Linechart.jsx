@@ -17,7 +17,7 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-// 🔹 Helper untuk parsing angka dari Excel (termasuk format (123))
+// 🔹 Helper parsing angka
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
@@ -40,7 +40,7 @@ export default function Linechart({
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [loading, setLoading] = useState(false);
 
-  // 🔹 Ambil masterCode dari Firestore
+  // 🔹 Ambil masterCode
   useEffect(() => {
     const fetchMasterCode = async () => {
       try {
@@ -57,19 +57,18 @@ export default function Linechart({
     fetchMasterCode();
   }, [selectedYear]);
 
-  // 🔹 Ambil kategori unik dari masterCode
+  // 🔹 Kategori unik
   const categories = useMemo(() => {
     if (masterCode.length === 0) return ["ALL"];
     const unique = [...new Set(masterCode.map((m) => m.category))];
     return ["ALL", ...unique];
   }, [masterCode]);
 
-  // 🔹 Hitung total per bulan berdasarkan kategori (pakai masterCode)
+  // 🔹 Hitung nilai per bulan
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0 || masterCode.length === 0)
       return [];
 
-    // Awal nilai per bulan
     const monthlyTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));
 
     data.forEach((row) => {
@@ -94,6 +93,11 @@ export default function Linechart({
     }));
   }, [data, masterCode, selectedCategory]);
 
+  // 🔹 Total keseluruhan
+  const totalValue = useMemo(() => {
+    return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
+  }, [chartData]);
+
   return (
     <div className="p-6 bg-white shadow-lg rounded-2xl">
       <div className="flex justify-between items-center mb-4">
@@ -101,7 +105,7 @@ export default function Linechart({
           📈 Line Chart Berdasarkan Kategori & Bulan
         </h3>
 
-        {/* 🔹 Dropdown filter tahun dan kategori */}
+        {/* Filter */}
         <div className="flex gap-3">
           <select
             value={selectedYear}
@@ -129,31 +133,38 @@ export default function Linechart({
       {loading ? (
         <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
       ) : chartData.length > 0 ? (
-        <ResponsiveContainer width="100%" height={380}>
-          <LineChart
-            data={chartData}
-            margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-            <YAxis tickFormatter={(val) => val.toLocaleString()} />
-            <Tooltip formatter={(v) => v.toLocaleString()} />
-            <Legend />
-            <Line
-              type="monotone"
-              dataKey="value"
-              name={
-                selectedCategory === "ALL"
-                  ? "Total Semua Kategori"
-                  : selectedCategory
-              }
-              stroke="#4f46e5"
-              strokeWidth={3}
-              dot={{ r: 4 }}
-              activeDot={{ r: 6 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
+        <>
+          <ResponsiveContainer width="100%" height={380}>
+            <LineChart
+              data={chartData}
+              margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+              <YAxis tickFormatter={(val) => val.toLocaleString()} />
+              <Tooltip formatter={(v) => v.toLocaleString()} />
+              <Legend />
+              <Line
+                type="monotone"
+                dataKey="value"
+                name={
+                  selectedCategory === "ALL"
+                    ? "Total Semua Kategori"
+                    : selectedCategory
+                }
+                stroke="#4f46e5"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+
+          {/* 🔹 Total Keseluruhan */}
+          <p className="text-center mt-4 font-semibold text-gray-700">
+            Total Keseluruhan: {totalValue.toLocaleString()}
+          </p>
+        </>
       ) : (
         <p className="text-center text-gray-500">
           Tidak ada data untuk kategori ini.

@@ -8,6 +8,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import * as XLSX from "xlsx";
@@ -61,60 +62,67 @@ export const useDataManagement = (initialData = {}) => {
     file,
     selectedYear
   ) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+    // ---- BACA FILE ----
+    const arrayBuffer = await file.arrayBuffer();
+    const workbook = XLSX.read(arrayBuffer, { type: "array" });
+    const sheetName = workbook.SheetNames[0];
+    const sheet = workbook.Sheets[sheetName];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-      reader.onload = async (e) => {
-        try {
-          const workbook = XLSX.read(e.target.result, { type: "binary" });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const data = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    // ---- FIRESTORE BASE PATH ----
+    const baseRef = collection(
+      db,
+      "unitData",
+      selectedUnit,
+      selectedYear,
+      "data",
+      "items"
+    );
 
-          for (const row of data) {
-            // Hanya ambil baris Debit atau Credit
-            const typeValue = row["Dr/Cr"];
-            if (typeValue !== "Debit" && typeValue !== "Credit") continue;
+    let batch = writeBatch(db);
+    let batchCounter = 0;
 
-            // Convert Excel timestamp to JS date
-            const jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
-            const month = jsDate.toLocaleString("en-US", { month: "short" });
-            const cleanValue = parseFloat(row["Doc Value"]) || 0;
+    for (const row of rows) {
+      // Filter Debit / Credit saja
+      const typeValue = row["Dr/Cr"];
+      if (typeValue !== "Debit" && typeValue !== "Credit") continue;
 
-            try {
-              await addDoc(
-                collection(
-                  db,
-                  "unitData",
-                  selectedUnit,
-                  selectedYear,
-                  "data",
-                  "items"
-                ),
-                {
-                  accountName: row["Line Desc."] || "-",
-                  accountCode: row["Account Code"] || "-",
-                  category: row["El4 short name"] || "-",
-                  area: row["Location"] || "-",
-                  businessLine: row["Business Line"] || "-",
-                  month,
-                  docValue: cleanValue,
-                  type: typeValue, // Debit / Credit
-                }
-              );
-            } catch (err) {
-              console.warn("Lewati karena error / duplikat:", err.message);
-            }
-          }
+      // Convert Excel date → JS Date
+      const jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
+      const month = jsDate.toLocaleString("en-US", { month: "short" });
 
-          resolve(true);
-        } catch (error) {
-          reject(error);
-        }
-      };
+      const cleanValue = parseFloat(row["Doc Value"]) || 0;
 
-      reader.readAsBinaryString(file);
-    });
+      // Dokumen baru
+      const newDoc = doc(baseRef);
+
+      batch.set(newDoc, {
+        accountName: row["Line Desc."] || "-",
+        accountCode: row["Account Code"] || "-",
+        category: row["El4 short name"] || "-",
+        area: row["Location"] || "-",
+        businessLine: row["Business Line"] || "-",
+        month,
+        docValue: cleanValue,
+        type: typeValue,
+      });
+
+      batchCounter++;
+
+      // Jika batch hampir penuh, kirim lalu buat batch baru
+      if (batchCounter >= 400) {
+        await batch.commit();
+        batch = writeBatch(db);
+        batchCounter = 0;
+      }
+    }
+
+    // Kirim sisa batch
+    if (batchCounter > 0) {
+      await batch.commit();
+    }
+
+    return true;
   };
 
   // 🔹 IMPORT SEMUA DATA BUDGET DARI EXCEL KE FIRESTORE

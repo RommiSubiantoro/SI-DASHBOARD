@@ -4,38 +4,31 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const COLORS = [
-  "#4facfe",
-  "#ff6b6b",
-  "#3ddb97",
-  "#ffa726",
-  "#8b5cf6",
-  "#f59e0b",
-  "#60a5fa",
-  "#ef4444",
-  "#10b981",
-  "#6366f1",
+  "#4facfe", "#ff6b6b", "#3ddb97", "#ffa726",
+  "#8b5cf6", "#f59e0b", "#60a5fa", "#ef4444",
+  "#10b981", "#6366f1",
 ];
 
-const MONTHS = [
-  "ALL",
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-];
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// 🔹 parseNumber sama seperti di BarChart
+function parseNumber(raw) {
+  if (raw === null || raw === undefined || raw === "") return 0;
+  let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
+  let isNeg = false;
+  if (/^\(.+\)$/.test(s)) {
+    isNeg = true;
+    s = s.replace(/^\(|\)$/g, "");
+  }
+  let n = Number(s);
+  if (Number.isNaN(n)) n = 0;
+  return isNeg ? -Math.abs(n) : n;
+}
 
 export default function Piechart({
   data = [],
   selectedYear,
-  selectedMonth,
+  selectedMonth = "ALL",
   setSelectedMonth,
   mode = "default",
 }) {
@@ -44,52 +37,12 @@ export default function Piechart({
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // =======================================
-  // FORMAT RUPIAH
-  // =======================================
   const formatRupiah = (value) =>
     "Rp " + Number(value).toLocaleString("id-ID");
 
-  // =======================================
-  // MODE ATK (langsung proses data)
-  // =======================================
-  useEffect(() => {
-    if (mode !== "atk") return;
-
-    const grouped = {};
-
-    data.forEach((item) => {
-      const name =
-        item.Barang_yang_Diminta ||
-        item.nama_barang ||
-        item.Barang ||
-        "Unknown";
-
-      const value =
-        Number(item.Jumlah_Diminta) ||
-        Number(item.jumlah) ||
-        Number(item.total) ||
-        0;
-
-      if (value > 0) {
-        grouped[name] = (grouped[name] || 0) + value;
-      }
-    });
-
-    const result = Object.entries(grouped).map(([name, value]) => ({
-      name,
-      value,
-    }));
-
-    setChartData(result);
-  }, [data, mode]);
-
-  // =======================================
-  // MODE LAMA — MASTER CODE
-  // =======================================
+  // Ambil masterCode
   useEffect(() => {
     if (mode === "atk") return;
-
     const fetchMaster = async () => {
       try {
         setIsLoading(true);
@@ -102,21 +55,12 @@ export default function Piechart({
         setIsLoading(false);
       }
     };
-
     fetchMaster();
   }, [selectedYear, data, mode]);
 
-  const categories = useMemo(() => {
-    if (mode === "atk") return [];
-    return [...new Set(masterCode.map((m) => m.category))];
-  }, [masterCode, mode]);
-
-  // =======================================
-  // PROSES DATA PIE — MODE LAMA
-  // =======================================
+  // Hitung chartData
   useEffect(() => {
     if (mode === "atk") return;
-
     if (data.length === 0 || masterCode.length === 0) {
       setChartData([]);
       return;
@@ -124,12 +68,12 @@ export default function Piechart({
 
     const getValue = (item) => {
       if (selectedMonth === "ALL") {
-        return MONTHS.slice(1).reduce(
-          (sum, m) => sum + (Number(item[m]) || 0),
+        return MONTHS.reduce(
+          (sum, m) => sum + Math.abs(parseNumber(item[m])),
           0
         );
       }
-      return Number(item[selectedMonth]) || 0;
+      return Math.abs(parseNumber(item[selectedMonth]));
     };
 
     if (selectedCategory === "ALL") {
@@ -143,7 +87,7 @@ export default function Piechart({
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
         if (match) {
-          groupedByCategory[match.category] += Math.abs(getValue(item));
+          groupedByCategory[match.category] += getValue(item);
         }
       });
 
@@ -182,7 +126,7 @@ export default function Piechart({
           item.accountName ||
           "Unknown";
         const value = getValue(item);
-        grouped[name] = (grouped[name] || 0) + Math.abs(value);
+        grouped[name] = (grouped[name] || 0) + value;
       });
 
       const result = Object.entries(grouped)
@@ -193,11 +137,12 @@ export default function Piechart({
     }
   }, [selectedCategory, selectedMonth, data, masterCode, mode]);
 
-  const showFilters = mode !== "atk";
+  // Total untuk tampil di bawah chart
+  const totalValue = useMemo(() => {
+    return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
+  }, [chartData]);
 
-  const renderLabel = ({ name, percent }) => {
-    return `${name} (${(percent * 100).toFixed(0)}%)`;
-  };
+  const showFilters = mode !== "atk";
 
   return (
     <div className="p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
@@ -211,10 +156,8 @@ export default function Piechart({
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
               <option value="ALL">Semua Kategori</option>
-              {categories.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
+              {[...new Set(masterCode.map((m) => m.category))].map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
               ))}
             </select>
           </div>
@@ -226,17 +169,13 @@ export default function Piechart({
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
-              {MONTHS.map((m) => (
-                <option key={m} value={m}>
-                  {m === "ALL" ? "Semua Bulan" : m}
-                </option>
-              ))}
+              <option value="ALL">Semua Bulan</option>
+              {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
             </select>
           </div>
         </div>
       )}
 
-      {/* ======================== CHART ======================== */}
       <ResponsiveContainer width="100%" height={500}>
         <PieChart>
           <Pie
@@ -252,22 +191,19 @@ export default function Piechart({
             ))}
           </Pie>
 
-          {/* Tooltip format rupiah */}
-          <Tooltip formatter={(value) => formatRupiah(value)} />
-
-          {/* Legend format rupiah + kecil */}
+          <Tooltip formatter={(value) => "Rp " + Number(value).toLocaleString("id-ID")} />
           <Legend
             formatter={(value, entry) =>
-              `${value} (${formatRupiah(entry.payload.value)})`
+              `${value} (${"Rp " + Number(entry.payload.value).toLocaleString("id-ID")})`
             }
-            wrapperStyle={{
-              fontSize: "6px",
-              marginBottom: "1px",
-              paddingTop: "7px",
-            }}
+            wrapperStyle={{ fontSize: "8px" }}
           />
         </PieChart>
       </ResponsiveContainer>
+
+      <p className="text-center mt-4 font-semibold text-gray-700">
+        Total Keseluruhan: Rp {totalValue.toLocaleString("id-ID")}
+      </p>
 
       {chartData.length === 0 && (
         <p className="text-gray-500 text-center mt-4">

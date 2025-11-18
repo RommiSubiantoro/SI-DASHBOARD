@@ -28,6 +28,7 @@ import {
   query,
   where,
   limit,
+  writeBatch,
 } from "firebase/firestore";
 import {
   createUserWithEmailAndPassword,
@@ -242,7 +243,7 @@ function AdminDashboard() {
     fetchUnitUploads();
   }, [units]);
 
-  // Realtime chart data for selectedUnit + selectedYear
+  // Untuk Data Table
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -254,14 +255,11 @@ function AdminDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
-      // 🔹 Hanya ambil Debit
-      const debitData = rawData.filter((item) => item.type === "Debit");
-
-      // 🔹 Kelompokkan berdasarkan account dan bulan
       const grouped = {};
 
-      debitData.forEach((item) => {
+      rawData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -283,14 +281,24 @@ function AdminDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue;
+
+        const value = parseFloat(item.docValue) || 0;
+        const signedValue =
+          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
+
+        grouped[key][item.month] += signedValue;
       });
 
-      setCurrentData(Object.values(grouped)); // untuk DataTable
+      setCurrentData(Object.values(grouped));
     });
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
+
+  // =======================
+  //    DUPLIKAT USE EFFECT
+  // =======================
+
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -302,14 +310,11 @@ function AdminDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
-      // 🔹 Hanya ambil Debit
-      const debitData = rawData.filter((item) => item.type === "Debit");
-
-      // 🔹 Kelompokkan berdasarkan account dan bulan
       const grouped = {};
 
-      debitData.forEach((item) => {
+      rawData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -331,29 +336,37 @@ function AdminDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue;
+
+        const value = parseFloat(item.docValue) || 0;
+        const signedValue =
+          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
+
+        grouped[key][item.month] += signedValue;
       });
 
-      setCurrentData(Object.values(grouped)); // untuk DataTable
+      setCurrentData(Object.values(grouped));
     });
 
     return () => unsubscribe();
   }, [selectedUnit, selectedYear]);
 
-  // Realtime data untuk DashboardView (hanya baca, tidak berubah saat tahun diganti)
+  // =============================
+  //   DashboardView (tahun 2025)
+  // =============================
+
   useEffect(() => {
     if (!selectedUnit) return;
 
-    // default ke tahun 2025 (atau bisa juga tahun terbaru yang tersedia)
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-      const debitData = rawData.filter((item) => item.type === "Debit");
+
       const grouped = {};
 
-      debitData.forEach((item) => {
+      rawData.forEach((item) => {
         const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName,
@@ -375,7 +388,12 @@ function AdminDashboard() {
             Dec: 0,
           };
         }
-        grouped[key][item.month] += item.docValue;
+
+        const value = parseFloat(item.docValue) || 0;
+        const signedValue =
+          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
+
+        grouped[key][item.month] += signedValue;
       });
 
       setViewData(Object.values(grouped));
@@ -496,29 +514,52 @@ function AdminDashboard() {
       return;
 
     setIsLoading(true);
+
     try {
-      const deleteAllDocs = async (path) => {
+      const fastBatchDelete = async (path) => {
         const colRef = collection(db, path);
         const snap = await getDocs(colRef);
 
-        if (snap.empty) return;
+        if (snap.empty) {
+          console.log(`Tidak ada data di ${path}`);
+          return;
+        }
 
-        console.log(`Menghapus ${snap.size} dokumen dari ${path}...`);
+        console.log(`⚡ Menghapus ${snap.size} dokumen dari ${path}...`);
 
-        // 🔥 langsung hapus semuanya sekaligus
-        await Promise.all(snap.docs.map((d) => deleteDoc(doc(db, path, d.id))));
+        let batch = writeBatch(db);
+        let counter = 0;
+
+        for (const docItem of snap.docs) {
+          batch.delete(docItem.ref);
+          counter++;
+
+          // Jika batch sudah mendekati limit, commit dulu
+          if (counter >= 400) {
+            await batch.commit();
+            batch = writeBatch(db);
+            counter = 0;
+          }
+        }
+
+        // Commit sisa batch
+        if (counter > 0) {
+          await batch.commit();
+        }
 
         console.log(`✅ Selesai hapus ${snap.size} dokumen dari ${path}`);
       };
 
-      await deleteAllDocs(`unitData/${unitName}/${year}/data/items`);
-      await deleteAllDocs(`unitData/${unitName}/${year}/budget/items`);
+      // Hapus items utama
+      await fastBatchDelete(`unitData/${unitName}/${year}/data/items`);
+      // Hapus budget
+      await fastBatchDelete(`unitData/${unitName}/${year}/budget/items`);
 
       alert(`✅ Semua data ${unitName} tahun ${year} berhasil dihapus.`);
       fetchUnitUploads();
     } catch (err) {
       console.error("handleDeleteAllRecords err:", err);
-      alert("Gagal menghapus records: " + err.message);
+      alert("❌ Gagal menghapus records: " + err.message);
     } finally {
       setIsLoading(false);
     }
