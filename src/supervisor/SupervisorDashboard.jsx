@@ -143,7 +143,6 @@ function SupervisorDashboard() {
   useEffect(() => {
     fetchUnitUploads();
   }, [units]);
-  
 
   // 🟢 Ambil data untuk DashboardView (2025 default)
   useEffect(() => {
@@ -183,10 +182,7 @@ function SupervisorDashboard() {
           };
         }
 
-        const value = parseFloat(item.docValue) || 0;
-        const signedValue =
-          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
+        const signedValue = parseFloat(item.docValue) || 0;
         grouped[key][item.month] += signedValue;
       });
 
@@ -255,10 +251,7 @@ function SupervisorDashboard() {
           };
         }
 
-        const value = parseFloat(item.docValue) || 0;
-        const signedValue =
-          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
+        const signedValue = parseFloat(item.docValue) || 0;
         grouped[key][item.month] += signedValue;
       });
 

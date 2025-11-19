@@ -28,7 +28,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -Math.abs(n) : n;
+  return isNeg ? -(n) : n;
 }
 
 export default function Linechart({
@@ -83,7 +83,7 @@ export default function Linechart({
 
       MONTHS.forEach((month) => {
         const val = parseNumber(row[month]);
-        monthlyTotals[month] += Math.abs(val);
+        monthlyTotals[month] += (val);
       });
     });
 

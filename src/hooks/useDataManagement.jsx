@@ -62,14 +62,14 @@ export const useDataManagement = (initialData = {}) => {
     file,
     selectedYear
   ) => {
-    // ---- BACA FILE ----
+    // ---- BACA FILE EXCEL ----
     const arrayBuffer = await file.arrayBuffer();
     const workbook = XLSX.read(arrayBuffer, { type: "array" });
     const sheetName = workbook.SheetNames[0];
     const sheet = workbook.Sheets[sheetName];
     const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
 
-    // ---- FIRESTORE BASE PATH ----
+    // ---- PATH FIRESTORE ----
     const baseRef = collection(
       db,
       "unitData",
@@ -83,23 +83,33 @@ export const useDataManagement = (initialData = {}) => {
     let batchCounter = 0;
 
     for (const row of rows) {
-      // Filter Debit / Credit saja
+      // ---- FILTER DEBIT / CREDIT ----
       const typeValue = row["Dr/Cr"];
       if (typeValue !== "Debit" && typeValue !== "Credit") continue;
 
-      // Convert Excel date → JS Date
-      const jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
-      const month = jsDate.toLocaleString("en-US", { month: "short" });
+      // ---- KONVERSI TANGGAL ----
+      let jsDate = null;
+      let month = "-";
+      if (row["Doc Date"]) {
+        jsDate = new Date((row["Doc Date"] - 25569) * 86400 * 1000);
+        month = jsDate.toLocaleString("en-US", { month: "short" });
+      }
 
-      const cleanValue = parseFloat(row["Doc Value"]) || 0;
+      // ---- BERSIHKAN ANGKA ----
+      const rawValue = row["Doc Value"];
+      const cleanValue =
+        parseFloat(
+          String(rawValue)
+            .replace(/\./g, "") // hapus titik ribuan
+            .replace(/,/g, ".") // ganti koma desimal
+        ) || 0;
 
-      // Dokumen baru
+      // ---- BUAT DOKUMEN BARU ----
       const newDoc = doc(baseRef);
-
       batch.set(newDoc, {
         accountName: row["Line Desc."] || "-",
         accountCode: row["Account Code"] || "-",
-        category: row["El4 short name"] || "-",
+        category: row["El4 short name"] || "-", // pastikan ini konsisten
         area: row["Location"] || "-",
         businessLine: row["Business Line"] || "-",
         month,
@@ -109,7 +119,7 @@ export const useDataManagement = (initialData = {}) => {
 
       batchCounter++;
 
-      // Jika batch hampir penuh, kirim lalu buat batch baru
+      // ---- COMMIT BATCH TIAP 400 DOKUMEN ----
       if (batchCounter >= 400) {
         await batch.commit();
         batch = writeBatch(db);
@@ -117,7 +127,7 @@ export const useDataManagement = (initialData = {}) => {
       }
     }
 
-    // Kirim sisa batch
+    // ---- COMMIT SISA BATCH ----
     if (batchCounter > 0) {
       await batch.commit();
     }

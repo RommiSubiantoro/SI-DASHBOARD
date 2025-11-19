@@ -1,4 +1,3 @@
-// src/pages/UserDashboard.jsx
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
@@ -25,9 +24,6 @@ import DashboardView from "../components/DashboardView";
 // Custom hook
 import { useDataManagement } from "../hooks/useDataManagement";
 
-/**
- * Helper: cek apakah string valid (bukan null/undefined/empty/whitespace)
- */
 const isValidString = (s) => typeof s === "string" && s.trim() !== "";
 
 const UserDashboard = () => {
@@ -36,33 +32,32 @@ const UserDashboard = () => {
   const [selectedYear, setSelectedYear] = useState("2025");
   const [assignedUnits, setAssignedUnits] = useState([]);
   const [currentData, setCurrentData] = useState([]);
+  const [viewData, setViewData] = useState([]);
   const [units, setUnits] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
-  const [budgetFile, setBudgetFile] = useState(null);
   const [isUploading, setIsUploading] = useState(false);
   const [activeMenu, setActiveMenu] = useState("dashboard");
 
-  // refs to keep track of active unsubscribes and mounted state
   const listenersRef = useRef({
     userListener: null,
     unitsListener: null,
     dataListener: null,
   });
+
   const isMountedRef = useRef(true);
 
-  // Custom hook import/export
   const { exportToExcel, importFromExcelToFirebase, importBudgetFromExcel } =
     useDataManagement({});
 
-  // --- AUTH: ambil assignedUnits dari dokumen users ---
+  // ============================
+  // AUTH LISTENER
+  // ============================
   useEffect(() => {
     isMountedRef.current = true;
 
-    // subscribe auth state one time
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      // clear previous user listener if any
       if (listenersRef.current.userListener) {
         listenersRef.current.userListener();
         listenersRef.current.userListener = null;
@@ -70,52 +65,40 @@ const UserDashboard = () => {
 
       if (!user) {
         setAssignedUnits([]);
-        // don't force redirect here - keep UI simple
         return;
       }
 
       try {
         const q = query(collection(db, "users"), where("uid", "==", user.uid));
-        const unsub = onSnapshot(
-          q,
-          (snapshot) => {
-            if (!isMountedRef.current) return;
-            if (snapshot.empty) {
-              setAssignedUnits([]);
-              return;
-            }
-            const doc = snapshot.docs[0];
-            const userData = doc.data() || {};
-            const unitsFromUser = Array.isArray(userData.unitBisnis)
-              ? userData.unitBisnis
-              : [];
+        const unsub = onSnapshot(q, (snapshot) => {
+          if (!isMountedRef.current) return;
 
-            setAssignedUnits(unitsFromUser);
-
-            // set selectedUnit only if not set or invalid
-            setSelectedUnit((prev) => {
-              if (!isValidString(prev) && unitsFromUser.length > 0) {
-                return unitsFromUser[0];
-              }
-              // If prev is valid and exists in assigned list, keep it.
-              if (isValidString(prev) && unitsFromUser.includes(prev))
-                return prev;
-              // Otherwise fallback to first if available
-              return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
-            });
-          },
-          (error) => {
-            console.error("❌ users onSnapshot error:", error);
+          if (snapshot.empty) {
+            setAssignedUnits([]);
+            return;
           }
-        );
+
+          const userData = snapshot.docs[0].data() || {};
+          const unitsFromUser = Array.isArray(userData.unitBisnis)
+            ? userData.unitBisnis
+            : [];
+
+          setAssignedUnits(unitsFromUser);
+
+          setSelectedUnit((prev) => {
+            if (!isValidString(prev) && unitsFromUser.length > 0) {
+              return unitsFromUser[0];
+            }
+            if (isValidString(prev) && unitsFromUser.includes(prev)) return prev;
+            return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
+          });
+        });
 
         listenersRef.current.userListener = unsub;
       } catch (error) {
-        console.error("❌ Error setting user listener:", error);
+        console.error("User listener error:", error);
       }
     });
-
-    listenersRef.current.unitsListener = null; // will be set in next effect
 
     return () => {
       isMountedRef.current = false;
@@ -123,27 +106,22 @@ const UserDashboard = () => {
         listenersRef.current.userListener();
       unsubscribeAuth();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // run once on mount
+  }, []);
 
-  // --- Ambil daftar semua unit (static list) ---
+  // ============================
+  // LISTENER UNTUK UNIT
+  // ============================
   useEffect(() => {
     const colRef = collection(db, "units");
-    const unsub = onSnapshot(
-      colRef,
-      (snapshot) => {
-        if (!isMountedRef.current) return;
-        const list = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setUnits(list);
-      },
-      (error) => {
-        console.error("❌ units onSnapshot error:", error);
-      }
-    );
+
+    const unsub = onSnapshot(colRef, (snapshot) => {
+      if (!isMountedRef.current) return;
+      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setUnits(list);
+    });
+
     listenersRef.current.unitsListener = unsub;
+
     return () => {
       if (listenersRef.current.unitsListener) {
         listenersRef.current.unitsListener();
@@ -152,146 +130,132 @@ const UserDashboard = () => {
     };
   }, []);
 
-  // --- Ambil masterCode (cached fetch sekali, safe) ---
+  // ============================
+  // FETCH MASTER CODE
+  // ============================
   useEffect(() => {
     let cancelled = false;
+
     const fetchMaster = async () => {
       try {
         const snap = await getDocs(collection(db, "masterCode"));
         if (cancelled) return;
+
         const data = snap.docs.map((doc) => doc.data() || {});
-        // normalisasi: pastikan code ada dan string
         const normalized = data
           .filter((d) => d && (d.code || d.code === 0))
           .map((d) => ({ ...d, code: String(d.code).trim() }));
+
         if (isMountedRef.current) setMasterCode(normalized);
       } catch (error) {
-        console.error("❌ Gagal ambil masterCode di UserDashboard:", error);
+        console.error("Error masterCode:", error);
       }
     };
+
     fetchMaster();
     return () => {
       cancelled = true;
     };
   }, []);
 
-  // --- Realtime listener untuk data (protected by strict validation) ---
-  const setupDataListener = useCallback(() => {
-    if (listenersRef.current.dataListener) {
-      listenersRef.current.dataListener();
-      listenersRef.current.dataListener = null;
-    }
+  // ============================
+  // REALTIME DATA LISTENER (FINAL)
+  // ============================
+  useEffect(() => {
+    if (!selectedUnit || !selectedYear) return;
 
-    if (!isValidString(selectedUnit)) return;
-    if (!isValidString(selectedYear)) return;
-    if (!Array.isArray(masterCode) || masterCode.length === 0) return;
+    const colRef = collection(
+      db,
+      `unitData/${selectedUnit}/${selectedYear}/data/items`
+    );
 
-    if (selectedUnit.includes("/") || selectedYear.includes("/")) {
-      console.error("❌ Invalid characters in selectedUnit/selectedYear");
-      return;
-    }
+    const unsubscribe = onSnapshot(colRef, (snapshot) => {
+      let rawData = snapshot.docs.map((doc) => doc.data() || {});
 
-    try {
-      const colRef = collection(
-        db,
-        `unitData/${selectedUnit}/${selectedYear}/data/items`
-      );
+      // Filter by masterCode
+      if (masterCode.length > 0) {
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
 
-      const unsub = onSnapshot(
-        colRef,
-        (snapshot) => {
-          if (!isMountedRef.current) return;
-          const rawData = snapshot.docs.map((doc) => doc.data() || {});
+        rawData = rawData.filter((item) =>
+          validCodes.has(String(item.accountCode || "").toLowerCase().trim())
+        );
+      }
 
-          // Ambil data Debit & Credit
-          let filteredData = rawData.filter(
-            (item) => item.type === "Debit" || item.type === "Credit"
-          );
+      const grouped = {};
 
-          // Filter berdasarkan masterCode
-          const validCodes = new Set(
-            masterCode.map((m) => String(m.code).toLowerCase().trim())
-          );
+      rawData.forEach((item) => {
+        // use grouping WITHOUT forcing sign changes — take docValue as-is
+        const key = `${item.accountCode || ""}-${item.category || ""}-${item.area || ""}-${item.businessLine || ""}-${item.type || ""}`;
 
-          filteredData = filteredData.filter((item) => {
-            const code = String(item.accountCode || "")
-              .toLowerCase()
-              .trim();
-            return validCodes.has(code);
-          });
-
-          // Grouping
-          const grouped = {};
-          filteredData.forEach((item) => {
-            const key = `${item.accountCode || ""}-${item.category || ""}-${
-              item.area || ""
-            }-${item.businessLine || ""}`.trim();
-            if (!grouped[key]) {
-              grouped[key] = {
-                accountName: item.accountName || "",
-                accountCode: item.accountCode || "",
-                category: item.category || "",
-                area: item.area || "",
-                businessLine: item.businessLine || "",
-                Jan: 0,
-                Feb: 0,
-                Mar: 0,
-                Apr: 0,
-                May: 0,
-                Jun: 0,
-                Jul: 0,
-                Aug: 0,
-                Sep: 0,
-                Oct: 0,
-                Nov: 0,
-                Dec: 0,
-              };
-            }
-
-            const month = String(item.month || "").trim();
-            if (grouped[key].hasOwnProperty(month)) {
-              // applies to Admin, Manager, Supervisor, User
-              const value = parseFloat(item.docValue) || 0;
-              const signedValue =
-                item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
-              grouped[key][item.month] += signedValue;
-            }
-          });
-
-          setCurrentData(Object.values(grouped));
-        },
-        (error) => {
-          console.error("❌ data onSnapshot error:", error);
+        if (!grouped[key]) {
+          grouped[key] = {
+            accountName: item.accountName || "",
+            accountCode: item.accountCode || "",
+            category: item.category || "",
+            area: item.area || "",
+            businessLine: item.businessLine || "",
+            type: item.type || "",
+            Jan: 0,
+            Feb: 0,
+            Mar: 0,
+            Apr: 0,
+            May: 0,
+            Jun: 0,
+            Jul: 0,
+            Aug: 0,
+            Sep: 0,
+            Oct: 0,
+            Nov: 0,
+            Dec: 0,
+          };
         }
-      );
 
-      listenersRef.current.dataListener = unsub;
-    } catch (error) {
-      console.error("❌ Exception creating data listener:", error);
-    }
+        const month = String(item.month || "").trim();
+        const signedValue = parseFloat(item.docValue) || 0; // take value as-is from Excel
+
+        // ensure month key exists (safety)
+        if (grouped[key].hasOwnProperty(month)) {
+          grouped[key][month] += signedValue;
+        } else {
+          // if month invalid, ignore or you may log
+          // console.warn('Unknown month:', month, item);
+        }
+      });
+
+      const finalData = Object.values(grouped);
+
+      setCurrentData(finalData);
+      setViewData(finalData);
+    });
+
+    listenersRef.current.dataListener = unsubscribe;
+
+    return () => {
+      if (listenersRef.current.dataListener) {
+        listenersRef.current.dataListener();
+        listenersRef.current.dataListener = null;
+      }
+    };
   }, [selectedUnit, selectedYear, masterCode]);
 
-  // call setupDataListener when deps change
-  useEffect(() => {
-    setupDataListener();
-    // cleanup on unmount handled inside setupDataListener via listenersRef
-    return () => {
-      // leave cleanup to setupDataListener next invocation or unmount
-    };
-  }, [setupDataListener]);
-
-  // --- Fetch budget data (one-time per selectedUnit/selectedYear when masterCode ready) ---
+  // ============================
+  // BUDGET DATA
+  // ============================
   useEffect(() => {
     let cancelled = false;
+
     const fetchBudget = async () => {
-      if (!isValidString(selectedUnit) || !isValidString(selectedYear)) return;
-      if (!Array.isArray(masterCode) || masterCode.length === 0) return;
+      if (!selectedUnit || !selectedYear) return;
+      if (!masterCode.length) return;
+
       try {
         const colRef = collection(
           db,
           `unitData/${selectedUnit}/${selectedYear}/budget/items`
         );
+
         const snap = await getDocs(colRef);
         if (cancelled || !isMountedRef.current) return;
 
@@ -346,7 +310,7 @@ const UserDashboard = () => {
 
         setBudgetData(final);
       } catch (error) {
-        console.error("❌ Gagal ambil data budget:", error);
+        console.error("Gagal ambil data budget:", error);
       }
     };
 
@@ -357,7 +321,9 @@ const UserDashboard = () => {
     };
   }, [selectedUnit, selectedYear, masterCode]);
 
-  // ====== HANDLERS ======
+  // ============================
+  // HANDLERS
+  // ============================
   const handleLogout = async () => {
     try {
       setIsLoading(true);
@@ -536,7 +502,6 @@ const UserDashboard = () => {
           <Header
             selectedUnit={selectedUnit}
             setSelectedUnit={(u) => {
-              // safe setter: only accept valid strings
               if (!isValidString(u)) return;
               setSelectedUnit(u);
             }}

@@ -15,7 +15,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -Math.abs(n) : n;
+  return isNeg ? - (n) : n;
 }
 
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
@@ -75,7 +75,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
             item.accountCode || item["ACCOUNT CODE"] || item["AccountCode"] || item["account_code"] || item["Code"] || ""
           ).toLowerCase().trim();
 
-        const getMonthValue = (item, m) => Math.abs(parseNumber(item[m]));
+        const getMonthValue = (item, m) => (parseNumber(item[m]));
 
         let allBudgets = {};
         for (const year of years) {
@@ -90,7 +90,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
             if (!grouped[code]) grouped[code] = { accountCode: code, totalBudget: 0 };
 
             const monthsUpper = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-            grouped[code].totalBudget += monthsUpper.reduce((sum, m) => sum + Math.abs(parseNumber(item[m])), 0);
+            grouped[code].totalBudget += monthsUpper.reduce((sum, m) => sum + (parseNumber(item[m])), 0);
           });
 
           allBudgets[year] = Object.values(grouped);
@@ -138,7 +138,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + Math.abs(parseNumber(row[m])), 0),
+            sum + months.reduce((acc, m) => acc + (parseNumber(row[m])), 0),
           0
         );
 
@@ -146,13 +146,13 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + Math.abs(parseNumber(row[m])), 0),
+            sum + months.reduce((acc, m) => acc + (parseNumber(row[m])), 0),
           0
         );
 
       const totalBdgt = budgetForYear
         .filter(matchCat)
-        .reduce((sum, row) => sum + Math.abs(parseNumber(row.totalBudget)), 0);
+        .reduce((sum, row) => sum + (parseNumber(row.totalBudget)), 0);
 
       const aVsCValue = totalActNow - totalActPrev;
       const bVsCValue = totalActNow - totalBdgt;

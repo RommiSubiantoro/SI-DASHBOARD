@@ -22,7 +22,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -Math.abs(n) : n;
+  return isNeg ? -(n) : n;
 }
 
 export default function Piechart({
@@ -69,11 +69,11 @@ export default function Piechart({
     const getValue = (item) => {
       if (selectedMonth === "ALL") {
         return MONTHS.reduce(
-          (sum, m) => sum + Math.abs(parseNumber(item[m])),
+          (sum, m) => sum + (parseNumber(item[m])),
           0
         );
       }
-      return Math.abs(parseNumber(item[selectedMonth]));
+      return (parseNumber(item[selectedMonth]));
     };
 
     if (selectedCategory === "ALL") {

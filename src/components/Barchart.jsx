@@ -41,7 +41,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -Math.abs(n) : n;
+  return isNeg ? -(n) : n;
 }
 
 export default function Barchart({
@@ -96,7 +96,7 @@ export default function Barchart({
 
       MONTHS.forEach((month) => {
         const val = parseNumber(row[month]) || 0;
-        monthTotals[month] += Math.abs(val);
+        monthTotals[month] += (val);
       });
     });
 

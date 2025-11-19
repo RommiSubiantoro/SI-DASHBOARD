@@ -282,10 +282,7 @@ function AdminDashboard() {
           };
         }
 
-        const value = parseFloat(item.docValue) || 0;
-        const signedValue =
-          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
+        const signedValue = parseFloat(item.docValue) || 0;
         grouped[key][item.month] += signedValue;
       });
 
@@ -298,9 +295,8 @@ function AdminDashboard() {
   // =======================
   //    DUPLIKAT USE EFFECT
   // =======================
-
   useEffect(() => {
-    if (!selectedUnit || !selectedYear) return;
+    if (!selectedUnit || !selectedYear || masterCode.length === 0) return;
 
     const colRef = collection(
       db,
@@ -310,10 +306,25 @@ function AdminDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
+      // ================================
+      // 1️⃣ AMBIL CATEGORY VALID DARI masterCode
+      // ================================
+      const allowedCodes = new Set(
+        masterCode.map((m) => String(m.code).trim().toLowerCase())
+      );
+
+      // filter seperti SUBTOTAL → hanya kode yang masuk category
+      const data = rawData.filter((item) =>
+        allowedCodes.has(String(item.accountCode).trim().toLowerCase())
+      );
+
+      // ================================
+      // 2️⃣ GROUPING
+      // ================================
       const grouped = {};
 
-      rawData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+      data.forEach((item) => {
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
 
         if (!grouped[key]) {
           grouped[key] = {
@@ -322,6 +333,7 @@ function AdminDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type,
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -337,18 +349,16 @@ function AdminDashboard() {
           };
         }
 
-        const value = parseFloat(item.docValue) || 0;
-        const signedValue =
-          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
-        grouped[key][item.month] += signedValue;
+        const v = parseFloat(item.docValue) || 0;
+        grouped[key][item.month] += v;
       });
 
+      // set ke currentData
       setCurrentData(Object.values(grouped));
     });
 
     return () => unsubscribe();
-  }, [selectedUnit, selectedYear]);
+  }, [selectedUnit, selectedYear, masterCode]);
 
   // =============================
   //   DashboardView (tahun 2025)
@@ -362,10 +372,11 @@ function AdminDashboard() {
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
 
+      // ⛔ Tidak ada filter Debit lagi → Debit + Kredit akan diambil
       const grouped = {};
 
       rawData.forEach((item) => {
-        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}`;
+        const key = `${item.accountCode}-${item.category}-${item.area}-${item.businessLine}-${item.type}`;
 
         if (!grouped[key]) {
           grouped[key] = {
@@ -374,6 +385,7 @@ function AdminDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
+            type: item.type, // ⬅️ Simpan jenis transaksi
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -389,10 +401,7 @@ function AdminDashboard() {
           };
         }
 
-        const value = parseFloat(item.docValue) || 0;
-        const signedValue =
-          item.type === "Kredit" ? -Math.abs(value) : Math.abs(value);
-
+        const signedValue = parseFloat(item.docValue) || 0;
         grouped[key][item.month] += signedValue;
       });
 
