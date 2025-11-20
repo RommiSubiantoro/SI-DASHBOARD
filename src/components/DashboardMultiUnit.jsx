@@ -1,56 +1,57 @@
-// src/components/DashboardMultiUnit.jsx
+// src/components/DashboardMultiUnit.jsx (FINAL WITH MEMORY + DERIVED CATEGORIES)
 import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 
+/* Helper parse angka — sama seperti DashboardView */
+function parseNumber(raw) {
+  if (raw === null || raw === undefined || raw === "") return 0;
+  let s = String(raw).replace(/\s+/g, "").replace(/\./g, "").replace(/,/g, "");
+  let isNeg = false;
+  if (/^\(.+\)$/.test(s)) {
+    isNeg = true;
+    s = s.replace(/^\(|\)$/g, "");
+  }
+  let n = Number(s);
+  if (Number.isNaN(n)) n = 0;
+  return isNeg ? -n : n;
+}
+
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec",
 ];
 
-const MONTH_MAP = {
-  Jan: 1,
-  Feb: 2,
-  Mar: 3,
-  Apr: 4,
-  May: 5,
-  Jun: 6,
-  Jul: 7,
-  Aug: 8,
-  Sep: 9,
-  Oct: 10,
-  Nov: 11,
-  Dec: 12,
-};
-
-// Urutan kategori tetap
-const CUSTOM_ORDER = [
+/* Urutan final yang kamu minta */
+const FINAL_ORDER = [
   "Service Revenue",
   "Cost of Service",
   "Gross Profit",
   "General & Administration Expenses",
+  "Operation Income",
   "Other Income/Expense",
+  "NIBT",
   "Pajak",
 ];
 
-// Mapping nama kategori Firestore → nama yang tampil
-const CATEGORY_MAP = {
+/* Mapping kategori dari masterCode → canonical */
+const CATEGORY_CANON = {
   "Service Revenue": "Service Revenue",
+  "service revenue": "Service Revenue",
+
   "Cost Of Service": "Cost of Service",
+  "Cost of Service": "Cost of Service",
+
   "General & Administration Expense": "General & Administration Expenses",
+  "General & Administration Expenses": "General & Administration Expenses",
+
   "Other Income (Expenses)": "Other Income/Expense",
-  Pajak: "Pajak",
+  "Other Income/Expense": "Other Income/Expense",
+
+  "Pajak": "Pajak",
 };
+
+const SUMMARY_CACHE = {}; // cache global
 
 const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   const [unitList, setUnitList] = useState([]);
@@ -63,134 +64,155 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   );
   const [selectedMonth, setSelectedMonth] = useState("All");
 
-  // 🔹 Ambil daftar unit
+  // 🔥 Load saved filter (bulan & tahun)
   useEffect(() => {
-    const fetchUnits = async () => {
-      try {
-        const snap = await getDocs(collection(db, "units"));
-        const units = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setUnitList(units);
-      } catch (error) {
-        console.error("❌ Gagal ambil units:", error);
-      }
-    };
-    fetchUnits();
+    const savedYear = localStorage.getItem("multiUnitYear");
+    const savedMonth = localStorage.getItem("multiUnitMonth");
+
+    if (savedYear) setSelectedYear(savedYear);
+    if (savedMonth) setSelectedMonth(savedMonth);
   }, []);
 
-  // 🔹 Ambil masterCode
+  // > Fetch Units (1x)
   useEffect(() => {
-    const fetchMaster = async () => {
-      try {
-        const snap = await getDocs(collection(db, "masterCode"));
-        const codes = snap.docs.map((doc) => doc.data());
-        setMasterCode(codes);
-      } catch (error) {
-        console.error("❌ Gagal ambil masterCode:", error);
-      }
-    };
-    fetchMaster();
+    (async () => {
+      const snap = await getDocs(collection(db, "units"));
+      setUnitList(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    })();
   }, []);
 
-  // 🔹 Ambil dan olah data semua unit → berdasarkan kategori
+  // > Fetch masterCode (1x)
   useEffect(() => {
-    if (!unitList.length || !masterCode.length || !selectedYear) return;
+    (async () => {
+      const snap = await getDocs(collection(db, "masterCode"));
+      setMasterCode(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    })();
+  }, []);
 
-    const fetchSummary = async () => {
+  // > Build categorized summary (CACHE + PARALLEL)
+  useEffect(() => {
+    if (!unitList.length || !masterCode.length) return;
+
+    const cacheKey = `${selectedYear}-${selectedMonth}`;
+    if (SUMMARY_CACHE[cacheKey]) {
+      setSummaryData(SUMMARY_CACHE[cacheKey]);
+      setLoading(false);
+      return;
+    }
+
+    const load = async () => {
       setLoading(true);
-      const categoryMap = {}; // { kategori: { unitName: total } }
+      const catMap = {};
 
-      for (const unit of unitList) {
-        try {
+      // Map masterCode → canonical category → code list
+      const codesByCategory = masterCode.reduce((acc, m) => {
+        const cat = CATEGORY_CANON[m.category] || m.category;
+        const code = String(m.code || "").trim();
+        if (!acc[cat]) acc[cat] = new Set();
+        acc[cat].add(code);
+        return acc;
+      }, {});
+
+      await Promise.all(
+        unitList.map(async (unit) => {
           const path = `unitData/${unit.name}/${selectedYear}/data/items`;
           const snap = await getDocs(collection(db, path));
-          const docs = snap.docs.map((doc) => doc.data());
+          const docs = snap.docs.map((d) => d.data());
 
-          // 🔹 Ambil semua transaksi (Debit + Kredit)
-          const filtered = docs.filter((d) => {
-            // Filter bulan jika bukan "All"
-            if (selectedMonth === "All") return true;
+          const filtered =
+            selectedMonth === "All"
+              ? docs
+              : docs.filter((d) => d.month === selectedMonth);
 
-            const monthNumber = MONTH_MAP[selectedMonth];
-            return Number(d.month) === monthNumber;
+          const perCodeSum = {};
+          filtered.forEach((docItem) => {
+            const code = String(docItem.accountCode || "").trim();
+            perCodeSum[code] =
+              (perCodeSum[code] || 0) + parseNumber(docItem.docValue);
           });
 
-          // 🔹 Loop setiap kategori masterCode
-          masterCode.forEach((m) => {
-            const cat = CATEGORY_MAP[m.category] || m.category || "Lainnya";
-            const code = String(m.code).trim();
+          for (const [cat, codes] of Object.entries(codesByCategory)) {
+            let sum = 0;
+            codes.forEach((c) => (sum += perCodeSum[c] || 0));
 
-            const catItems = filtered.filter(
-              (d) => String(d.accountCode).trim() === code
-            );
+            if (!catMap[cat]) catMap[cat] = {};
+            catMap[cat][unit.name] = (catMap[cat][unit.name] || 0) + sum;
+          }
+        })
+      );
 
-            // 🔹 Total Debit + Kredit
-            const total = catItems.reduce(
-              (sum, d) => sum + (parseFloat(d.docValue) || 0),
-              0
-            );
+      // Derived categories
+      const ensure = (k) => {
+        if (!catMap[k]) catMap[k] = {};
+      };
 
-            if (!categoryMap[cat]) categoryMap[cat] = {};
-            categoryMap[cat][unit.name] =
-              (categoryMap[cat][unit.name] || 0) + total;
-          });
-        } catch (error) {
-          console.error(`❌ Gagal ambil data ${unit.name}:`, error);
-        }
-      }
+      ensure("Service Revenue");
+      ensure("Cost of Service");
+      ensure("General & Administration Expenses");
+      ensure("Other Income/Expense");
+      ensure("Pajak");
 
-      setSummaryData(categoryMap);
+      ensure("Gross Profit");
+      unitList.forEach((u) => {
+        const r = catMap["Service Revenue"][u.name] || 0;
+        const c = catMap["Cost of Service"][u.name] || 0;
+        catMap["Gross Profit"][u.name] = r - c;
+      });
+
+      ensure("Operation Income");
+      unitList.forEach((u) => {
+        const gp = catMap["Gross Profit"][u.name] || 0;
+        const ga = catMap["General & Administration Expenses"][u.name] || 0;
+        catMap["Operation Income"][u.name] = gp - ga;
+      });
+
+      ensure("NIBT");
+      unitList.forEach((u) => {
+        const op = catMap["Operation Income"][u.name] || 0;
+        const oie = catMap["Other Income/Expense"][u.name] || 0;
+        catMap["NIBT"][u.name] = op - oie;
+      });
+
+      SUMMARY_CACHE[cacheKey] = catMap;
+      setSummaryData(catMap);
       setLoading(false);
     };
 
-    fetchSummary();
+    load();
   }, [unitList, masterCode, selectedYear, selectedMonth]);
 
-  // 🔹 Fungsi ambil nilai per kategori/unit
-  const getValue = (cat, unitName) => {
-    if (cat === "Gross Profit") {
-      const revenue = summaryData["Service Revenue"]?.[unitName] || 0;
-      const cost = summaryData["Cost of Service"]?.[unitName] || 0;
-      return revenue - cost;
-    }
-    return summaryData[cat]?.[unitName] || 0;
-  };
+  const getValue = (cat, unit) => summaryData[cat]?.[unit] || 0;
 
-  // 🔹 Hitung total per kategori
-  const getTotalPerCategory = (cat) => {
-    if (cat === "Gross Profit") {
-      const revenueData = summaryData["Service Revenue"] || {};
-      const costData = summaryData["Cost of Service"] || {};
-      return Object.keys(revenueData).reduce(
-        (sum, unit) => sum + (revenueData[unit] || 0) - (costData[unit] || 0),
-        0
-      );
-    }
-    const catData = summaryData[cat] || {};
-    return Object.values(catData).reduce((sum, val) => sum + val, 0);
+  const getTotal = (cat) => {
+    return Object.values(summaryData[cat] || {}).reduce(
+      (s, v) => s + (v || 0),
+      0
+    );
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md w-full max-w-3xl mx-auto mt-10">
+    <div className="p-6 bg-white rounded-xl shadow-md w-full max-w-4xl mx-auto mt-10">
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
-        📊 Laporan Unit Bisnis per Kategori -{" "}
-        {selectedMonth === "All" ? "Semua Bulan" : selectedMonth} {selectedYear}
+        📊 Laporan Unit Bisnis – {selectedMonth} {selectedYear}
       </h2>
 
-      {/* Filter Tahun & Bulan */}
+      {/* Filters */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div>
           <label className="block mb-1 text-sm font-medium text-gray-700">
             Tahun
           </label>
           <select
-            className="border px-2 py-1.5 rounded-md w-full text-sm"
             value={selectedYear}
-            onChange={(e) => setSelectedYear(e.target.value)}
+            onChange={(e) => {
+              const y = e.target.value;
+              setSelectedYear(y);
+              localStorage.setItem("multiUnitYear", y);
+            }}
+            className="border px-2 py-1.5 rounded-md w-full text-sm"
           >
-            {[2023, 2024, 2025, 2026].map((year) => (
-              <option key={year} value={year}>
-                {year}
-              </option>
+            {[2023, 2024, 2025, 2026].map((y) => (
+              <option key={y}>{y}</option>
             ))}
           </select>
         </div>
@@ -200,80 +222,72 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             Bulan
           </label>
           <select
-            className="border px-2 py-1.5 rounded-md w-full text-sm"
             value={selectedMonth}
-            onChange={(e) => setSelectedMonth(e.target.value)}
+            onChange={(e) => {
+              const m = e.target.value;
+              setSelectedMonth(m);
+              localStorage.setItem("multiUnitMonth", m);
+            }}
+            className="border px-2 py-1.5 rounded-md w-full text-sm"
           >
             <option value="All">Semua Bulan</option>
             {MONTHS.map((m) => (
-              <option key={m} value={m}>
-                {m}
-              </option>
+              <option key={m}>{m}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Tabel Data */}
+      {/* Table */}
       {loading ? (
-        <p className="text-center text-gray-500 py-4">⏳ Memuat data...</p>
+        <p className="text-center text-gray-500 py-4">
+          ⏳ Memuat data...
+        </p>
       ) : (
         <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full border-collapse text-sm text-center">
+          <table className="w-full text-sm text-center border-collapse">
             <thead>
               <tr className="bg-yellow-400">
-                <th
-                  rowSpan="2"
-                  className="border px-3 py-2 text-left font-semibold bg-yellow-400"
-                >
+                <th className="border px-3 py-2 text-left" rowSpan="2">
                   Description
                 </th>
-                <th
-                  colSpan={unitList.length}
-                  className="border px-3 py-2 font-semibold bg-yellow-400"
-                >
-                  {selectedMonth === "All" ? "Semua Bulan" : selectedMonth}{" "}
-                  {selectedYear}
+                <th colSpan={unitList.length} className="border px-3 py-2">
+                  {selectedMonth} {selectedYear}
                 </th>
-                <th
-                  rowSpan="2"
-                  className="border px-3 py-2 font-semibold bg-yellow-400"
-                >
+                <th className="border px-3 py-2" rowSpan="2">
                   Total
                 </th>
               </tr>
               <tr>
-                {unitList.map((unit) => (
+                {unitList.map((u) => (
                   <th
-                    key={unit.id}
-                    className="border px-3 py-2 font-semibold bg-cyan-300"
+                    key={u.id}
+                    className="border px-3 py-2 bg-cyan-300"
                   >
-                    {unit.name}
+                    {u.name}
                   </th>
                 ))}
               </tr>
             </thead>
+
             <tbody>
-              {CUSTOM_ORDER.map((cat) => (
-                <tr
-                  key={cat}
-                  className="hover:bg-gray-50 transition duration-150"
-                >
+              {FINAL_ORDER.map((cat) => (
+                <tr key={cat} className="hover:bg-gray-50">
                   <td className="border px-3 py-2 text-left font-semibold">
                     {cat}
                   </td>
 
-                  {unitList.map((unit) => (
+                  {unitList.map((u) => (
                     <td
-                      key={unit.id}
-                      className="border px-3 py-2 text-right text-gray-700"
+                      key={u.id}
+                      className="border px-3 py-2 text-right"
                     >
-                      {getValue(cat, unit.name).toLocaleString("id-ID")}
+                      {getValue(cat, u.name).toLocaleString("id-ID")}
                     </td>
                   ))}
 
-                  <td className="border px-3 py-2 font-semibold text-right text-gray-900">
-                    {getTotalPerCategory(cat).toLocaleString("id-ID")}
+                  <td className="border px-3 py-2 text-right font-semibold">
+                    {getTotal(cat).toLocaleString("id-ID")}
                   </td>
                 </tr>
               ))}

@@ -37,6 +37,10 @@ function ManagerDashboard() {
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
+  // CACHED DATA (GLOBAL, TIDAK HILANG KETIKA PAGE PINDAH)
+  const cacheCurrentData = {};
+  const cacheViewData = {};
+  const cacheMasterCode = null;
 
   const auth = getAuth();
 
@@ -148,12 +152,16 @@ function ManagerDashboard() {
   useEffect(() => {
     if (!selectedUnit) return;
 
+    const cacheKey = `${selectedUnit}-view`;
+
+    if (cacheViewData[cacheKey]) {
+      setViewData(cacheViewData[cacheKey]);
+    }
+
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ⛔ Tidak ada filter Debit lagi → Debit + Kredit akan diambil
       const grouped = {};
 
       rawData.forEach((item) => {
@@ -166,7 +174,7 @@ function ManagerDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
-            type: item.type, // ⬅️ Simpan jenis transaksi
+            type: item.type,
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -186,7 +194,11 @@ function ManagerDashboard() {
         grouped[key][item.month] += signedValue;
       });
 
-      setViewData(Object.values(grouped));
+      const result = Object.values(grouped);
+
+      cacheViewData[cacheKey] = result;
+
+      setViewData(result);
     });
 
     return () => unsubscribe();
@@ -196,6 +208,13 @@ function ManagerDashboard() {
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
+    const cacheKey = `${selectedUnit}-${selectedYear}`;
+
+    // 🟢 Jika data sudah pernah diambil → langsung pakai tanpa nunggu
+    if (cacheCurrentData[cacheKey]) {
+      setCurrentData(cacheCurrentData[cacheKey]);
+    }
+
     const colRef = collection(
       db,
       `unitData/${selectedUnit}/${selectedYear}/data/items`
@@ -203,11 +222,8 @@ function ManagerDashboard() {
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ⛔ Tidak filter type → Debit + Kredit
       let data = rawData;
 
-      // Jika ada masterCode → filter berdasarkan accountCode
       if (masterCode.length > 0) {
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
@@ -222,7 +238,6 @@ function ManagerDashboard() {
         );
       }
 
-      // Grouping
       const grouped = {};
 
       data.forEach((item) => {
@@ -235,7 +250,7 @@ function ManagerDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
-            type: item.type, // ⬅️ Penting supaya Debit & Kredit terpisah
+            type: item.type,
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -255,7 +270,12 @@ function ManagerDashboard() {
         grouped[key][item.month] += signedValue;
       });
 
-      setCurrentData(Object.values(grouped));
+      const finalData = Object.values(grouped);
+
+      // 🟢 CACHE DISINI
+      cacheCurrentData[cacheKey] = finalData;
+
+      setCurrentData(finalData);
     });
 
     return () => unsubscribe();
