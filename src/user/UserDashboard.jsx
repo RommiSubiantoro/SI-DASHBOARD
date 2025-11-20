@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+// src/pages/UserDashboard.jsx
+import React, { useState, useEffect, useRef } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
 import {
@@ -7,97 +8,87 @@ import {
   where,
   onSnapshot,
   getDocs,
-  addDoc,
 } from "firebase/firestore";
-import * as XLSX from "xlsx";
+import { ChevronDown, LogOut } from "lucide-react";
 
-// Import komponen
 import Header from "../components/Header";
 import ControlButtons from "../components/ControlButtons";
 import DataTable from "../components/DataTable";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
-import Navbar from "../components/navbar";
-import DashboardView from "../components/DashboardView";
 
-// Custom hook
-import { useDataManagement } from "../hooks/useDataManagement";
-
-const isValidString = (s) => typeof s === "string" && s.trim() !== "";
+import Logo from "../assets/logo-smdr.png";
 
 const UserDashboard = () => {
-  const [selectedUnit, setSelectedUnit] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
-  const [selectedYear, setSelectedYear] = useState("2025");
-  const [assignedUnits, setAssignedUnits] = useState([]);
-  const [currentData, setCurrentData] = useState([]);
-  const [viewData, setViewData] = useState([]);
-  const [units, setUnits] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [masterCode, setMasterCode] = useState([]);
-  const [budgetData, setBudgetData] = useState([]);
-  const [isUploading, setIsUploading] = useState(false);
+  // ===== STATE =====
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [activeMenu, setActiveMenu] = useState("dashboard");
 
+  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedYear, setSelectedYear] = useState("2025");
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
+
+  const [assignedUnits, setAssignedUnits] = useState([]);
+  const [units, setUnits] = useState([]);
+  const [masterCode, setMasterCode] = useState([]);
+  const [currentData, setCurrentData] = useState([]);
+  const [budgetData, setBudgetData] = useState([]);
+
+  const [viewData, setViewData] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+
+
+  const isValidString = (s) => typeof s === "string" && s.trim() !== "";
+
+  const dropdownRef = useRef(null);
   const listenersRef = useRef({
     userListener: null,
     unitsListener: null,
     dataListener: null,
   });
-
   const isMountedRef = useRef(true);
 
-  const { exportToExcel, importFromExcelToFirebase, importBudgetFromExcel } =
-    useDataManagement({});
-
-  // ============================
-  // AUTH LISTENER
-  // ============================
+  // ===== HOOKS =====
   useEffect(() => {
     isMountedRef.current = true;
 
+    // Auth listener
     const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
-      if (listenersRef.current.userListener) {
-        listenersRef.current.userListener();
-        listenersRef.current.userListener = null;
-      }
-
       if (!user) {
         setAssignedUnits([]);
+        setUserProfile(null);
         return;
       }
 
-      try {
-        const q = query(collection(db, "users"), where("uid", "==", user.uid));
-        const unsub = onSnapshot(q, (snapshot) => {
-          if (!isMountedRef.current) return;
+      setUserProfile({
+        displayName: user.displayName || "User",
+        email: user.email,
+        photoURL: user.photoURL || null,
+      });
 
-          if (snapshot.empty) {
-            setAssignedUnits([]);
-            return;
-          }
+      const q = query(collection(db, "users"), where("uid", "==", user.uid));
+      const unsub = onSnapshot(q, (snapshot) => {
+        if (!isMountedRef.current) return;
+        if (snapshot.empty) return;
 
-          const userData = snapshot.docs[0].data() || {};
-          const unitsFromUser = Array.isArray(userData.unitBisnis)
-            ? userData.unitBisnis
-            : [];
+        const userData = snapshot.docs[0].data();
+        const unitsFromUser = Array.isArray(userData.unitBisnis)
+          ? userData.unitBisnis
+          : [];
+        setAssignedUnits(unitsFromUser);
 
-          setAssignedUnits(unitsFromUser);
-
-          setSelectedUnit((prev) => {
-            if (!isValidString(prev) && unitsFromUser.length > 0) {
-              return unitsFromUser[0];
-            }
-            if (isValidString(prev) && unitsFromUser.includes(prev)) return prev;
-            return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
-          });
+        setSelectedUnit((prev) => {
+          if (!prev && unitsFromUser.length > 0) return unitsFromUser[0];
+          if (prev && unitsFromUser.includes(prev)) return prev;
+          return unitsFromUser.length > 0 ? unitsFromUser[0] : prev;
         });
+      });
 
-        listenersRef.current.userListener = unsub;
-      } catch (error) {
-        console.error("User listener error:", error);
-      }
+      listenersRef.current.userListener = unsub;
     });
 
     return () => {
@@ -108,59 +99,40 @@ const UserDashboard = () => {
     };
   }, []);
 
-  // ============================
-  // LISTENER UNTUK UNIT
-  // ============================
+  // Unit listener
   useEffect(() => {
     const colRef = collection(db, "units");
-
     const unsub = onSnapshot(colRef, (snapshot) => {
       if (!isMountedRef.current) return;
-      const list = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setUnits(list);
+      setUnits(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
-
     listenersRef.current.unitsListener = unsub;
 
     return () => {
-      if (listenersRef.current.unitsListener) {
+      if (listenersRef.current.unitsListener)
         listenersRef.current.unitsListener();
-        listenersRef.current.unitsListener = null;
-      }
     };
   }, []);
 
-  // ============================
-  // FETCH MASTER CODE
-  // ============================
+  // Master code fetch
   useEffect(() => {
-    let cancelled = false;
-
-    const fetchMaster = async () => {
+    const fetchMasterCode = async () => {
       try {
         const snap = await getDocs(collection(db, "masterCode"));
-        if (cancelled) return;
-
+        if (!isMountedRef.current) return;
         const data = snap.docs.map((doc) => doc.data() || {});
         const normalized = data
           .filter((d) => d && (d.code || d.code === 0))
           .map((d) => ({ ...d, code: String(d.code).trim() }));
-
-        if (isMountedRef.current) setMasterCode(normalized);
+        setMasterCode(normalized);
       } catch (error) {
         console.error("Error masterCode:", error);
       }
     };
-
-    fetchMaster();
-    return () => {
-      cancelled = true;
-    };
+    fetchMasterCode();
   }, []);
 
-  // ============================
-  // REALTIME DATA LISTENER (FINAL)
-  // ============================
+  // Realtime data listener
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
@@ -168,27 +140,23 @@ const UserDashboard = () => {
       db,
       `unitData/${selectedUnit}/${selectedYear}/data/items`
     );
-
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       let rawData = snapshot.docs.map((doc) => doc.data() || {});
 
-      // Filter by masterCode
       if (masterCode.length > 0) {
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
         );
-
         rawData = rawData.filter((item) =>
-          validCodes.has(String(item.accountCode || "").toLowerCase().trim())
+          validCodes.has((item.accountCode || "").toLowerCase().trim())
         );
       }
 
       const grouped = {};
-
       rawData.forEach((item) => {
-        // use grouping WITHOUT forcing sign changes — take docValue as-is
-        const key = `${item.accountCode || ""}-${item.category || ""}-${item.area || ""}-${item.businessLine || ""}-${item.type || ""}`;
-
+        const key = `${item.accountCode || ""}-${item.category || ""}-${
+          item.area || ""
+        }-${item.businessLine || ""}-${item.type || ""}`;
         if (!grouped[key]) {
           grouped[key] = {
             accountName: item.accountName || "",
@@ -211,34 +179,56 @@ const UserDashboard = () => {
             Dec: 0,
           };
         }
-
         const month = String(item.month || "").trim();
-        const signedValue = parseFloat(item.docValue) || 0; // take value as-is from Excel
-
-        // ensure month key exists (safety)
-        if (grouped[key].hasOwnProperty(month)) {
-          grouped[key][month] += signedValue;
-        } else {
-          // if month invalid, ignore or you may log
-          // console.warn('Unknown month:', month, item);
-        }
+        const value = parseFloat(item.docValue) || 0;
+        if (grouped[key][month] !== undefined) grouped[key][month] += value;
       });
 
       const finalData = Object.values(grouped);
-
       setCurrentData(finalData);
-      setViewData(finalData);
     });
 
     listenersRef.current.dataListener = unsubscribe;
-
     return () => {
-      if (listenersRef.current.dataListener) {
+      if (listenersRef.current.dataListener)
         listenersRef.current.dataListener();
-        listenersRef.current.dataListener = null;
-      }
     };
   }, [selectedUnit, selectedYear, masterCode]);
+
+  // ===== HANDLERS =====
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.clear();
+      sessionStorage.clear();
+      window.location.href = "/";
+    } catch (error) {
+      alert("Error logout: " + error.message);
+    }
+  };
+
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
+  const handlePageChange = (page) => setActiveMenu(page);
+
+  const columns = [
+    { Header: "Account Name", accessor: "accountName" },
+    { Header: "Account Code", accessor: "accountCode" },
+    { Header: "Category", accessor: "category" },
+    { Header: "Area", accessor: "area" },
+    { Header: "Business Line", accessor: "businessLine" },
+    { Header: "Jan", accessor: "Jan" },
+    { Header: "Feb", accessor: "Feb" },
+    { Header: "Mar", accessor: "Mar" },
+    { Header: "Apr", accessor: "Apr" },
+    { Header: "May", accessor: "May" },
+    { Header: "Jun", accessor: "Jun" },
+    { Header: "Jul", accessor: "Jul" },
+    { Header: "Aug", accessor: "Aug" },
+    { Header: "Sep", accessor: "Sep" },
+    { Header: "Oct", accessor: "Oct" },
+    { Header: "Nov", accessor: "Nov" },
+    { Header: "Dec", accessor: "Dec" },
+  ];
 
   // ============================
   // BUDGET DATA
@@ -321,52 +311,6 @@ const UserDashboard = () => {
     };
   }, [selectedUnit, selectedYear, masterCode]);
 
-  // ============================
-  // HANDLERS
-  // ============================
-  const handleLogout = async () => {
-    try {
-      setIsLoading(true);
-      await signOut(auth);
-      localStorage.clear();
-      sessionStorage.clear();
-      alert("Berhasil logout!");
-      window.location.href = "/";
-    } catch (error) {
-      alert("Error logout: " + error.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const columns = [
-    { Header: "Account Name", accessor: "accountName" },
-    { Header: "Account Code", accessor: "accountCode" },
-    { Header: "Category", accessor: "category" },
-    { Header: "Area", accessor: "area" },
-    { Header: "Business Line", accessor: "businessLine" },
-    { Header: "Jan", accessor: "Jan" },
-    { Header: "Feb", accessor: "Feb" },
-    { Header: "Mar", accessor: "Mar" },
-    { Header: "Apr", accessor: "Apr" },
-    { Header: "May", accessor: "May" },
-    { Header: "Jun", accessor: "Jun" },
-    { Header: "Jul", accessor: "Jul" },
-    { Header: "Aug", accessor: "Aug" },
-    { Header: "Sep", accessor: "Sep" },
-    { Header: "Oct", accessor: "Oct" },
-    { Header: "Nov", accessor: "Nov" },
-    { Header: "Dec", accessor: "Dec" },
-  ];
-
-  const handleExportExcel = () => {
-    if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
-      alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum export!");
-      return;
-    }
-    exportToExcel(selectedUnit, currentData);
-  };
-
   const handleImportData = async (event) => {
     const file = event.target.files[0];
     if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
@@ -387,6 +331,14 @@ const UserDashboard = () => {
         setIsLoading(false);
       }
     }
+  };
+
+  const handleExportExcel = () => {
+    if (!isValidString(selectedUnit) || !isValidString(selectedYear)) {
+      alert("⚠️ Pilih Unit Bisnis dan Tahun terlebih dahulu sebelum export!");
+      return;
+    }
+    exportToExcel(selectedUnit, currentData);
   };
 
   const handleImportBudget = async (event) => {
@@ -444,11 +396,6 @@ const UserDashboard = () => {
     if (saved) setActiveMenu(saved);
   }, []);
 
-  const handlePageChange = (page) => {
-    setActiveMenu(page);
-    localStorage.setItem("dashboard", page);
-  };
-
   // Cleanup on unmount: unsubscribe any leftover listeners
   useEffect(() => {
     return () => {
@@ -461,13 +408,17 @@ const UserDashboard = () => {
     };
   }, []);
 
-  // ====== RENDER ======
+  // ===== RENDER =====
   return (
-    <div className="grid grid-cols-[16rem_1fr] min-h-screen bg-gray-100">
+    <div className="flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar */}
-      <aside className="h-screen bg-red-500 border-r shadow-lg flex flex-col">
+      <aside
+        className={`fixed z-50 inset-y-0 left-0 w-64 bg-red-500 shadow-lg border-r transform transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        } md:translate-x-0`}
+      >
         <div className="p-4">
-          <h2 className="text-2xl font-bold text-white mb-3 px-12 pt-3">
+          <h2 className="text-2xl font-bold text-white mb-3 px-4">
             User Panel
           </h2>
         </div>
@@ -480,7 +431,6 @@ const UserDashboard = () => {
           >
             📊 Dashboard
           </button>
-
           <button
             onClick={() => handlePageChange("viewTable")}
             className={`w-full text-left px-4 py-2 rounded-lg text-white font-medium text-sm transition-all ${
@@ -492,39 +442,130 @@ const UserDashboard = () => {
         </nav>
       </aside>
 
-      {/* Main Content */}
-      <div className="flex flex-col h-screen overflow-auto">
-        <header className="fixed top-0 left-0 w-full z-50">
-          <Navbar onLogout={handleLogout} />
-        </header>
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-transparent z-40 md:hidden"
+          onClick={toggleSidebar}
+        />
+      )}
 
-        <main className="flex-1 p-6 space-y-6 pt-20">
+      {/* Main content */}
+      <div className="flex-1 flex flex-col overflow-auto md:ml-64">
+        {/* Navbar */}
+        <nav className="bg-black shadow-md sticky top-0 z-40">
+          <div className="flex items-center justify-between px-4 py-3 md:px-8">
+            <div className="flex items-center space-x-3">
+              <button
+                className="md:hidden text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
+                onClick={toggleSidebar}
+              >
+                <svg
+                  className="w-6 h-6"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
+                </svg>
+              </button>
+              <img
+                src={Logo}
+                alt="Logo"
+                className="h-10 w-auto object-contain"
+              />
+              <h2 className="text-lg md:text-xl font-bold text-white">
+                Samudera Indonesia
+              </h2>
+            </div>
+
+            {/* User info */}
+            {userProfile ? (
+              <div className="relative" ref={dropdownRef}>
+                <button
+                  className="flex items-center p-2 rounded-lg hover:bg-gray-800 transition-colors"
+                  onClick={() => setShowDropdown(!showDropdown)}
+                >
+                  <div className="hidden sm:flex flex-col text-left mr-3">
+                    <span className="text-sm font-medium text-white truncate">
+                      {userProfile.displayName}
+                    </span>
+                    <span className="text-xs text-gray-400 truncate">
+                      {userProfile.email}
+                    </span>
+                  </div>
+                  {userProfile.photoURL ? (
+                    <img
+                      src={userProfile.photoURL}
+                      alt="User Avatar"
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
+                      <span className="text-xs font-semibold text-gray-800">
+                        {userProfile.displayName.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                  <ChevronDown
+                    className={`ml-1 text-white transition-transform ${
+                      showDropdown ? "rotate-180" : ""
+                    }`}
+                    size={16}
+                  />
+                </button>
+
+                {showDropdown && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 animate-fade-in">
+                    <div className="px-4 py-3 border-b border-gray-100">
+                      <div className="font-medium text-gray-900 truncate">
+                        {userProfile.displayName}
+                      </div>
+                      <div className="text-sm text-gray-500 truncate">
+                        {userProfile.email}
+                      </div>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                    >
+                      <LogOut size={16} className="mr-2" /> Logout
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-gray-300 text-sm">Not logged in</div>
+            )}
+          </div>
+        </nav>
+
+        {/* Main Dashboard */}
+        <main className="flex-1 p-4 md:p-6 space-y-6">
           <Header
             selectedUnit={selectedUnit}
-            setSelectedUnit={(u) => {
-              if (!isValidString(u)) return;
-              setSelectedUnit(u);
-            }}
+            setSelectedUnit={setSelectedUnit}
             units={assignedUnits}
             title={activeMenu === "dashboard" ? "User Dashboard" : "View Table"}
             selectedYear={selectedYear}
-            setSelectedYear={(y) => {
-              if (!isValidString(y)) return;
-              setSelectedYear(y);
-            }}
+            setSelectedYear={setSelectedYear}
           />
 
           <ControlButtons
-            onImportData={handleImportData}
-            onImportBudget={handleImportBudget}
-            onExportExcel={handleExportExcel}
             showImportButton
             showExportButtons
+            onImportData={handleImportData}
+            onImportBudget={handleImportBudget}
+            onExportData={handleExportExcel}
           />
 
           {activeMenu === "dashboard" && (
-            <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="w-full bg-white p-4 rounded-xl shadow">
                 <Piechart
                   data={currentData}
                   masterCodeData={masterCode}
@@ -532,36 +573,27 @@ const UserDashboard = () => {
                   setSelectedMonth={setSelectedMonth}
                   selectedYear={selectedYear}
                 />
+              </div>
+              <div className="w-full bg-white p-4 rounded-xl shadow">
                 <Barchart data={currentData} selectedYear={selectedYear} />
               </div>
-
-              <div className="p-2 shadow rounded-lg bg-white">
+              <div className="w-full bg-white p-4 rounded-xl shadow md:col-span-2">
                 <Linechart data={currentData} selectedYear={selectedYear} />
               </div>
-            </>
+            </div>
           )}
 
           {activeMenu === "viewTable" && (
-            <>
-              <DashboardView
-                currentData={currentData}
-                masterCodeData={masterCode}
-                budgetData={budgetData}
-                selectedYear={selectedYear}
-                selectedUnit={selectedUnit}
+            <div className="space-y-6">
+              <DataTable
+                data={currentData}
+                columns={columns}
+                title={`Data ${selectedUnit} - ${selectedYear}`}
+                showFilters
+                showPagination
+                rowsPerPage={25}
               />
-
-              <div className="bg-white p-6 rounded-xl shadow">
-                <DataTable
-                  data={currentData}
-                  columns={columns}
-                  title={`Data ${selectedUnit} - ${selectedYear}`}
-                  showFilters
-                  showPagination
-                  rowsPerPage={25}
-                />
-              </div>
-            </>
+            </div>
           )}
         </main>
       </div>

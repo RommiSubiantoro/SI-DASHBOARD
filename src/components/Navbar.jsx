@@ -82,18 +82,33 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
   };
 
   return (
-    <nav className="bg-black shadow-md  sticky top-0 z-40 ml-64">
+    <nav className="bg-black shadow-md sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 py-3 md:px-8">
         {/* Left: Logo + menu button */}
         <div className="flex items-center space-x-3">
-          {/* Tombol toggle sidebar (hanya mobile) */}
+          {/* Tombol toggle sidebar (mobile only) */}
           <button
-            className="md:hidden text-white focus:outline-none"
+            className="md:hidden text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
             onClick={onToggleSidebar}
           >
+            {/* Hamburger icon */}
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
+            </svg>
           </button>
 
-          {/* Logo dan title */}
+          {/* Logo */}
           <img
             src={Logo}
             alt="Samudera Indonesia Logo"
@@ -111,7 +126,7 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
               className="flex items-center p-2 rounded-lg hover:bg-gray-800 transition-colors"
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              {/* User Info */}
+              {/* User Info (hidden on very small screens) */}
               <div className="hidden sm:flex flex-col text-left mr-3">
                 <span className="text-sm font-medium text-white truncate">
                   {userProfile.displayName}
@@ -135,16 +150,19 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
                   </span>
                 </div>
               )}
+
+              {/* Chevron */}
               <ChevronDown
-                className={`ml-1 text-white transition-transform ${
+                className={`ml-1 text-white transition-transform duration-200 ${
                   showDropdown ? "rotate-180" : ""
                 }`}
                 size={16}
               />
             </button>
 
+            {/* Dropdown */}
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50">
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 animate-fade-in">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <div className="font-medium text-gray-900 truncate">
                     {userProfile.displayName}

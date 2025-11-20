@@ -96,7 +96,7 @@ export const useDataManagement = (initialData = {}) => {
       }
 
       // ---- BERSIHKAN ANGKA ----
-      const rawValue = row["Doc Value"];
+      const rawValue = row["Home Value"];
       const cleanValue =
         parseFloat(
           String(rawValue)

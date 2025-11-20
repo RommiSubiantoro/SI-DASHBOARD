@@ -30,18 +30,20 @@ const MONTHS = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-// 🔹 Helper untuk parsing number
+// 🔹 Helper parsing angka
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
   let isNeg = false;
+
   if (/^\(.+\)$/.test(s)) {
     isNeg = true;
     s = s.replace(/^\(|\)$/g, "");
   }
+
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -(n) : n;
+  return isNeg ? -n : n;
 }
 
 export default function Barchart({
@@ -53,7 +55,9 @@ export default function Barchart({
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [isLoading, setIsLoading] = useState(false);
 
-  // 🔹 Ambil masterCode
+  // ------------------------------------------------------------
+  // 🔥 Ambil masterCode HANYA SEKALI
+  // ------------------------------------------------------------
   useEffect(() => {
     const fetchMasterCode = async () => {
       try {
@@ -67,17 +71,22 @@ export default function Barchart({
         setIsLoading(false);
       }
     };
-    fetchMasterCode();
-  }, [selectedYear, data]);
 
-  // 🔹 Kategori unik
+    fetchMasterCode();
+  }, []); // ⬅️ hanya 1x load!
+
+  // ------------------------------------------------------------
+  // 🔹 Ambil kategori unik
+  // ------------------------------------------------------------
   const categories = useMemo(() => {
     if (masterCode.length === 0) return ["ALL"];
     const unique = [...new Set(masterCode.map((m) => m.category))];
     return ["ALL", ...unique];
   }, [masterCode]);
 
-  // 🔹 Hitung nilai per bulan
+  // ------------------------------------------------------------
+  // 🔥 Hitung total nilai per bulan + kategori filter
+  // ------------------------------------------------------------
   const chartData = useMemo(() => {
     if (!Array.isArray(data) || data.length === 0 || masterCode.length === 0)
       return [];
@@ -86,6 +95,7 @@ export default function Barchart({
 
     data.forEach((row) => {
       const code = String(row.accountCode)?.trim();
+
       const match = masterCode.find(
         (m) => String(m.code).trim() === code
       );
@@ -95,8 +105,8 @@ export default function Barchart({
       if (selectedCategory !== "ALL" && category !== selectedCategory) return;
 
       MONTHS.forEach((month) => {
-        const val = parseNumber(row[month]) || 0;
-        monthTotals[month] += (val);
+        const val = parseNumber(row[month]);
+        monthTotals[month] += val;
       });
     });
 
@@ -106,7 +116,9 @@ export default function Barchart({
     }));
   }, [data, masterCode, selectedCategory]);
 
+  // ------------------------------------------------------------
   // 🔹 Total keseluruhan
+  // ------------------------------------------------------------
   const totalValue = useMemo(() => {
     return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
   }, [chartData]);
@@ -145,28 +157,26 @@ export default function Barchart({
       {isLoading ? (
         <p className="text-center text-gray-500">⏳ Memuat data...</p>
       ) : chartData.length > 0 ? (
-        <>
-          <div className="w-full h-120 bg-gray-50 rounded-lg p-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(v) => Number(v).toLocaleString()} />
-                <Legend wrapperStyle={{ fontSize: 10 }} />
-                <Bar dataKey="value" name={totalValue.toLocaleString()}>
-                  {chartData.map((entry, idx) => (
-                    <Cell
-                      key={`bar-${idx}`}
-                      fill={COLORS[idx % COLORS.length]}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-          
-        </>
+        <div className="w-full h-120 bg-gray-50 rounded-lg p-4">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+              <YAxis tick={{ fontSize: 10 }} />
+              <Tooltip formatter={(v) => Number(v).toLocaleString()} />
+              <Legend wrapperStyle={{ fontSize: 10 }} />
+
+              <Bar dataKey="value" name={totalValue.toLocaleString()}>
+                {chartData.map((entry, idx) => (
+                  <Cell
+                    key={`bar-${idx}`}
+                    fill={COLORS[idx % COLORS.length]}
+                  />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       ) : (
         <p className="text-center text-gray-500">
           Tidak ada data untuk kategori ini.
