@@ -84,20 +84,18 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
   return (
     <nav className="bg-black shadow-md sticky top-0 z-50">
       <div className="flex items-center justify-between px-4 py-3 md:px-8">
-        {/* Left: Logo + menu button */}
+        {/* ─── Left Section ─────────────────────────────── */}
         <div className="flex items-center space-x-3">
-          {/* Tombol toggle sidebar (mobile only) */}
+          {/* Toggle Sidebar (Mobile Only) */}
           <button
             className="md:hidden text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
             onClick={onToggleSidebar}
           >
-            {/* Hamburger icon */}
             <svg
               className="w-6 h-6"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
             >
               <path
                 strokeLinecap="round"
@@ -108,30 +106,30 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
             </svg>
           </button>
 
-          {/* Logo */}
+          {/* Logo + Title */}
           <img
             src={Logo}
             alt="Samudera Indonesia Logo"
             className="h-10 w-auto object-contain"
           />
-          <h2 className="text-lg md:text-xl font-bold text-white">
+          <h2 className="text-lg md:text-xl font-bold text-white whitespace-nowrap">
             Samudera Indonesia
           </h2>
         </div>
 
-        {/* Right: User info */}
+        {/* ─── Right Section: User Info ─────────────────── */}
         {userProfile ? (
           <div className="relative" ref={dropdownRef}>
             <button
-              className="flex items-center p-2 rounded-lg hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-gray-800 transition-colors"
               onClick={() => setShowDropdown(!showDropdown)}
             >
-              {/* User Info (hidden on very small screens) */}
-              <div className="hidden sm:flex flex-col text-left mr-3">
-                <span className="text-sm font-medium text-white truncate">
+              {/* User Name + Email (hidden on extra-small) */}
+              <div className="hidden sm:flex flex-col text-left mr-1">
+                <span className="text-sm font-medium text-white truncate max-w-[120px]">
                   {userProfile.displayName}
                 </span>
-                <span className="text-xs text-gray-400 truncate">
+                <span className="text-xs text-gray-400 truncate max-w-[120px]">
                   {userProfile.email}
                 </span>
               </div>
@@ -151,9 +149,8 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
                 </div>
               )}
 
-              {/* Chevron */}
               <ChevronDown
-                className={`ml-1 text-white transition-transform duration-200 ${
+                className={`text-white transition-transform duration-200 ${
                   showDropdown ? "rotate-180" : ""
                 }`}
                 size={16}

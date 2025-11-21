@@ -15,7 +15,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? - (n) : n;
+  return isNeg ? -n : n;
 }
 
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
@@ -27,7 +27,20 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [loadingReload, setLoadingReload] = useState(false);
 
   const months = useMemo(
-    () => ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"],
+    () => [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ],
     []
   );
 
@@ -68,18 +81,30 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
 
       try {
         const years = ["2024", "2025"];
-        const validCodes = new Set(masterCode.map((m) => String(m.code).toLowerCase().trim()));
+        const validCodes = new Set(
+          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        );
 
         const extractCode = (item) =>
           String(
-            item.accountCode || item["ACCOUNT CODE"] || item["AccountCode"] || item["account_code"] || item["Code"] || ""
-          ).toLowerCase().trim();
+            item.accountCode ||
+              item["ACCOUNT CODE"] ||
+              item["AccountCode"] ||
+              item["account_code"] ||
+              item["Code"] ||
+              ""
+          )
+            .toLowerCase()
+            .trim();
 
-        const getMonthValue = (item, m) => (parseNumber(item[m]));
+        const getMonthValue = (item, m) => parseNumber(item[m]);
 
         let allBudgets = {};
         for (const year of years) {
-          const colRef = collection(db, `unitData/${selectedUnit}/${year}/budget/items`);
+          const colRef = collection(
+            db,
+            `unitData/${selectedUnit}/${year}/budget/items`
+          );
           const snap = await getDocs(colRef);
           let data = snap.docs.map((doc) => doc.data());
           data = data.filter((item) => validCodes.has(extractCode(item)));
@@ -87,10 +112,27 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           const grouped = {};
           data.forEach((item) => {
             const code = extractCode(item);
-            if (!grouped[code]) grouped[code] = { accountCode: code, totalBudget: 0 };
+            if (!grouped[code])
+              grouped[code] = { accountCode: code, totalBudget: 0 };
 
-            const monthsUpper = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
-            grouped[code].totalBudget += monthsUpper.reduce((sum, m) => sum + (parseNumber(item[m])), 0);
+            const monthsUpper = [
+              "JAN",
+              "FEB",
+              "MAR",
+              "APR",
+              "MAY",
+              "JUN",
+              "JUL",
+              "AUG",
+              "SEP",
+              "OCT",
+              "NOV",
+              "DEC",
+            ];
+            grouped[code].totalBudget += monthsUpper.reduce(
+              (sum, m) => sum + parseNumber(item[m]),
+              0
+            );
           });
 
           allBudgets[year] = Object.values(grouped);
@@ -138,7 +180,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + (parseNumber(row[m])), 0),
+            sum + months.reduce((acc, m) => acc + parseNumber(row[m]), 0),
           0
         );
 
@@ -146,19 +188,23 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + (parseNumber(row[m])), 0),
+            sum + months.reduce((acc, m) => acc + parseNumber(row[m]), 0),
           0
         );
 
       const totalBdgt = budgetForYear
         .filter(matchCat)
-        .reduce((sum, row) => sum + (parseNumber(row.totalBudget)), 0);
+        .reduce((sum, row) => sum + parseNumber(row.totalBudget), 0);
 
       const aVsCValue = totalActNow - totalActPrev;
       const bVsCValue = totalActNow - totalBdgt;
 
-      const aVsCPercent = totalActPrev ? (totalActNow / totalActPrev - 1) * 100 : null;
-      const bVsCPercent = totalBdgt ? (totalActNow / totalBdgt - 1) * 100 : null;
+      const aVsCPercent = totalActPrev
+        ? (totalActNow / totalActPrev - 1) * 100
+        : null;
+      const bVsCPercent = totalBdgt
+        ? (totalActNow / totalBdgt - 1) * 100
+        : null;
 
       return {
         description: cat,
@@ -227,7 +273,9 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
 
     // 🔹 Operation Income = Gross Profit - G&A Expense
     const gpa = summary.find((r) => r.description === "Gross Profit");
-    const gae = summary.find((r) => r.description === "General & Administration Expense");
+    const gae = summary.find(
+      (r) => r.description === "General & Administration Expense"
+    );
     if (gpa && gae) {
       const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
 
@@ -242,7 +290,9 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         act2025: formatNumber(opIncomeAct2025),
         aVsC: {
           value: opIncomeAct2025 - opIncomeAct2024,
-          percent: opIncomeAct2024 ? (opIncomeAct2025 / opIncomeAct2024 - 1) * 100 : null,
+          percent: opIncomeAct2024
+            ? (opIncomeAct2025 / opIncomeAct2024 - 1) * 100
+            : null,
           text: opIncomeAct2024
             ? ((opIncomeAct2025 / opIncomeAct2024 - 1) * 100).toFixed(1) +
               "% (" +
@@ -252,7 +302,9 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         },
         bVsC: {
           value: opIncomeAct2025 - opIncomeBdgt2025,
-          percent: opIncomeBdgt2025 ? (opIncomeAct2025 / opIncomeBdgt2025 - 1) * 100 : null,
+          percent: opIncomeBdgt2025
+            ? (opIncomeAct2025 / opIncomeBdgt2025 - 1) * 100
+            : null,
           text: opIncomeBdgt2025
             ? ((opIncomeAct2025 / opIncomeBdgt2025 - 1) * 100).toFixed(1) +
               "% (" +
@@ -263,7 +315,9 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       });
 
       // 🔹 NIBT = Operation Income - Other Income (Expenses)
-      const oie = summary.find((r) => r.description === "Other Income (Expenses)");
+      const oie = summary.find(
+        (r) => r.description === "Other Income (Expenses)"
+      );
       if (oie) {
         const nibtAct2024 = opIncomeAct2024 - num(oie.act2024);
         const nibtAct2025 = opIncomeAct2025 - num(oie.act2025);
@@ -286,7 +340,9 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           },
           bVsC: {
             value: nibtAct2025 - nibtBdgt2025,
-            percent: nibtBdgt2025 ? (nibtAct2025 / nibtBdgt2025 - 1) * 100 : null,
+            percent: nibtBdgt2025
+              ? (nibtAct2025 / nibtBdgt2025 - 1) * 100
+              : null,
             text: nibtBdgt2025
               ? ((nibtAct2025 / nibtBdgt2025 - 1) * 100).toFixed(1) +
                 "% (" +
@@ -309,11 +365,22 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       "NIBT",
       "Pajak",
     ];
-    summary.sort((a, b) => order.indexOf(a.description) - order.indexOf(b.description));
+    summary.sort(
+      (a, b) => order.indexOf(a.description) - order.indexOf(b.description)
+    );
 
     setSummaryData(summary);
     return () => clearTimeout(timeout);
-  }, [filteredData, budgetData, actData2024, masterCode, selectedYear, categories, codeMap, reloadKey]);
+  }, [
+    filteredData,
+    budgetData,
+    actData2024,
+    masterCode,
+    selectedYear,
+    categories,
+    codeMap,
+    reloadKey,
+  ]);
 
   const totals = useMemo(() => {
     const sum = { act2024: 0, bdgt2025: 0, act2025: 0 };
@@ -327,59 +394,104 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   }, [summaryData]);
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow mt-10">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">
-          Summary Dashboard — <span className="text-blue-600">{selectedYear || "Pilih Tahun"}</span>
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow mt-6 sm:mt-10 w-full">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        <h2 className="text-base sm:text-lg font-bold">
+          Summary Dashboard —{" "}
+          <span className="text-blue-600">{selectedYear || "Pilih Tahun"}</span>
         </h2>
+
         <button
           onClick={() => setReloadKey(Date.now())}
           disabled={loadingReload}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm transition ${loadingReload ? "bg-gray-400 cursor-not-allowed text-white" : "bg-blue-600 hover:bg-blue-700 text-white"}`}
+          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition ${
+            loadingReload
+              ? "bg-gray-400 cursor-not-allowed text-white"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+          }`}
         >
-          <RefreshCcw className={`w-4 h-4 ${loadingReload ? "animate-spin" : ""}`} />
+          <RefreshCcw
+            className={`w-4 h-4 ${loadingReload ? "animate-spin" : ""}`}
+          />
           {loadingReload ? "Loading..." : "Reload Data"}
         </button>
       </div>
 
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-red-500 text-left">
-            <th className="border p-2 text-white">DESCRIPTION</th>
-            <th className="border p-2 text-right text-white">ACT 2024</th>
-            <th className="border p-2 text-right text-white">BDGT {selectedYear}</th>
-            <th className="border p-2 text-right text-white">ACT {selectedYear}</th>
-            <th className="border p-2 text-right text-white">A VS C</th>
-            <th className="border p-2 text-right text-white">B VS C</th>
-          </tr>
-        </thead>
-        <tbody>
-          {summaryData.map((row, i) => (
-            <tr key={i} className="hover:bg-gray-50">
-              <td className="border p-2">{row.description}</td>
-              <td className="border p-2 text-right">{row.act2024}</td>
-              <td className="border p-2 text-right">{row.bdgt2025}</td>
-              <td className="border p-2 text-right font-bold">{row.act2025}</td>
-              <td className="border p-2 text-right">
-                {row.aVsC === "-" ? "-" : (
-                  <div className={`flex items-center justify-end gap-1 ${row.aVsC.percent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    <span>{row.aVsC.text}</span>
-                    {row.aVsC.percent >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  </div>
-                )}
-              </td>
-              <td className="border p-2 text-right">
-                {row.bVsC === "-" ? "-" : (
-                  <div className={`flex items-center justify-end gap-1 ${row.bVsC.percent >= 0 ? "text-green-600" : "text-red-600"}`}>
-                    <span>{row.bVsC.text}</span>
-                    {row.bVsC.percent >= 0 ? <ArrowUp className="w-4 h-4" /> : <ArrowDown className="w-4 h-4" />}
-                  </div>
-                )}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-xs sm:text-sm">
+          <thead>
+            <tr className="bg-red-500 text-left">
+              <th className="border p-2 text-white">DESCRIPTION</th>
+              <th className="border p-2 text-right text-white">ACT 2024</th>
+              <th className="border p-2 text-right text-white">
+                BDGT {selectedYear}
+              </th>
+              <th className="border p-2 text-right text-white">
+                ACT {selectedYear}
+              </th>
+              <th className="border p-2 text-right text-white">A VS C</th>
+              <th className="border p-2 text-right text-white">B VS C</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+
+          <tbody>
+            {summaryData.map((row, i) => (
+              <tr key={i} className="hover:bg-gray-50">
+                <td className="border p-2">{row.description}</td>
+                <td className="border p-2 text-right">{row.act2024}</td>
+                <td className="border p-2 text-right">{row.bdgt2025}</td>
+                <td className="border p-2 text-right font-bold">
+                  {row.act2025}
+                </td>
+
+                {/* A VS C */}
+                <td className="border p-2 text-right">
+                  {row.aVsC === "-" ? (
+                    "-"
+                  ) : (
+                    <div
+                      className={`flex items-center justify-end gap-1 ${
+                        row.aVsC.percent >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      <span>{row.aVsC.text}</span>
+                      {row.aVsC.percent >= 0 ? (
+                        <ArrowUp className="w-4 h-4" />
+                      ) : (
+                        <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  )}
+                </td>
+
+                {/* B VS C */}
+                <td className="border p-2 text-right">
+                  {row.bVsC === "-" ? (
+                    "-"
+                  ) : (
+                    <div
+                      className={`flex items-center justify-end gap-1 ${
+                        row.bVsC.percent >= 0
+                          ? "text-green-600"
+                          : "text-red-600"
+                      }`}
+                    >
+                      <span>{row.bVsC.text}</span>
+                      {row.bVsC.percent >= 0 ? (
+                        <ArrowUp className="w-4 h-4" />
+                      ) : (
+                        <ArrowDown className="w-4 h-4" />
+                      )}
+                    </div>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {summaryData.length === 0 && (
         <p className="text-center text-gray-500 mt-4">

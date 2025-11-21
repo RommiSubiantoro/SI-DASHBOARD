@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import { collection, addDoc, getDocs, deleteDoc, doc } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  getDocs,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { db } from "../firebase";
 
 const LibraryCode = () => {
@@ -73,7 +79,8 @@ const LibraryCode = () => {
 
   // 🔹 Hapus semua data di Firestore
   const handleDeleteAll = async () => {
-    if (!window.confirm("Yakin ingin menghapus semua data Library Code?")) return;
+    if (!window.confirm("Yakin ingin menghapus semua data Library Code?"))
+      return;
     try {
       const querySnapshot = await getDocs(collection(db, "libraryCode"));
       for (const d of querySnapshot.docs) {
@@ -89,26 +96,35 @@ const LibraryCode = () => {
 
   return (
     <div className="bg-white p-6 rounded-lg mt-6 shadow-md">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-700">📚 Library Code</h2>
+      <h2 className="text-2xl font-semibold mb-4 text-gray-700">
+        📚 Library Code
+      </h2>
 
-      <div className="flex gap-4 mb-6">
+      {/* Upload + Delete Controls */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <input
           type="file"
           accept=".xlsx, .xls"
           onChange={handleFileUpload}
-          className="border border-gray-300 p-2 rounded"
+          className="border border-gray-300 p-2 rounded w-full sm:w-auto"
         />
         <button
           onClick={handleDeleteAll}
-          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+          className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 w-full sm:w-auto"
         >
           Hapus Semua
         </button>
       </div>
 
-      {uploading && <p className="text-blue-600">Sedang mengupload dan menyimpan data...</p>}
-      {loading && <p className="text-gray-600">Memuat data dari Firestore...</p>}
+      {/* Status */}
+      {uploading && (
+        <p className="text-blue-600">Sedang mengupload dan menyimpan data...</p>
+      )}
+      {loading && (
+        <p className="text-gray-600">Memuat data dari Firestore...</p>
+      )}
 
+      {/* Table */}
       <div className="overflow-x-auto mt-4">
         <table className="min-w-full border border-gray-300 text-sm">
           <thead className="bg-red-500 text-white">

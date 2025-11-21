@@ -98,115 +98,119 @@ const DataTable = ({
     : filteredData;
 
   return (
-    <div className="bg-white p-6 rounded-2xl shadow-md">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
-      </div>
+    <div className="bg-white p-6 rounded-2xl shadow-md w-full">
+  {/* Header */}
+  <div className="flex justify-between items-center mb-4">
+    <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+  </div>
 
-      {/* 🔹 Filter Bar */}
-      {showFilters && (
-        <div className="flex flex-wrap gap-4 mb-4">
-          {/* 🔹 Category (dropdown) */}
-          <select
-            value={categoryFilter}
-            onChange={(e) => {
-              setCategoryFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">📋 All Categories</option>
-            {loadingMaster ? (
-              <option>⏳ Loading...</option>
-            ) : (
-              categories.map((cat, i) => (
-                <option key={`cat-${i}`} value={cat}>
-                  📂 {cat}
-                </option>
-              ))
-            )}
-          </select>
+  {/* Filter Bar */}
+  {showFilters && (
+    <div className="flex flex-wrap gap-3 mb-4">
 
-          {/* 🔹 Business Line (dropdown) */}
-          <select
-            value={businessLineFilter}
-            onChange={(e) => {
-              setBusinessLineFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="">🏢 All Business Lines</option>
-            {businessLines.map((line, i) => (
-              <option key={`bl-${i}`} value={line}>
-                {line}
-              </option>
-            ))}
-          </select>
+      {/* Category */}
+      <select
+        value={categoryFilter}
+        onChange={(e) => {
+          setCategoryFilter(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="min-w-[180px] px-4 py-2 border rounded-lg text-sm"
+      >
+        <option value="">📋 All Categories</option>
+        {loadingMaster ? (
+          <option>⏳ Loading...</option>
+        ) : (
+          categories.map((cat, i) => (
+            <option key={`cat-${i}`} value={cat}>📂 {cat}</option>
+          ))
+        )}
+      </select>
 
-          {/* 🔹 Account Code (input teks) */}
-          <input
-            type="text"
-            placeholder="🔍 Search Account Code..."
-            value={accountCodeFilter}
-            onChange={(e) => {
-              setAccountCodeFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-lg bg-white text-sm focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-      )}
+      {/* Business Line */}
+      <select
+        value={businessLineFilter}
+        onChange={(e) => {
+          setBusinessLineFilter(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="min-w-[180px] px-4 py-2 border rounded-lg text-sm"
+      >
+        <option value="">🏢 All Business Lines</option>
+        {businessLines.map((line, i) => (
+          <option key={`bl-${i}`} value={line}>{line}</option>
+        ))}
+      </select>
 
-      {/* 🔹 Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm border-collapse">
-          <thead>
-            <tr className="bg-gray-100 text-gray-700 border-b">
-              {Object.keys(data[0] || {}).map((key) => (
-                <th key={key} className="px-3 py-2 text-left border">
-                  {key}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {paginatedData.map((row, i) => (
-              <tr key={i} className="hover:bg-gray-50 border-b">
-                {Object.values(row).map((val, j) => (
-                  <td key={j} className="px-3 py-2 border">
-                    {String(val)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* 🔹 Pagination */}
-      {showPagination && totalPages > 1 && (
-        <div className="flex justify-center items-center gap-3 mt-4">
-          <button
-            onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-            disabled={currentPage === 1}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            ◀
-          </button>
-          <span>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-            disabled={currentPage === totalPages}
-            className="px-3 py-1 bg-gray-200 rounded disabled:opacity-50"
-          >
-            ▶
-          </button>
-        </div>
-      )}
+      {/* Account Code */}
+      <input
+        type="text"
+        placeholder="🔍 Search Account Code..."
+        value={accountCodeFilter}
+        onChange={(e) => {
+          setAccountCodeFilter(e.target.value);
+          setCurrentPage(1);
+        }}
+        className="min-w-[180px] px-4 py-2 border rounded-lg text-sm"
+      />
     </div>
+  )}
+
+  {/* Table */}
+  <div className="overflow-x-auto rounded-lg">
+    <table className="w-full text-sm border-collapse">
+      <thead>
+        <tr className="bg-gray-100 text-gray-700 border-b">
+          {Object.keys(data[0] || {}).map((key) => (
+            <th key={key} className="px-3 py-2 border whitespace-nowrap">
+              {key}
+            </th>
+          ))}
+        </tr>
+      </thead>
+
+      <tbody>
+        {paginatedData.map((row, i) => (
+          <tr key={i} className="hover:bg-gray-50 border-b">
+            {Object.values(row).map((val, j) => (
+              <td key={j} className="px-3 py-2 border whitespace-nowrap">
+                {String(val)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Pagination */}
+  {showPagination && totalPages > 1 && (
+    <div className="flex justify-center items-center gap-3 mt-4 text-sm">
+
+      <button
+        onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+        disabled={currentPage === 1}
+        className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+      >
+        ◀
+      </button>
+
+      <span className="text-gray-700">
+        Page {currentPage} of {totalPages}
+      </span>
+
+      <button
+        onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+        disabled={currentPage === totalPages}
+        className="px-3 py-1 rounded bg-gray-200 disabled:opacity-50"
+      >
+        ▶
+      </button>
+
+    </div>
+  )}
+</div>
+
   );
 };
 

@@ -17,6 +17,7 @@ import DataTable from "../components/DataTable";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
+import DashboardView from "../components/DashboardView";
 
 import Logo from "../assets/logo-smdr.png";
 
@@ -40,7 +41,6 @@ const UserDashboard = () => {
   const [viewData, setViewData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-
 
   const isValidString = (s) => typeof s === "string" && s.trim() !== "";
 
@@ -584,16 +584,26 @@ const UserDashboard = () => {
           )}
 
           {activeMenu === "viewTable" && (
-            <div className="space-y-6">
-              <DataTable
-                data={currentData}
-                columns={columns}
-                title={`Data ${selectedUnit} - ${selectedYear}`}
-                showFilters
-                showPagination
-                rowsPerPage={25}
+            <>
+              <DashboardView
+                currentData={currentData}
+                masterCodeData={masterCode}
+                budgetData={budgetData}
+                selectedYear={selectedYear}
+                selectedUnit={selectedUnit}
               />
-            </div>
+
+              <div className="space-6">
+                <DataTable
+                  data={currentData}
+                  columns={columns}
+                  title={`Data ${selectedUnit} - ${selectedYear}`}
+                  showFilters
+                  showPagination
+                  rowsPerPage={25}
+                />
+              </div>
+            </>
           )}
         </main>
       </div>

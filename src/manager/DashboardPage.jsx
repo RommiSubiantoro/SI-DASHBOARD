@@ -34,8 +34,9 @@ const DashboardPage = ({
           selectedYear={selectedYear}
           setSelectedYear={setSelectedYear}
         >
+          {/* Row Chart: Pie + Bar */}
           <div className="w-full flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 p-2 shadow rounded-lg bg-white">
+            <div className="flex-1 p-2 shadow rounded-lg bg-white min-h-[300px]">
               <Piechart
                 data={currentData}
                 selectedMonth={selectedMonth}
@@ -44,16 +45,15 @@ const DashboardPage = ({
                 setSelectedYear={setSelectedYear}
               />
             </div>
-            <div className="flex-1 p-2 shadow rounded-lg bg-white">
+            <div className="flex-1 p-2 shadow rounded-lg bg-white min-h-[300px]">
               <Barchart data={currentData} selectedYear={selectedYear} />
             </div>
           </div>
 
+          {/* Line Chart Full Width */}
           <div className="w-full mt-6">
-            <div className="p-2 shadow rounded-lg bg-white">
-              <Linechart
-               data={currentData} 
-               selectedYear={selectedYear}/>
+            <div className="p-2 shadow rounded-lg bg-white min-h-[300px]">
+              <Linechart data={currentData} selectedYear={selectedYear} />
             </div>
           </div>
         </ExporttableChart>

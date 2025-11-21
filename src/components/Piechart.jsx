@@ -1,15 +1,42 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { PieChart, Pie, Tooltip, ResponsiveContainer, Cell, Legend } from "recharts";
+import {
+  PieChart,
+  Pie,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+  Legend,
+} from "recharts";
 import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const COLORS = [
-  "#4facfe", "#ff6b6b", "#3ddb97", "#ffa726",
-  "#8b5cf6", "#f59e0b", "#60a5fa", "#ef4444",
-  "#10b981", "#6366f1",
+  "#4facfe",
+  "#ff6b6b",
+  "#3ddb97",
+  "#ffa726",
+  "#8b5cf6",
+  "#f59e0b",
+  "#60a5fa",
+  "#ef4444",
+  "#10b981",
+  "#6366f1",
 ];
 
-const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 // 🔹 parseNumber sama seperti di BarChart
 function parseNumber(raw) {
@@ -22,7 +49,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -(n) : n;
+  return isNeg ? -n : n;
 }
 
 export default function Piechart({
@@ -37,8 +64,7 @@ export default function Piechart({
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const formatRupiah = (value) =>
-    "Rp " + Number(value).toLocaleString("id-ID");
+  const formatRupiah = (value) => "Rp " + Number(value).toLocaleString("id-ID");
 
   // Ambil masterCode
   useEffect(() => {
@@ -68,12 +94,9 @@ export default function Piechart({
 
     const getValue = (item) => {
       if (selectedMonth === "ALL") {
-        return MONTHS.reduce(
-          (sum, m) => sum + (parseNumber(item[m])),
-          0
-        );
+        return MONTHS.reduce((sum, m) => sum + parseNumber(item[m]), 0);
       }
-      return (parseNumber(item[selectedMonth]));
+      return parseNumber(item[selectedMonth]);
     };
 
     if (selectedCategory === "ALL") {
@@ -145,11 +168,14 @@ export default function Piechart({
   const showFilters = mode !== "atk";
 
   return (
-    <div className="p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
+    <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
       {showFilters && (
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {/* Kategori */}
           <div>
-            <label className="block mb-1 font-medium">Pilih Kategori</label>
+            <label className="block mb-1 font-medium text-sm sm:text-base">
+              Pilih Kategori
+            </label>
             <select
               className="border px-3 py-2 rounded-lg w-full text-sm"
               value={selectedCategory}
@@ -157,56 +183,73 @@ export default function Piechart({
             >
               <option value="ALL">Semua Kategori</option>
               {[...new Set(masterCode.map((m) => m.category))].map((cat) => (
-                <option key={cat} value={cat}>{cat}</option>
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
               ))}
             </select>
           </div>
 
+          {/* Bulan */}
           <div>
-            <label className="block mb-1 font-medium">Pilih Bulan</label>
+            <label className="block mb-1 font-medium text-sm sm:text-base">
+              Pilih Bulan
+            </label>
             <select
               className="border px-3 py-2 rounded-lg w-full text-sm"
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
             >
               <option value="ALL">Semua Bulan</option>
-              {MONTHS.map((m) => <option key={m} value={m}>{m}</option>)}
+              {MONTHS.map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
             </select>
           </div>
         </div>
       )}
 
-      <ResponsiveContainer width="100%" height={500}>
-        <PieChart>
-          <Pie
-            data={chartData}
-            dataKey="value"
-            nameKey="name"
-            cx="50%"
-            cy="50%"
-            outerRadius={150}
-          >
-            {chartData.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Pie>
+      {/* Chart Container Responsive */}
+      <div className="w-full h-[300px] sm:h-[400px] md:h-[500px]">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={chartData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              outerRadius="70%" // responsive radius
+            >
+              {chartData.map((_, i) => (
+                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              ))}
+            </Pie>
 
-          <Tooltip formatter={(value) => "Rp " + Number(value).toLocaleString("id-ID")} />
-          <Legend
-            formatter={(value, entry) =>
-              `${value} (${"Rp " + Number(entry.payload.value).toLocaleString("id-ID")})`
-            }
-            wrapperStyle={{ fontSize: "8px" }}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+            <Tooltip
+              formatter={(value) =>
+                "Rp " + Number(value).toLocaleString("id-ID")
+              }
+            />
 
-      <p className="text-center mt-4 font-semibold text-gray-700">
+            <Legend
+              wrapperStyle={{
+                fontSize: "10px",
+                paddingTop: "10px",
+              }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      <p className="text-center mt-4 font-semibold text-gray-700 text-sm sm:text-base">
         Total Keseluruhan: Rp {totalValue.toLocaleString("id-ID")}
       </p>
 
       {chartData.length === 0 && (
-        <p className="text-gray-500 text-center mt-4">
+        <p className="text-gray-500 text-center mt-4 text-sm">
           Tidak ada data untuk pilihan ini.
         </p>
       )}

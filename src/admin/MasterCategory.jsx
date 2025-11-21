@@ -65,16 +65,16 @@ const MasterCategory = ({
 
         {/* 🔹 Form input kategori */}
         <div className="mb-6">
-          <div className="flex gap-2">
+          <div className="flex flex-col sm:flex-row gap-2">
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nama kategori..."
-              className="flex-1 px-3 py-2 border rounded-lg"
+              className="flex-1 px-3 py-2 border rounded-lg w-full"
             />
             <button
               onClick={save}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg"
+              className="px-4 py-2 bg-green-600 text-white rounded-lg w-full sm:w-auto"
             >
               {editing ? "Update" : "Simpan"}
             </button>
@@ -84,7 +84,7 @@ const MasterCategory = ({
                   setEditing(null);
                   setName("");
                 }}
-                className="px-4 py-2 bg-gray-400 text-white rounded-lg"
+                className="px-4 py-2 bg-gray-400 text-white rounded-lg w-full sm:w-auto"
               >
                 Batal
               </button>
@@ -95,13 +95,15 @@ const MasterCategory = ({
           </p>
         </div>
 
-        {/* 🔹 Tabel dengan kolom tambahan Account Name */}
+        {/* 🔹 Tabel */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-red-500 border-b">
               <tr>
                 <th className="px-4 py-2 text-left text-white">No</th>
-                <th className="px-4 py-2 text-left text-white">Nama Kategori</th>
+                <th className="px-4 py-2 text-left text-white">
+                  Nama Kategori
+                </th>
                 <th className="px-4 py-2 text-left text-white">Daftar Code</th>
                 <th className="px-4 py-2 text-left text-white">Account Name</th>
                 <th className="px-4 py-2 text-left text-white">Aksi</th>
@@ -125,15 +127,11 @@ const MasterCategory = ({
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-4 py-3">{i + 1}</td>
                     <td className="px-4 py-3 font-medium">{c.name}</td>
-
-                    {/* 🔸 Daftar Code */}
                     <td className="px-4 py-3">
                       {c.relatedCodes || (
                         <span className="text-gray-400">Belum ada code</span>
                       )}
                     </td>
-
-                    {/* 🔸 Daftar Account Name */}
                     <td className="px-4 py-3">
                       {c.relatedAccounts || (
                         <span className="text-gray-400">
@@ -141,13 +139,11 @@ const MasterCategory = ({
                         </span>
                       )}
                     </td>
-
-                    {/* 🔸 Aksi */}
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => startEdit(c)}
-                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded"
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded w-full sm:w-auto"
                         >
                           Edit
                         </button>
@@ -156,7 +152,7 @@ const MasterCategory = ({
                             if (window.confirm(`Hapus kategori "${c.name}"?`))
                               onDeleteCategory(c);
                           }}
-                          className="px-3 py-1 bg-red-100 text-red-700 rounded"
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded w-full sm:w-auto"
                         >
                           Hapus
                         </button>

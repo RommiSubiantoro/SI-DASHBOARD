@@ -189,17 +189,17 @@ const MasterCode = ({
           </div>
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
           <button
             onClick={save}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg"
+            className="px-4 py-2 bg-green-600 text-white rounded-lg w-full sm:w-auto"
           >
             {editing ? "Update Code" : "Simpan Code"}
           </button>
           {editing && (
             <button
               onClick={() => setEditing(null)}
-              className="px-4 py-2 bg-gray-400 text-white rounded-lg"
+              className="px-4 py-2 bg-gray-400 text-white rounded-lg w-full sm:w-auto"
             >
               Batal
             </button>
@@ -208,7 +208,7 @@ const MasterCode = ({
 
         {/* 🔹 Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm min-w-[600px]">
             <thead className="bg-red-500 border-b">
               <tr>
                 <th className="px-4 py-2 text-left text-white">No</th>
@@ -245,10 +245,10 @@ const MasterCode = ({
                         : c.description || "-"}
                     </td>
                     <td className="px-4 py-3">
-                      <div className="flex gap-2">
+                      <div className="flex flex-col sm:flex-row gap-2">
                         <button
                           onClick={() => setEditing(c)}
-                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded"
+                          className="px-3 py-1 bg-blue-100 text-blue-700 rounded w-full sm:w-auto"
                         >
                           Edit
                         </button>
@@ -257,7 +257,7 @@ const MasterCode = ({
                             if (window.confirm(`Hapus code "${c.code}"?`))
                               onDeleteCode(c);
                           }}
-                          className="px-3 py-1 bg-red-100 text-red-700 rounded"
+                          className="px-3 py-1 bg-red-100 text-red-700 rounded w-full sm:w-auto"
                         >
                           Hapus
                         </button>

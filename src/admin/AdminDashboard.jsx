@@ -45,6 +45,7 @@ function AdminDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
   const [isLoading, setIsLoading] = useState(false);
   const [Loading, setLoading] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Units & uploads
   const [units, setUnits] = useState([]);
@@ -1085,23 +1086,45 @@ function AdminDashboard() {
   }, [selectedUnit, masterCode]);
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="flex">
-        <Sidebar
-          activePage={activePage}
-          onChangePage={handlePageChange}
-          onLogout={handleLogout}
-          userRoles={currentUser?.role || savedRoles}
+    <div className="min-h-screen bg-gray-100 flex">
+      {/* SIDEBAR */}
+      <Sidebar
+        activePage={activePage}
+        onChangePage={handlePageChange}
+        onLogout={handleLogout}
+        userRoles={currentUser?.role || savedRoles}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
+        className={`
+      fixed z-30 top-0 left-0 h-full w-64 bg-white shadow-md transform transition-transform duration-300
+      ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
+      md:translate-x-0 md:relative md:static
+    `}
+      />
+
+      {/* BACKDROP MOBILE */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-20 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
+      )}
 
-        <div className="flex-1 p-6 ml-64">
-          <div className="fixed top-0 left-0 w-full z-50">
-            <Navbar onLogout={handleLogout} />
-          </div>
+      {/* WRAPPER MAIN CONTENT */}
+      <div className="flex-1 flex flex-col md:ml-64 min-h-screen transition-all duration-300">
+        {/* NAVBAR */}
+        <div className="sticky top-0 z-40 w-full bg-white shadow-md">
+          <Navbar
+            onLogout={handleLogout}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        </div>
 
-          {/* Dashboard */}
-          {activePage === "dashboard" && (
-            <>
+        {/* MAIN CONTENT */}
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <div className="space-y-6 max-w-7xl mx-auto">
+            {/* Dashboard */}
+            {activePage === "dashboard" && (
               <DashboardPage
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
@@ -1112,148 +1135,127 @@ function AdminDashboard() {
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
                 handleExportExcel={handleExportExcel}
-                handleImportData={(e) => handleImportData(e)}
+                handleImportData={handleImportData}
                 handleExportPDF={handleExportPDF}
               />
-            </>
-          )}
+            )}
 
-          {activePage === "dashboardView" && (
-            <div style={{ marginTop: "70px" }}>
-              {" "}
-              {/* atur sesuai tinggi Navbar */}
-              <Header
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                units={units.map((u) => u.name)}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
-                title="View Table"
-              />
-              <DashboardView
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
+            {/* Dashboard View */}
+            {activePage === "dashboardView" && (
+              <>
+                <Header
+                  selectedUnit={selectedUnit}
+                  setSelectedUnit={setSelectedUnit}
+                  units={units.map((u) => u.name)}
+                  selectedYear={selectedYear}
+                  setSelectedYear={setSelectedYear}
+                  title="View Table"
+                />
+                <DashboardView
+                  selectedUnit={selectedUnit}
+                  setSelectedUnit={setSelectedUnit}
+                  selectedYear={selectedYear}
+                  setSelectedYear={setSelectedYear}
+                  units={units}
+                  currentData={currentData}
+                  selectedMonth={selectedMonth}
+                  setSelectedMonth={setSelectedMonth}
+                  handleExportExcel={handleExportExcel}
+                  handleImportData={handleImportData}
+                  handleImportBudget={handleImportBudget}
+                  handleExportPDF={handleExportPDF}
+                />
+              </>
+            )}
+
+            {/* Unit Management */}
+            {activePage === "unit" && (
+              <UnitManagement
                 units={units}
-                currentData={currentData}
-                selectedMonth={selectedMonth}
-                setSelectedMonth={setSelectedMonth}
-                handleExportExcel={handleExportExcel}
-                handleImportData={(e) => handleImportData(e)}
-                handleImportBudget={handleImportBudget}
-                handleExportPDF={handleExportPDF}
+                users={users}
+                loadingUnits={loadingUnits}
+                loadingUploads={loadingUploads}
+                unitUploads={unitUploads}
+                handleAddUnit={handleAddUnit}
+                handleEditUnit={handleEditUnit}
+                handleDeleteUnit={handleDeleteUnit}
+                handleDeleteAllRecords={handleDeleteAllRecords}
+                handleExportUnits={handleExportUnits}
+                isLoading={isLoading}
               />
-            </div>
-          )}
+            )}
 
-          {/* Unit management */}
-          {activePage === "unit" && (
-            <UnitManagement
-              units={units}
-              users={users}
-              loadingUnits={loadingUnits}
-              loadingUploads={loadingUploads}
-              unitUploads={unitUploads}
-              handleAddUnit={handleAddUnit}
-              handleEditUnit={handleEditUnit}
-              handleDeleteUnit={handleDeleteUnit}
-              handleDeleteAllRecords={handleDeleteAllRecords}
-              handleExportUnits={handleExportUnits}
-              isLoading={isLoading}
-            />
-          )}
+            {/* User Management */}
+            {activePage === "user" && (
+              <UserManagement
+                users={users}
+                loadingUsers={loadingUsers}
+                units={units}
+                searchTerm={searchTerm}
+                setSearchTerm={setSearchTerm}
+                roleFilter={roleFilter}
+                setRoleFilter={setRoleFilter}
+                unitFilter={unitFilter}
+                setUnitFilter={setUnitFilter}
+                handleResetFilters={handleResetFilters}
+                paginatedUsers={paginatedUsers}
+                currentPage={currentPage}
+                usersPerPage={usersPerPage}
+                totalPages={totalPages}
+                setCurrentPage={setCurrentPage}
+                handleAddUser={handleAddUser}
+                handleEditUser={handleEditUser}
+                handleDeleteUser={handleDeleteUser}
+                handleExportUsers={handleExportUsers}
+                isLoading={isLoading}
+              />
+            )}
 
-          {/* User management */}
-          {activePage === "user" && (
-            <UserManagement
-              users={users}
-              loadingUsers={loadingUsers}
-              units={units}
-              searchTerm={searchTerm}
-              setSearchTerm={setSearchTerm}
-              roleFilter={roleFilter}
-              setRoleFilter={setRoleFilter}
-              unitFilter={unitFilter}
-              setUnitFilter={setUnitFilter}
-              handleResetFilters={handleResetFilters}
-              paginatedUsers={paginatedUsers}
-              currentPage={currentPage}
-              usersPerPage={usersPerPage}
-              totalPages={totalPages}
-              setCurrentPage={setCurrentPage}
-              handleAddUser={handleAddUser}
-              handleEditUser={handleEditUser}
-              handleDeleteUser={handleDeleteUser}
-              handleExportUsers={handleExportUsers}
-              isLoading={isLoading}
-            />
-          )}
+            {/* Master Category */}
+            {activePage === "masterCategory" && (
+              <MasterCategory
+                categories={categories}
+                codes={codes}
+                loading={loadingCategories || loadingCodes}
+                onAddCategory={handleAddCategory}
+                onEditCategory={handleEditCategory}
+                onDeleteCategory={handleDeleteCategory}
+              />
+            )}
 
-          {/* Master Category */}
-          {activePage === "masterCategory" && (
-            <MasterCategory
-              categories={categories}
-              codes={codes} // ⬅️ penting untuk relasi ke MasterCode
-              loading={loadingCategories || loadingCodes}
-              onAddCategory={handleAddCategory}
-              onEditCategory={handleEditCategory}
-              onDeleteCategory={handleDeleteCategory}
-            />
-          )}
+            {/* Master Code */}
+            {activePage === "masterCode" && (
+              <MasterCode
+                codes={codes}
+                categories={categories}
+                loading={loadingCodes}
+                onAddCode={handleAddCode}
+                onEditCode={handleEditCode}
+                onDeleteCode={handleDeleteCode}
+              />
+            )}
 
-          {/* Master Code */}
-          {activePage === "masterCode" && (
-            <MasterCode
-              codes={codes}
-              categories={categories}
-              loading={loadingCodes}
-              onAddCode={handleAddCode}
-              onEditCode={handleEditCode}
-              onDeleteCode={handleDeleteCode}
-            />
-          )}
+            {/* Library Code */}
+            {activePage === "libraryCode" && (
+              <LibraryCode
+                codes={codes}
+                categories={categories}
+                loading={loadingCodes}
+                onAddCode={handleAddCode}
+                onEditCode={handleEditCode}
+                onDeleteCode={handleDeleteCode}
+              />
+            )}
 
-          {/* Library Code */}
-          {activePage === "libraryCode" && (
-            <LibraryCode
-              codes={codes}
-              categories={categories}
-              loading={loadingCodes}
-              onAddCode={handleAddCode}
-              onEditCode={handleEditCode}
-              onDeleteCode={handleDeleteCode}
-            />
-          )}
-
-          {/* === GA/FS SECTION === */}
-          {activePage === "gafs_daily" && (
-            <div className="bg-white rounded-lg p-6 shadow">
-              <h2 className="text-lg font-semibold mb-4">Daily OB/CS Report</h2>
-              <p>Data laporan harian OB/CS ditampilkan di sini...</p>
-              {<GAFSDaily />}
-            </div>
-          )}
-
-          {activePage === "gafs_driver" && (
-            <div className="bg-white rounded-lg p-6 shadow">
-              <h2 className="text-lg font-semibold mb-4">Driver Report</h2>
-              <p>Data laporan driver ditampilkan di sini...</p>
-              {<GAFSDriver />}
-            </div>
-          )}
-
-          {activePage === "gafs_atk" && (
-            <div className="bg-white rounded-lg p-6 shadow">
-              <h2 className="text-lg font-semibold mb-4">ATK / RTG Report</h2>
-              <p>Data laporan ATK/RTG ditampilkan di sini...</p>
-              {<GAFSATK />}
-            </div>
-          )}
-        </div>
+            {/* GA/FS */}
+            {activePage === "gafs_daily" && <GAFSDaily />}
+            {activePage === "gafs_driver" && <GAFSDriver />}
+            {activePage === "gafs_atk" && <GAFSATK />}
+          </div>
+        </main>
       </div>
 
-      {/* Modals for Unit & User */}
+      {/* MODALS */}
       <UnitModal
         show={showUnitModal}
         onClose={() => setShowUnitModal(false)}

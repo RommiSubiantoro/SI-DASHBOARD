@@ -26,8 +26,18 @@ const COLORS = [
 ];
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 // 🔹 Helper parsing angka
@@ -96,9 +106,7 @@ export default function Barchart({
     data.forEach((row) => {
       const code = String(row.accountCode)?.trim();
 
-      const match = masterCode.find(
-        (m) => String(m.code).trim() === code
-      );
+      const match = masterCode.find((m) => String(m.code).trim() === code);
       if (!match) return;
 
       const category = match.category || "Unknown";
@@ -124,17 +132,17 @@ export default function Barchart({
   }, [chartData]);
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4 text-center">
+    <div className="bg-white rounded-lg shadow-md p-4 sm:p-6 border border-gray-200">
+      <h3 className="text-base sm:text-lg font-semibold text-gray-800 mb-4 text-center">
         📊 Bar Chart Berdasarkan Kategori & Bulan
       </h3>
 
       {/* Filter */}
-      <div className="flex gap-3 mb-4 justify-center items-center">
+      <div className="flex flex-col sm:flex-row gap-3 mb-4 justify-center items-center">
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
-          className="px-3 py-2 border rounded"
+          className="px-3 py-2 border rounded w-full sm:w-auto text-sm"
         >
           <option value="2024">2024</option>
           <option value="2025">2025</option>
@@ -143,7 +151,7 @@ export default function Barchart({
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="px-3 py-2 border rounded"
+          className="px-3 py-2 border rounded w-full sm:w-auto text-sm"
         >
           {categories.map((c) => (
             <option key={c} value={c}>
@@ -157,7 +165,7 @@ export default function Barchart({
       {isLoading ? (
         <p className="text-center text-gray-500">⏳ Memuat data...</p>
       ) : chartData.length > 0 ? (
-        <div className="w-full h-120 bg-gray-50 rounded-lg p-4">
+        <div className="w-full h-[300px] sm:h-[450px] bg-gray-50 rounded-lg p-2 sm:p-4">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -168,10 +176,7 @@ export default function Barchart({
 
               <Bar dataKey="value" name={totalValue.toLocaleString()}>
                 {chartData.map((entry, idx) => (
-                  <Cell
-                    key={`bar-${idx}`}
-                    fill={COLORS[idx % COLORS.length]}
-                  />
+                  <Cell key={`bar-${idx}`} fill={COLORS[idx % COLORS.length]} />
                 ))}
               </Bar>
             </BarChart>

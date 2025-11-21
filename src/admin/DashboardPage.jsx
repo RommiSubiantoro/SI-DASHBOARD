@@ -22,7 +22,8 @@ const DashboardPage = ({
   handleExportPDF,
 }) => {
   return (
-    <div className="space-y-6 pt-16">
+    <div className="space-y-6 pt-16 px-4 sm:px-6 lg:px-8">
+      {/* === Header === */}
       <Header
         selectedUnit={selectedUnit}
         setSelectedUnit={setSelectedUnit}
@@ -31,6 +32,8 @@ const DashboardPage = ({
         setSelectedYear={setSelectedYear}
         title="Admin Dashboard"
       />
+
+      {/* === Control Buttons === */}
       <ControlButtons
         onImportData={handleImportData}
         onImportBudget={handleImportBudget}
@@ -39,6 +42,7 @@ const DashboardPage = ({
         showExportButtons
       />
 
+      {/* === Charts === */}
       <div className="w-full flex flex-col gap-6">
         <ExporttableChart
           currentData={currentData}
@@ -50,8 +54,9 @@ const DashboardPage = ({
           onImportData={handleImportData}
           onExportPDF={handleExportPDF}
         >
+          {/* Row of Pie + Bar Charts */}
           <div className="w-full flex flex-col lg:flex-row gap-6">
-            <div className="flex-1 p-2 shadow rounded-lg bg-white">
+            <div className="flex-1 min-w-0 p-4 shadow rounded-lg bg-white">
               <Piechart
                 data={currentData}
                 selectedMonth={selectedMonth}
@@ -60,14 +65,15 @@ const DashboardPage = ({
               />
             </div>
 
-            <div className="flex-1 p-2 shadow rounded-lg bg-white">
+            <div className="flex-1 min-w-0 p-4 shadow rounded-lg bg-white">
               <Barchart data={currentData} selectedYear={selectedYear} />
             </div>
           </div>
 
+          {/* Line Chart Full Width */}
           <div className="w-full mt-6">
-            <div className="p-2 shadow rounded-lg bg-white">
-              <Linechart data={currentData} SelectedYear={selectedYear} />
+            <div className="p-4 shadow rounded-lg bg-white overflow-x-auto">
+              <Linechart data={currentData} selectedYear={selectedYear} />
             </div>
           </div>
         </ExporttableChart>

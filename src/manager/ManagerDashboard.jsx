@@ -9,8 +9,6 @@ import Sidebar from "./Sidebar";
 import Navbar from "../components/navbar";
 import DashboardPage from "./DashboardPage";
 import DataTable from "../components/DataTable";
-import UnitModal from "./UnitModal";
-import UserModal from "./UserModal";
 import Header from "../components/Header";
 import DashboardView from "../components/DashboardView";
 import DashboardMultiUnit from "../components/DashboardMultiUnit";
@@ -19,6 +17,7 @@ function ManagerDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
@@ -310,98 +309,100 @@ function ManagerDashboard() {
   // 🧱 UI
   return (
     <div className="min-h-screen bg-gray-100 flex">
+      {/* Sidebar */}
       <Sidebar
         activePage={activePage}
         onChangePage={handlePageChange}
         onLogout={handleLogout}
+        isOpen={isSidebarOpen}
+        onClose={() => setIsSidebarOpen(false)}
       />
 
-      <div className="flex-1 ml-64 p-6">
-        <div className="fixed top-0 left-0 w-full z-50">
-          <Navbar onLogout={handleLogout} />
+      {/* Backdrop mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Main content */}
+      <div
+        className={`flex-1 transition-all duration-300 ${
+          isSidebarOpen ? "blur-sm md:blur-none" : ""
+        }`}
+      >
+        {/* Navbar */}
+        <div className="sticky top-0 z-50">
+          <Navbar
+            onLogout={handleLogout}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
         </div>
 
-        {activePage === "dashboard" && (
-          <DashboardPage
-            selectedUnit={selectedUnit}
-            setSelectedUnit={setSelectedUnit}
-            units={units}
-            selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
-            currentData={currentData}
-          />
-        )}
-
-        {activePage === "TableView" && (
-          <DashboardMultiUnit
-            selectedYear={selectedYear}
-            currentData={currentData}
-          />
-        )}
-
-        {activePage === "Performance" && (
-          <div style={{ marginTop: "70px" }}>
-            <Header
+        {/* Content */}
+        <div className="pt-4 px-4 sm:px-6 md:px-8">
+          {activePage === "dashboard" && (
+            <DashboardPage
               selectedUnit={selectedUnit}
               setSelectedUnit={setSelectedUnit}
-              units={units.map((u) => u.name)}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              title="View Table"
-            />
-            <DashboardView
-              selectedUnit={selectedUnit}
-              setSelectedUnit={setSelectedUnit}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
               units={units}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
               currentData={currentData}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
             />
+          )}
 
-            {/* Wrapper untuk membatasi lebar tabel */}
-            <div
-              className="bg-white p-2 rounded-xl shadow"
-              style={{
-                maxWidth: "900px", // batasi lebar maksimum
-                margin: "20px auto", // posisikan di tengah
-                overflowX: "auto", // biar bisa digeser kalau kolom terlalu banyak
-              }}
-            >
-              <DataTable
-                data={currentData}
-                columns={columns}
-                title={`Data ${selectedUnit} - ${selectedYear}`}
-                showFilters
-                showPagination
-                rowsPerPage={25}
+          {activePage === "TableView" && (
+            <DashboardMultiUnit
+              selectedYear={selectedYear}
+              currentData={currentData}
+            />
+          )}
+
+          {activePage === "Performance" && (
+            <div className="space-y-6">
+              {/* 🔹 Header tetap ada */}
+              <Header
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                units={units.map((u) => u.name)}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                title="View Table"
               />
+
+              {/* 🔹 Dashboard view */}
+              <DashboardView
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                units={units}
+                currentData={currentData}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+
+              {/* 🔹 Table wrapper responsive & max-width */}
+              <div
+                className="bg-white p-2 rounded-xl shadow overflow-x-auto mx-auto"
+                style={{ maxWidth: "1000px" }}
+              >
+                <DataTable
+                  data={currentData}
+                  columns={columns}
+                  title={`Data ${selectedUnit || ""} - ${selectedYear}`}
+                  showFilters
+                  showPagination
+                  rowsPerPage={25}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
-      {/* Modals */}
-      {showUnitModal && (
-        <UnitModal
-          show={showUnitModal}
-          setShow={setShowUnitModal}
-          editingUnit={editingUnit}
-          setEditingUnit={setEditingUnit}
-          isLoading={isLoading}
-        />
-      )}
-      {showUserModal && (
-        <UserModal
-          show={showUserModal}
-          setShow={setShowUserModal}
-          editingUser={editingUser}
-          setEditingUser={setEditingUser}
-          units={units}
-          isLoading={isLoading}
-        />
-      )}
     </div>
   );
 }

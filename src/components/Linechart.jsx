@@ -13,8 +13,18 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 // 🔹 Helper parsing angka
@@ -28,7 +38,7 @@ function parseNumber(raw) {
   }
   let n = Number(s);
   if (Number.isNaN(n)) n = 0;
-  return isNeg ? -(n) : n;
+  return isNeg ? -n : n;
 }
 
 export default function Linechart({
@@ -73,9 +83,7 @@ export default function Linechart({
 
     data.forEach((row) => {
       const code = String(row.accountCode)?.trim();
-      const match = masterCode.find(
-        (m) => String(m.code).trim() === code
-      );
+      const match = masterCode.find((m) => String(m.code).trim() === code);
       if (!match) return;
 
       const category = match.category || "Unknown";
@@ -83,7 +91,7 @@ export default function Linechart({
 
       MONTHS.forEach((month) => {
         const val = parseNumber(row[month]);
-        monthlyTotals[month] += (val);
+        monthlyTotals[month] += val;
       });
     });
 
@@ -99,18 +107,19 @@ export default function Linechart({
   }, [chartData]);
 
   return (
-    <div className="p-6 bg-white shadow-lg rounded-2xl">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
+    <div className="p-4 sm:p-6 bg-white shadow-lg rounded-2xl">
+      {/* HEADER + FILTER */}
+      <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:items-center mb-4">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-800 text-center sm:text-left">
           📈 Line Chart Berdasarkan Kategori & Bulan
         </h3>
 
         {/* Filter */}
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <select
             value={selectedYear}
             onChange={(e) => setSelectedYear(e.target.value)}
-            className="px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+            className="w-full sm:w-auto px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
           >
             <option value="2024">2024</option>
             <option value="2025">2025</option>
@@ -119,7 +128,7 @@ export default function Linechart({
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
+            className="w-full sm:w-auto px-3 py-2 border rounded-lg bg-gray-50 text-gray-700"
           >
             {categories.map((cat) => (
               <option key={cat} value={cat}>
@@ -130,37 +139,42 @@ export default function Linechart({
         </div>
       </div>
 
+      {/* CONTENT */}
       {loading ? (
-        <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
+        <p className="text-center text-gray-500">
+          ⏳ Memuat data masterCode...
+        </p>
       ) : chartData.length > 0 ? (
         <>
-          <ResponsiveContainer width="100%" height={380}>
-            <LineChart
-              data={chartData}
-              margin={{ top: 10, right: 20, left: 50, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-              <YAxis tickFormatter={(val) => val.toLocaleString()} />
-              <Tooltip formatter={(v) => v.toLocaleString()} />
-              <Legend />
-              <Line
-                type="monotone"
-                dataKey="value"
-                name={
-                  selectedCategory === "ALL"
-                    ? "Total Semua Kategori"
-                    : selectedCategory
-                }
-                stroke="#4f46e5"
-                strokeWidth={3}
-                dot={{ r: 4 }}
-                activeDot={{ r: 6 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="w-full h-[280px] sm:h-[350px] md:h-[400px] bg-gray-50 rounded-lg p-2 sm:p-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart
+                data={chartData}
+                margin={{ top: 10, right: 20, left: 10, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                <YAxis tickFormatter={(val) => val.toLocaleString()} />
+                <Tooltip formatter={(v) => v.toLocaleString()} />
+                <Legend wrapperStyle={{ fontSize: 10 }} />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name={
+                    selectedCategory === "ALL"
+                      ? "Total Semua Kategori"
+                      : selectedCategory
+                  }
+                  stroke="#4f46e5"
+                  strokeWidth={3}
+                  dot={{ r: 3 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
 
-          {/* 🔹 Total Keseluruhan */}
+          {/* Total */}
           <p className="text-center mt-4 font-semibold text-gray-700">
             Total Keseluruhan: {totalValue.toLocaleString()}
           </p>
