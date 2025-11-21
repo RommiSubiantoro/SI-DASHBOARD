@@ -59,7 +59,7 @@ function App() {
           path="/marketing"
           element={
             <ProtectedRoute allowedRoles={["marketing"]}>
-              <GAFSDashPages />
+              {/* <GAFSDashPages /> */}
             </ProtectedRoute>
           }
         />
