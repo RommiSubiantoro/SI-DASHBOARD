@@ -1098,7 +1098,7 @@ function AdminDashboard() {
         className={`
       fixed z-30 top-0 left-0 h-full w-64 bg-white shadow-md transform transition-transform duration-300
       ${isSidebarOpen ? "translate-x-0" : "-translate-x-full"} 
-      md:translate-x-0 md:relative md:static
+      md:translate-x-0 md:relative
     `}
       />
 
