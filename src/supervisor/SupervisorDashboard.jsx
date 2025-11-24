@@ -9,8 +9,6 @@ import Sidebar from "./Sidebar";
 import Navbar from "../components/navbar";
 import DashboardPage from "./DashboardPage";
 import DataTable from "../components/DataTable";
-import UnitModal from "./UnitModal";
-import UserModal from "./UserModal";
 import Header from "../components/Header";
 import DashboardView from "../components/DashboardView";
 import DashboardMultiUnit from "../components/DashboardMultiUnit";
@@ -19,6 +17,8 @@ function SupervisorDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarOpen, setsidebarOpen] = useState(true);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
@@ -37,6 +37,10 @@ function SupervisorDashboard() {
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
+  // CACHED DATA (GLOBAL, TIDAK HILANG KETIKA PAGE PINDAH)
+  const cacheCurrentData = {};
+  const cacheViewData = {};
+  const cacheMasterCode = null;
 
   const auth = getAuth();
 
@@ -148,12 +152,16 @@ function SupervisorDashboard() {
   useEffect(() => {
     if (!selectedUnit) return;
 
+    const cacheKey = `${selectedUnit}-view`;
+
+    if (cacheViewData[cacheKey]) {
+      setViewData(cacheViewData[cacheKey]);
+    }
+
     const colRef = collection(db, `unitData/${selectedUnit}/2025/data/items`);
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ⛔ Tidak ada filter Debit lagi → Debit + Kredit akan diambil
       const grouped = {};
 
       rawData.forEach((item) => {
@@ -166,7 +174,7 @@ function SupervisorDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
-            type: item.type, // ⬅️ Simpan jenis transaksi
+            type: item.type,
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -186,7 +194,11 @@ function SupervisorDashboard() {
         grouped[key][item.month] += signedValue;
       });
 
-      setViewData(Object.values(grouped));
+      const result = Object.values(grouped);
+
+      cacheViewData[cacheKey] = result;
+
+      setViewData(result);
     });
 
     return () => unsubscribe();
@@ -196,6 +208,13 @@ function SupervisorDashboard() {
   useEffect(() => {
     if (!selectedUnit || !selectedYear) return;
 
+    const cacheKey = `${selectedUnit}-${selectedYear}`;
+
+    // 🟢 Jika data sudah pernah diambil → langsung pakai tanpa nunggu
+    if (cacheCurrentData[cacheKey]) {
+      setCurrentData(cacheCurrentData[cacheKey]);
+    }
+
     const colRef = collection(
       db,
       `unitData/${selectedUnit}/${selectedYear}/data/items`
@@ -203,11 +222,8 @@ function SupervisorDashboard() {
 
     const unsubscribe = onSnapshot(colRef, (snapshot) => {
       const rawData = snapshot.docs.map((doc) => doc.data());
-
-      // ⛔ Tidak filter type → Debit + Kredit
       let data = rawData;
 
-      // Jika ada masterCode → filter berdasarkan accountCode
       if (masterCode.length > 0) {
         const validCodes = new Set(
           masterCode.map((m) => String(m.code).toLowerCase().trim())
@@ -222,7 +238,6 @@ function SupervisorDashboard() {
         );
       }
 
-      // Grouping
       const grouped = {};
 
       data.forEach((item) => {
@@ -235,7 +250,7 @@ function SupervisorDashboard() {
             category: item.category,
             area: item.area,
             businessLine: item.businessLine,
-            type: item.type, // ⬅️ Penting supaya Debit & Kredit terpisah
+            type: item.type,
             Jan: 0,
             Feb: 0,
             Mar: 0,
@@ -255,7 +270,12 @@ function SupervisorDashboard() {
         grouped[key][item.month] += signedValue;
       });
 
-      setCurrentData(Object.values(grouped));
+      const finalData = Object.values(grouped);
+
+      // 🟢 CACHE DISINI
+      cacheCurrentData[cacheKey] = finalData;
+
+      setCurrentData(finalData);
     });
 
     return () => unsubscribe();
@@ -289,99 +309,99 @@ function SupervisorDashboard() {
 
   // 🧱 UI
   return (
-    <div className="min-h-screen bg-gray-100 flex">
-      <Sidebar
-        activePage={activePage}
-        onChangePage={handlePageChange}
-        onLogout={handleLogout}
-      />
-
-      <div className="flex-1 ml-64 p-6">
-        <div className="fixed top-0 left-0 w-full z-50">
-          <Navbar onLogout={handleLogout} />
-        </div>
-
-        {activePage === "dashboard" && (
-          <DashboardPage
-            selectedUnit={selectedUnit}
-            setSelectedUnit={setSelectedUnit}
-            units={units}
-            selectedYear={selectedYear}
-            setSelectedYear={setSelectedYear}
-            currentData={currentData}
-          />
-        )}
-
-        {activePage === "TableView" && (
-          <DashboardMultiUnit
-            selectedYear={selectedYear}
-            currentData={currentData}
-          />
-        )}
-
-        {activePage === "Performance" && (
-          <div style={{ marginTop: "70px" }}>
-            <Header
-              selectedUnit={selectedUnit}
-              setSelectedUnit={setSelectedUnit}
-              units={units.map((u) => u.name)}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              title="View Table"
-            />
-            <DashboardView
-              selectedUnit={selectedUnit}
-              setSelectedUnit={setSelectedUnit}
-              selectedYear={selectedYear}
-              setSelectedYear={setSelectedYear}
-              units={units}
-              currentData={currentData}
-              selectedMonth={selectedMonth}
-              setSelectedMonth={setSelectedMonth}
-            />
-
-            {/* Wrapper untuk membatasi lebar tabel */}
-            <div
-              className="bg-white p-2 rounded-xl shadow"
-              style={{
-                maxWidth: "900px", // batasi lebar maksimum
-                margin: "20px auto", // posisikan di tengah
-                overflowX: "auto", // biar bisa digeser kalau kolom terlalu banyak
-              }}
-            >
-              <DataTable
-                data={currentData}
-                columns={columns}
-                title={`Data ${selectedUnit} - ${selectedYear}`}
-                showFilters
-                showPagination
-                rowsPerPage={25}
-              />
-            </div>
-          </div>
-        )}
+    <div className="min-h-screen bg-white flex">
+      {/* Sidebar fixed */}
+      <div className="fixed inset-y-0 left-0 z-50 h-screen overflow-y-auto bg-red-500">
+        <Sidebar
+          activePage={activePage}
+          onChangePage={handlePageChange}
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
       </div>
 
-      {/* Modals */}
-      {showUnitModal && (
-        <UnitModal
-          show={showUnitModal}
-          setShow={setShowUnitModal}
-          editingUnit={editingUnit}
-          setEditingUnit={setEditingUnit}
-          isLoading={isLoading}
+      {/* Backdrop untuk mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
         />
       )}
-      {showUserModal && (
-        <UserModal
-          show={showUserModal}
-          setShow={setShowUserModal}
-          editingUser={editingUser}
-          setEditingUser={setEditingUser}
-          units={units}
-          isLoading={isLoading}
-        />
-      )}
+
+      {/* Main content */}
+      <div
+        className={`flex-1 transition-all duration-300 pl-0 md:pl-64 ${
+          isSidebarOpen ? "blur-sm md:blur-none" : ""
+        }`}
+      >
+        {/* Navbar */}
+        <div className="sticky top-0 z-50">
+          <Navbar
+            onLogout={handleLogout}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        </div>
+
+        {/* Content */}
+        <div className="pt-4 px-4 sm:px-6 md:px-8">
+          {activePage === "dashboard" && (
+            <DashboardPage
+              selectedUnit={selectedUnit}
+              setSelectedUnit={setSelectedUnit}
+              units={units}
+              selectedYear={selectedYear}
+              setSelectedYear={setSelectedYear}
+              currentData={currentData}
+            />
+          )}
+
+          {activePage === "TableView" && (
+            <DashboardMultiUnit
+              selectedYear={selectedYear}
+              currentData={currentData}
+            />
+          )}
+
+          {activePage === "Performance" && (
+            <div className="space-y-6">
+              <Header
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                units={units.map((u) => u.name)}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                title="View Table"
+              />
+
+              <DashboardView
+                selectedUnit={selectedUnit}
+                setSelectedUnit={setSelectedUnit}
+                selectedYear={selectedYear}
+                setSelectedYear={setSelectedYear}
+                units={units}
+                currentData={currentData}
+                selectedMonth={selectedMonth}
+                setSelectedMonth={setSelectedMonth}
+              />
+
+              <div
+                className="bg-white p-2 rounded-xl shadow overflow-x-auto mx-auto"
+                style={{ maxWidth: "1000px" }}
+              >
+                <DataTable
+                  data={currentData}
+                  columns={columns}
+                  title={`Data ${selectedUnit || ""} - ${selectedYear}`}
+                  showFilters
+                  showPagination
+                  rowsPerPage={25}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -18,6 +18,7 @@ function ManagerDashboard() {
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [sidebarOpen, setsidebarOpen] = useState(true);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
@@ -309,16 +310,18 @@ function ManagerDashboard() {
   // 🧱 UI
   return (
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <Sidebar
-        activePage={activePage}
-        onChangePage={handlePageChange}
-        onLogout={handleLogout}
-        isOpen={isSidebarOpen}
-        onClose={() => setIsSidebarOpen(false)}
-      />
+      {/* Sidebar fixed */}
+      <div className="fixed inset-y-0 left-0 z-50 h-screen overflow-y-auto bg-red-500">
+        <Sidebar
+          activePage={activePage}
+          onChangePage={handlePageChange}
+          onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
+        />
+      </div>
 
-      {/* Backdrop mobile */}
+      {/* Backdrop untuk mobile */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-40 md:hidden"
@@ -328,7 +331,7 @@ function ManagerDashboard() {
 
       {/* Main content */}
       <div
-        className={`flex-1 transition-all duration-300 ${
+        className={`flex-1 transition-all duration-300 pl-0 md:pl-64 ${
           isSidebarOpen ? "blur-sm md:blur-none" : ""
         }`}
       >
@@ -362,7 +365,6 @@ function ManagerDashboard() {
 
           {activePage === "Performance" && (
             <div className="space-y-6">
-              {/* 🔹 Header tetap ada */}
               <Header
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
@@ -372,7 +374,6 @@ function ManagerDashboard() {
                 title="View Table"
               />
 
-              {/* 🔹 Dashboard view */}
               <DashboardView
                 selectedUnit={selectedUnit}
                 setSelectedUnit={setSelectedUnit}
@@ -384,7 +385,6 @@ function ManagerDashboard() {
                 setSelectedMonth={setSelectedMonth}
               />
 
-              {/* 🔹 Table wrapper responsive & max-width */}
               <div
                 className="bg-white p-2 rounded-xl shadow overflow-x-auto mx-auto"
                 style={{ maxWidth: "1000px" }}
@@ -402,7 +402,6 @@ function ManagerDashboard() {
           )}
         </div>
       </div>
-
     </div>
   );
 }

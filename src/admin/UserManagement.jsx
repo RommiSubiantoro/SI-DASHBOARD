@@ -24,7 +24,7 @@ const UserManagement = ({
   isLoading,
 }) => {
   return (
-    <div className="space-y-6 min-h-screen mt-12 p-4">
+    <div className="space-y-6 min-h-screen mt-2 p-4">
       {/* Filter Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 space-y-4">
         <div className="flex flex-col md:flex-row flex-wrap gap-4 items-center">

@@ -16,7 +16,7 @@ const DashboardPage = ({
   const [selectedMonth, setSelectedMonth] = useState("Jan");
 
   return (
-    <div className="space-y-6 pt-16">
+    <div className="space-y-6 pt-10">
       <Header
         selectedUnit={selectedUnit}
         setSelectedUnit={setSelectedUnit}

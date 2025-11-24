@@ -17,9 +17,9 @@ import DataTable from "../components/DataTable";
 import Piechart from "../components/Piechart";
 import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
+import Navbar from "../components/navbar";
 import DashboardView from "../components/DashboardView";
 
-import Logo from "../assets/logo-smdr.png";
 
 const UserDashboard = () => {
   // ===== STATE =====
@@ -31,6 +31,7 @@ const UserDashboard = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [assignedUnits, setAssignedUnits] = useState([]);
   const [units, setUnits] = useState([]);
@@ -451,98 +452,13 @@ const UserDashboard = () => {
 
       {/* Main content */}
       <div className="flex-1 flex flex-col overflow-auto md:ml-64">
-        {/* Navbar */}
-        <nav className="bg-black shadow-md sticky top-0 z-40">
-          <div className="flex items-center justify-between px-4 py-3 md:px-8">
-            <div className="flex items-center space-x-3">
-              <button
-                className="md:hidden text-white p-2 rounded-md hover:bg-gray-800 transition-colors"
-                onClick={toggleSidebar}
-              >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M4 6h16M4 12h16M4 18h16"
-                  />
-                </svg>
-              </button>
-              <img
-                src={Logo}
-                alt="Logo"
-                className="h-10 w-auto object-contain"
-              />
-              <h2 className="text-lg md:text-xl font-bold text-white">
-                Samudera Indonesia
-              </h2>
-            </div>
-
-            {/* User info */}
-            {userProfile ? (
-              <div className="relative" ref={dropdownRef}>
-                <button
-                  className="flex items-center p-2 rounded-lg hover:bg-gray-800 transition-colors"
-                  onClick={() => setShowDropdown(!showDropdown)}
-                >
-                  <div className="hidden sm:flex flex-col text-left mr-3">
-                    <span className="text-sm font-medium text-white truncate">
-                      {userProfile.displayName}
-                    </span>
-                    <span className="text-xs text-gray-400 truncate">
-                      {userProfile.email}
-                    </span>
-                  </div>
-                  {userProfile.photoURL ? (
-                    <img
-                      src={userProfile.photoURL}
-                      alt="User Avatar"
-                      className="w-8 h-8 rounded-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-gray-800">
-                        {userProfile.displayName.charAt(0)}
-                      </span>
-                    </div>
-                  )}
-                  <ChevronDown
-                    className={`ml-1 text-white transition-transform ${
-                      showDropdown ? "rotate-180" : ""
-                    }`}
-                    size={16}
-                  />
-                </button>
-
-                {showDropdown && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 animate-fade-in">
-                    <div className="px-4 py-3 border-b border-gray-100">
-                      <div className="font-medium text-gray-900 truncate">
-                        {userProfile.displayName}
-                      </div>
-                      <div className="text-sm text-gray-500 truncate">
-                        {userProfile.email}
-                      </div>
-                    </div>
-                    <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                    >
-                      <LogOut size={16} className="mr-2" /> Logout
-                    </button>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="text-gray-300 text-sm">Not logged in</div>
-            )}
-          </div>
-        </nav>
+        {/* NAVBAR */}
+        <div className="sticky top-0 z-40 w-full bg-white shadow-md">
+          <Navbar
+            onLogout={handleLogout}
+            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          />
+        </div>
 
         {/* Main Dashboard */}
         <main className="flex-1 p-4 md:p-6 space-y-6">

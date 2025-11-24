@@ -16,7 +16,7 @@ const UnitManagement = ({
   isLoading,
 }) => {
   return (
-    <div className="space-y-6 min-h-screen mt-12">
+    <div className="space-y-6 min-h-screen mt-5">
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h1 className="text-2xl font-bold text-gray-800 mb-6">
           Manage Unit Bisnis

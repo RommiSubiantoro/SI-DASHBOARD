@@ -110,9 +110,22 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
           <img
             src={Logo}
             alt="Samudera Indonesia Logo"
-            className="h-10 w-auto object-contain"
+            className="
+      h-6         /* mobile kecil */
+      sm:h-8      /* tablet */
+      md:h-10     /* desktop normal */
+      w-auto object-contain
+    "
           />
-          <h2 className="text-lg md:text-xl font-bold text-white whitespace-nowrap">
+
+          <h2
+            className="
+      font-bold text-white whitespace-nowrap
+      text-base    /* mobile kecil */
+      sm:text-lg   /* tablet */
+      md:text-xl   /* desktop */
+    "
+          >
             Samudera Indonesia
           </h2>
         </div>
@@ -158,23 +171,28 @@ const Navbar = ({ onLogout, onToggleSidebar }) => {
             </button>
 
             {/* Dropdown */}
+            {/* DROPDOWN MENU */}
             {showDropdown && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 py-1 z-50 animate-fade-in">
-                <div className="px-4 py-3 border-b border-gray-100">
-                  <div className="font-medium text-gray-900 truncate">
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg ring-1 ring-black ring-opacity-5 py-2 z-50 animate-fade-in origin-top-right">
+                {/* TOP SECTION: USER INFO */}
+                <div className="px-4 py-3 border-b border-gray-200">
+                  <p className="text-sm font-semibold text-gray-900 truncate">
                     {userProfile.displayName}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">
+                  </p>
+                  <p className="text-xs text-gray-600 truncate">
                     {userProfile.email}
-                  </div>
+                  </p>
                 </div>
-                <button
-                  onClick={handleLogout}
-                  className="w-full flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                >
-                  <LogOut size={16} className="mr-2" />
-                  Logout
-                </button>
+
+                {/* MENU LIST */}
+                <div className="py-1">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition font-medium"
+                  >
+                    Keluar
+                  </button>
+                </div>
               </div>
             )}
           </div>
