@@ -34,7 +34,6 @@ const UserDashboard = () => {
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [selectedMonth, setSelectedMonth] = useState("Jan");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const [assignedUnits, setAssignedUnits] = useState([]);
   const [units, setUnits] = useState([]);
@@ -476,7 +475,7 @@ const UserDashboard = () => {
         <div className="sticky top-0 z-40 w-full bg-white shadow-md">
           <Navbar
             onLogout={handleLogout}
-            onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+            onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
           />
         </div>
 
