@@ -128,6 +128,21 @@ const GAFSATK = ({ onEdit, onDelete }) => {
     currentPage * itemsPerPage
   );
 
+  const pieData = useMemo(() => {
+    // kelompokkan per kategori
+    const map = {};
+
+    filteredData.forEach((item) => {
+      const key = item.Barang_yang_Diminta || "Unknown";
+      map[key] = (map[key] || 0) + (parseInt(item.Jumlah_Diminta) || 0);
+    });
+
+    return Object.entries(map).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  }, [filteredData]);
+
   // ====================== RENDER ======================
   return (
     <div className="space-y-4 p-4">
@@ -196,9 +211,7 @@ const GAFSATK = ({ onEdit, onDelete }) => {
 
       {/* ===== PIECHART ===== */}
       <div className="bg-white p-4 rounded-lg shadow border">
-        <h2 className="text-lg font-semibold mb-2">
-          📊 Piechart
-        </h2>
+        <h2 className="text-lg font-semibold mb-2">📊 Piechart</h2>
         <Piechart data={filteredData} mode="atk" />
       </div>
 

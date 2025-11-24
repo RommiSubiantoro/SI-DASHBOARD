@@ -89,6 +89,7 @@ function AdminDashboard() {
     isLoading: dataLoading,
     exportToExcel,
     importFromExcelToFirebase,
+    importBudgetFromExcel,
   } = useDataManagement({
     "Samudera Makassar Logistik": [],
     "Makassar Jaya Samudera": [],
@@ -1136,6 +1137,7 @@ function AdminDashboard() {
                 setSelectedMonth={setSelectedMonth}
                 handleExportExcel={handleExportExcel}
                 handleImportData={handleImportData}
+                handleImportBudget={handleImportBudget}
                 handleExportPDF={handleExportPDF}
               />
             )}

@@ -2,12 +2,15 @@
 import React, { useState, useEffect, useRef } from "react";
 import { signOut, onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "../firebase";
+import * as XLSX from "xlsx";
+
 import {
   collection,
   query,
   where,
   onSnapshot,
   getDocs,
+  addDoc,
 } from "firebase/firestore";
 import { ChevronDown, LogOut } from "lucide-react";
 
@@ -19,7 +22,7 @@ import Barchart from "../components/Barchart";
 import Linechart from "../components/Linechart";
 import Navbar from "../components/navbar";
 import DashboardView from "../components/DashboardView";
-
+import { useDataManagement } from "../hooks/useDataManagement";
 
 const UserDashboard = () => {
   // ===== STATE =====
@@ -52,6 +55,23 @@ const UserDashboard = () => {
     dataListener: null,
   });
   const isMountedRef = useRef(true);
+
+  const {
+    data,
+    isLoading: dataLoading,
+    exportToExcel,
+    importFromExcelToFirebase,
+    importBudgetFromExcel,
+  } = useDataManagement({
+    "Samudera Makassar Logistik": [],
+    "Makassar Jaya Samudera": [],
+    "Samudera Perdana": [],
+    "Masaji Kargosentra Utama": [],
+    "Kendari Jaya Samudera": [],
+    "Silkargo Indonesia": [],
+    "Samudera Agencies Indonesia": [],
+    "Samudera Kendari Logistik": [],
+  });
 
   // ===== HOOKS =====
   useEffect(() => {

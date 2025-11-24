@@ -84,6 +84,30 @@ export default function Piechart({
     fetchMaster();
   }, [selectedYear, data, mode]);
 
+  useEffect(() => {
+  if (mode !== "atk") return;
+
+  // Ringkas data berdasarkan kategori
+  const map = {};
+
+  data.forEach((item) => {
+    const key = item.Barang_yang_Diminta || "Unknown";
+
+    // Convert jumlah ke number
+    const value = parseInt(item.Jumlah_Diminta) || 0;
+
+    map[key] = (map[key] || 0) + value;
+  });
+
+  const result = Object.entries(map).map(([name, value]) => ({
+    name,
+    value,
+  }));
+
+  setChartData(result);
+}, [data, mode]);
+
+
   // Hitung chartData
   useEffect(() => {
     if (mode === "atk") return;
