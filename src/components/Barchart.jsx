@@ -59,6 +59,7 @@ function parseNumber(raw) {
 export default function Barchart({
   data = [],
   selectedYear = "2025",
+  selectedUnit = "",   // 🔥 TAMBAHKAN
   setSelectedYear = () => {},
 }) {
   const [masterCode, setMasterCode] = useState([]);
@@ -83,7 +84,44 @@ export default function Barchart({
     };
 
     fetchMasterCode();
-  }, []); // ⬅️ hanya 1x load!
+  }, []);
+
+  // ------------------------------------------------------------
+  // 🔥 BUSINESS LINE FILTER — (GEN99 / AGE11 / selain itu)
+  // ------------------------------------------------------------
+
+  const filtered = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+
+    const getBL = (row) =>
+      row.businessLine ||
+      row["Business Line"] ||
+      row.business_line ||
+      row.BL ||
+      "";
+
+    const unit = selectedUnit.toLowerCase();
+
+    // SAI GENA → hanya GEN99
+    if (unit.includes("gena")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+      );
+    }
+
+    // SAI LOCAL → hanya AGE11
+    if (unit.includes("local")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
+      );
+    }
+
+    // SAI biasa → selain GEN99 & AGE11
+    return data.filter((row) => {
+      const bl = String(getBL(row)).trim().toUpperCase();
+      return bl !== "GEN99" && bl !== "AGE11";
+    });
+  }, [data, selectedUnit]);
 
   // ------------------------------------------------------------
   // 🔹 Ambil kategori unik
@@ -98,14 +136,13 @@ export default function Barchart({
   // 🔥 Hitung total nilai per bulan + kategori filter
   // ------------------------------------------------------------
   const chartData = useMemo(() => {
-    if (!Array.isArray(data) || data.length === 0 || masterCode.length === 0)
+    if (!Array.isArray(filtered) || filtered.length === 0 || masterCode.length === 0)
       return [];
 
     const monthTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));
 
-    data.forEach((row) => {
+    filtered.forEach((row) => {
       const code = String(row.accountCode)?.trim();
-
       const match = masterCode.find((m) => String(m.code).trim() === code);
       if (!match) return;
 
@@ -122,7 +159,7 @@ export default function Barchart({
       month,
       value,
     }));
-  }, [data, masterCode, selectedCategory]);
+  }, [filtered, masterCode, selectedCategory]);
 
   // ------------------------------------------------------------
   // 🔹 Total keseluruhan

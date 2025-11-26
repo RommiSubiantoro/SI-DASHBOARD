@@ -23,7 +23,7 @@ function ManagerDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
   const [loadingUploads, setLoadingUploads] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
   const [showUnitModal, setShowUnitModal] = useState(false);
@@ -317,7 +317,7 @@ function ManagerDashboard() {
           onChangePage={handlePageChange}
           onLogout={handleLogout}
           isOpen={isSidebarOpen}
-          onClose={() => setIsSidebarOpen(false)}
+          onClose={() => setIsSidebarOpen(false)} 
         />
       </div>
 

@@ -507,13 +507,22 @@ const UserDashboard = () => {
                   selectedMonth={selectedMonth}
                   setSelectedMonth={setSelectedMonth}
                   selectedYear={selectedYear}
+                  selectedUnit={selectedUnit}
                 />
               </div>
               <div className="w-full bg-white p-4 rounded-xl shadow">
-                <Barchart data={currentData} selectedYear={selectedYear} />
+                <Barchart
+                  data={currentData}
+                  selectedYear={selectedYear}
+                  selectedUnit={selectedUnit}
+                />
               </div>
               <div className="w-full bg-white p-4 rounded-xl shadow md:col-span-2">
-                <Linechart data={currentData} selectedYear={selectedYear} />
+                <Linechart
+                  data={currentData}
+                  selectedYear={selectedYear}
+                  selectedUnit={selectedUnit}
+                />
               </div>
             </div>
           )}

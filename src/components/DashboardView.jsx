@@ -4,7 +4,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
 
-// 🔹 Helper parse angka sama seperti chart
+// Helper parse angka
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
@@ -18,6 +18,50 @@ function parseNumber(raw) {
   return isNeg ? -n : n;
 }
 
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+const FINAL_ORDER = [
+  "Service Revenue",
+  "Cost of Service",
+  "Gross Profit",
+  "General & Administration Expenses",
+  "Operation Income",
+  "Other Income/Expense",
+  "NIBT",
+  "Pajak",
+];
+
+const altNames = {
+  service: ["Service Revenue", "service revenue"],
+  cost: ["Cost Of Service", "Cost of Service", "cost of service"],
+  ga: [
+    "General & Administration Expense",
+    "General & Administration Expenses",
+    "general & administration expense",
+    "general & administration expenses",
+  ],
+  other: [
+    "Other Income (Expenses)",
+    "Other Income/Expense",
+    "other income (expenses)",
+    "other income/expense",
+  ],
+  pajak: ["Pajak", "pajak"],
+};
+
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [masterCode, setMasterCode] = useState([]);
   const [summaryData, setSummaryData] = useState([]);
@@ -26,33 +70,14 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
   const [reloadKey, setReloadKey] = useState(0);
   const [loadingReload, setLoadingReload] = useState(false);
 
-  const months = useMemo(
-    () => [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ],
-    []
-  );
+  const months = useMemo(() => MONTHS, []);
 
   // Ambil masterCode
   useEffect(() => {
     const fetchMaster = async () => {
       try {
         const snap = await getDocs(collection(db, "masterCode"));
-        const data = snap.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
         setMasterCode(data);
       } catch (error) {
         console.error("❌ Gagal ambil masterCode:", error);
@@ -61,16 +86,17 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     fetchMaster();
   }, []);
 
+  // codeMap: normalisasi ke lowercase string
   const codeMap = useMemo(() => {
     const map = new Map();
     masterCode.forEach((m) => {
-      if (m.code) map.set(String(m.code).trim(), m);
+      if (m.code) map.set(String(m.code).toLowerCase().trim(), m);
     });
     return map;
   }, [masterCode]);
 
   const categories = useMemo(
-    () => [...new Set(masterCode.map((item) => item.category))],
+    () => [...new Set(masterCode.map((item) => item.category).filter(Boolean))],
     [masterCode]
   );
 
@@ -96,8 +122,6 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           )
             .toLowerCase()
             .trim();
-
-        const getMonthValue = (item, m) => parseNumber(item[m]);
 
         let allBudgets = {};
         for (const year of years) {
@@ -130,7 +154,8 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
               "DEC",
             ];
             grouped[code].totalBudget += monthsUpper.reduce(
-              (sum, m) => sum + parseNumber(item[m]),
+              (sum, m) =>
+                sum + parseNumber(item[m] ?? item[m.toLowerCase()] ?? 0),
               0
             );
           });
@@ -147,40 +172,110 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     fetchAllBudgets();
   }, [selectedUnit, masterCode]);
 
-  // Filter data actual
+  // Filter data actual + special business-line logic
   const filteredData = useMemo(() => {
-    if (!currentData.length || !selectedUnit) return [];
-    return currentData;
+    if (!currentData || !currentData.length || !selectedUnit) return [];
+
+    let filtered = currentData.slice();
+
+    const businessLineField = (row) =>
+      row.businessLine ||
+      row["Business Line"] ||
+      row.business_line ||
+      row["BUSINESS LINE"] ||
+      row.BL ||
+      "";
+
+    const unitName = String(selectedUnit).toLowerCase();
+
+    const isGENA = unitName.includes("samudera agencies indonesia gena");
+    const isLOCAL = unitName.includes("samudera agencies indonesia local");
+    const isSAI = !isGENA && !isLOCAL; // unit utama
+
+    if (isGENA) {
+      // hanya ambil GEN99
+      filtered = filtered.filter(
+        (row) => String(businessLineField(row)).trim().toUpperCase() === "GEN99"
+      );
+    } else if (isLOCAL) {
+      // hanya ambil AGE11
+      filtered = filtered.filter(
+        (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE11"
+      );
+    } else if (isSAI) {
+      // SAI ambil SEMUA kecuali GEN99 & AGE11
+      filtered = filtered.filter((row) => {
+        const bl = String(businessLineField(row)).trim().toUpperCase();
+        return bl !== "GEN99" && bl !== "AGE11";
+      });
+    }
+
+    return filtered;
   }, [currentData, selectedUnit]);
 
   useEffect(() => {
-    if (selectedYear === "2024") setActData2024(filteredData);
+    if (String(selectedYear) === "2024") setActData2024(filteredData);
   }, [filteredData, selectedYear]);
 
-  // 🔹 Hitung summary (termasuk Gross Profit, Operation Income, NIBT)
+  // helper: get month value tolerant to key case
+  const getMonthValue = (row, m) => {
+    if (!row) return 0;
+    return (
+      parseNumber(row[m]) ||
+      parseNumber(row[m.toUpperCase()]) ||
+      parseNumber(row[m.toLowerCase()]) ||
+      0
+    );
+  };
+
+  // helper: find summary entry by a set of alternative names (case-insensitive)
+  const findByPossible = (arr, names) => {
+    if (!Array.isArray(arr)) return undefined;
+    return arr.find((r) => {
+      const d = String(r.description || "").toLowerCase();
+      return names.some((n) => d === n.toLowerCase());
+    });
+  };
+
+  // 🔹 Hitung summary
   useEffect(() => {
-    if (!masterCode.length) return setSummaryData([]);
+    if (!masterCode.length) {
+      setSummaryData([]);
+      return;
+    }
     setLoadingReload(true);
     const timeout = setTimeout(() => setLoadingReload(false), 800);
 
-    const budgetForYear = budgetData[selectedYear] || [];
+    const yearKey = String(selectedYear);
+    const budgetForYear = budgetData[yearKey] || [];
     const actPrev = actData2024 || [];
 
     const formatNumber = (num) =>
-      num ? num.toLocaleString("en-US", { maximumFractionDigits: 0 }) : "-";
+      num || num === 0
+        ? Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })
+        : "-";
 
-    const summary = categories.map((cat) => {
+    // categories could be from masterCode; if empty, rely to-empty array
+    const summary = (categories.length ? categories : []).map((cat) => {
       const matchCat = (row) => {
-        const rowCode = String(row.accountCode || row.AccountCode || "").trim();
+        const rowCode = String(
+          row.accountCode || row.AccountCode || row.Account || ""
+        )
+          .toLowerCase()
+          .trim();
         const match = codeMap.get(rowCode);
-        return match && match.category === cat;
+        return (
+          match &&
+          ((match.category || "").toString() === cat.toString() ||
+            String(match.category).toLowerCase() === String(cat).toLowerCase())
+        );
       };
 
       const totalActPrev = actPrev
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + parseNumber(row[m]), 0),
+            sum + months.reduce((acc, m) => acc + getMonthValue(row, m), 0),
           0
         );
 
@@ -188,13 +283,17 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         .filter(matchCat)
         .reduce(
           (sum, row) =>
-            sum + months.reduce((acc, m) => acc + parseNumber(row[m]), 0),
+            sum + months.reduce((acc, m) => acc + getMonthValue(row, m), 0),
           0
         );
 
       const totalBdgt = budgetForYear
         .filter(matchCat)
-        .reduce((sum, row) => sum + parseNumber(row.totalBudget), 0);
+        .reduce(
+          (sum, row) =>
+            sum + parseNumber(row.totalBudget || row.totalbudget || 0),
+          0
+        );
 
       const aVsCValue = totalActNow - totalActPrev;
       const bVsCValue = totalActNow - totalBdgt;
@@ -207,7 +306,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         : null;
 
       return {
-        description: cat,
+        description: String(cat),
         act2024: formatNumber(totalActPrev),
         bdgt2025: formatNumber(totalBdgt),
         act2025: formatNumber(totalActNow),
@@ -234,9 +333,15 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       };
     });
 
-    // 🔹 Gross Profit
-    const service = summary.find((r) => r.description === "Service Revenue");
-    const cost = summary.find((r) => r.description === "Cost Of Service");
+    // Derived rows -> use tolerant find for needed components
+    const service =
+      findByPossible(summary, altNames.service) ||
+      summary.find((s) =>
+        String(s.description).toLowerCase().includes("service revenue")
+      );
+    const cost =
+      findByPossible(summary, altNames.cost) ||
+      summary.find((s) => String(s.description).toLowerCase().includes("cost"));
     if (service && cost) {
       const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
       const act2024 = num(service.act2024) - num(cost.act2024);
@@ -271,14 +376,17 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       });
     }
 
-    // 🔹 Operation Income = Gross Profit - G&A Expense
-    const gpa = summary.find((r) => r.description === "Gross Profit");
-    const gae = summary.find(
-      (r) => r.description === "General & Administration Expense"
+    // Operation Income = Gross Profit - G&A
+    const gpa = summary.find(
+      (r) => String(r.description).toLowerCase() === "gross profit"
     );
+    const gae =
+      findByPossible(summary, altNames.ga) ||
+      summary.find((s) =>
+        String(s.description).toLowerCase().includes("general")
+      );
     if (gpa && gae) {
       const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
-
       const opIncomeAct2024 = num(gpa.act2024) - num(gae.act2024);
       const opIncomeAct2025 = num(gpa.act2025) - num(gae.act2025);
       const opIncomeBdgt2025 = num(gpa.bdgt2025) - num(gae.bdgt2025);
@@ -314,14 +422,22 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         },
       });
 
-      // 🔹 NIBT = Operation Income - Other Income (Expenses)
-      const oie = summary.find(
-        (r) => r.description === "Other Income (Expenses)"
-      );
+      // NIBT = Operation Income - Other Income/Expense
+      const oie =
+        findByPossible(summary, altNames.other) ||
+        summary.find((s) =>
+          String(s.description).toLowerCase().includes("other")
+        );
       if (oie) {
-        const nibtAct2024 = opIncomeAct2024 - num(oie.act2024);
-        const nibtAct2025 = opIncomeAct2025 - num(oie.act2025);
-        const nibtBdgt2025 = opIncomeBdgt2025 - num(oie.bdgt2025);
+        const nibtAct2024 =
+          opIncomeAct2024 -
+          (Number(String(oie.act2024).replace(/,/g, "")) || 0);
+        const nibtAct2025 =
+          opIncomeAct2025 -
+          (Number(String(oie.act2025).replace(/,/g, "")) || 0);
+        const nibtBdgt2025 =
+          opIncomeBdgt2025 -
+          (Number(String(oie.bdgt2025).replace(/,/g, "")) || 0);
 
         summary.push({
           description: "NIBT",
@@ -354,20 +470,16 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       }
     }
 
-    // 🔹 Sort urutan
-    const order = [
-      "Service Revenue",
-      "Cost Of Service",
-      "Gross Profit",
-      "General & Administration Expense",
-      "Operation Income",
-      "Other Income (Expenses)",
-      "NIBT",
-      "Pajak",
-    ];
-    summary.sort(
-      (a, b) => order.indexOf(a.description) - order.indexOf(b.description)
-    );
+    // Sort - normalize description comparison using FINAL_ORDER lowercased
+    const order = FINAL_ORDER.map((s) => s.toLowerCase());
+    summary.sort((a, b) => {
+      const ia = order.indexOf(String(a.description).toLowerCase());
+      const ib = order.indexOf(String(b.description).toLowerCase());
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
 
     setSummaryData(summary);
     return () => clearTimeout(timeout);

@@ -13,18 +13,8 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec",
 ];
 
 // 🔹 Helper parsing angka
@@ -44,6 +34,7 @@ function parseNumber(raw) {
 export default function Linechart({
   data = [],
   selectedYear = "2025",
+  selectedUnit = "",        // 🔥 WAJIB
   setSelectedYear = () => {},
 }) {
   const [masterCode, setMasterCode] = useState([]);
@@ -67,6 +58,42 @@ export default function Linechart({
     fetchMasterCode();
   }, [selectedYear]);
 
+  // ------------------------------------------------------------
+  // 🔥 FILTER BUSINESS LINE (GEN99 / AGE11 / selain dua itu)
+  // ------------------------------------------------------------
+  const filtered = useMemo(() => {
+    if (!Array.isArray(data)) return [];
+
+    const getBL = (row) =>
+      row.businessLine ||
+      row["Business Line"] ||
+      row.business_line ||
+      row.BL ||
+      "";
+
+    const unit = selectedUnit.toLowerCase();
+
+    // GENA → hanya GEN99
+    if (unit.includes("gena")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+      );
+    }
+
+    // LOCAL → hanya AGE11
+    if (unit.includes("local")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
+      );
+    }
+
+    // SAI / lainnya → selain GEN99 & AGE11
+    return data.filter((row) => {
+      const bl = String(getBL(row)).trim().toUpperCase();
+      return bl !== "GEN99" && bl !== "AGE11";
+    });
+  }, [data, selectedUnit]);
+
   // 🔹 Kategori unik
   const categories = useMemo(() => {
     if (masterCode.length === 0) return ["ALL"];
@@ -76,12 +103,12 @@ export default function Linechart({
 
   // 🔹 Hitung nilai per bulan
   const chartData = useMemo(() => {
-    if (!Array.isArray(data) || data.length === 0 || masterCode.length === 0)
+    if (!Array.isArray(filtered) || filtered.length === 0 || masterCode.length === 0)
       return [];
 
     const monthlyTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));
 
-    data.forEach((row) => {
+    filtered.forEach((row) => {
       const code = String(row.accountCode)?.trim();
       const match = masterCode.find((m) => String(m.code).trim() === code);
       if (!match) return;
@@ -99,7 +126,7 @@ export default function Linechart({
       month: m,
       value: monthlyTotals[m],
     }));
-  }, [data, masterCode, selectedCategory]);
+  }, [filtered, masterCode, selectedCategory]);
 
   // 🔹 Total keseluruhan
   const totalValue = useMemo(() => {
@@ -141,9 +168,7 @@ export default function Linechart({
 
       {/* CONTENT */}
       {loading ? (
-        <p className="text-center text-gray-500">
-          ⏳ Memuat data masterCode...
-        </p>
+        <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
       ) : chartData.length > 0 ? (
         <>
           <div className="w-full h-[280px] sm:h-[350px] md:h-[400px] bg-gray-50 rounded-lg p-2 sm:p-4">

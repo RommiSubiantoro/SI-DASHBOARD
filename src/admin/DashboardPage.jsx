@@ -62,18 +62,27 @@ const DashboardPage = ({
                 selectedMonth={selectedMonth}
                 setSelectedMonth={setSelectedMonth}
                 selectedYear={selectedYear}
+                selectedUnit={selectedUnit}
               />
             </div>
 
             <div className="flex-1 min-w-0 p-4 shadow rounded-lg bg-white">
-              <Barchart data={currentData} selectedYear={selectedYear} />
+              <Barchart
+                data={currentData}
+                selectedYear={selectedYear}
+                selectedUnit={selectedUnit}
+              />
             </div>
           </div>
 
           {/* Line Chart Full Width */}
           <div className="w-full mt-6">
             <div className="p-4 shadow rounded-lg bg-white overflow-x-auto">
-              <Linechart data={currentData} selectedYear={selectedYear} />
+              <Linechart
+                data={currentData}
+                selectedYear={selectedYear}
+                selectedUnit={selectedUnit}
+              />
             </div>
           </div>
         </ExporttableChart>

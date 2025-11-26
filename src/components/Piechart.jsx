@@ -24,21 +24,10 @@ const COLORS = [
 ];
 
 const MONTHS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
-// 🔹 parseNumber sama seperti di BarChart
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
@@ -57,12 +46,45 @@ export default function Piechart({
   selectedYear,
   selectedMonth = "ALL",
   setSelectedMonth,
+  selectedUnit,         // ← DITAMBAHKAN
   mode = "default",
 }) {
   const [masterCode, setMasterCode] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+
+  // 🔥 FILTER DATA SESUAI BUSINESS LINE UNIT
+  const filteredData = useMemo(() => {
+    if (!data || !selectedUnit) return data;
+
+    const unitLower = selectedUnit.toLowerCase();
+
+    const getBL = (row) =>
+      row.businessLine ||
+      row["Business Line"] ||
+      row.business_line ||
+      row.BL ||
+      "";
+
+    if (unitLower.includes("samudera agencies indonesia gena")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+      );
+    }
+
+    if (unitLower.includes("samudera agencies indonesia local")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
+      );
+    }
+
+    // SAI (unit lain) → selain GEN99 dan AGE11
+    return data.filter((row) => {
+      const bl = String(getBL(row)).trim().toUpperCase();
+      return bl !== "GEN99" && bl !== "AGE11";
+    });
+  }, [data, selectedUnit]);
 
   const formatRupiah = (value) => "Rp " + Number(value).toLocaleString("id-ID");
 
@@ -84,34 +106,31 @@ export default function Piechart({
     fetchMaster();
   }, [selectedYear, data, mode]);
 
+  // Mode ATK (tidak pakai masterCode)
   useEffect(() => {
-  if (mode !== "atk") return;
+    if (mode !== "atk") return;
 
-  // Ringkas data berdasarkan kategori
-  const map = {};
+    const map = {};
+    filteredData.forEach((item) => {
+      const key = item.Barang_yang_Diminta || "Unknown";
+      const value = parseInt(item.Jumlah_Diminta) || 0;
+      map[key] = (map[key] || 0) + value;
+    });
 
-  data.forEach((item) => {
-    const key = item.Barang_yang_Diminta || "Unknown";
+    const result = Object.entries(map).map(([name, value]) => ({
+      name,
+      value,
+    }));
 
-    // Convert jumlah ke number
-    const value = parseInt(item.Jumlah_Diminta) || 0;
+    setChartData(result);
+  }, [filteredData, mode]);
 
-    map[key] = (map[key] || 0) + value;
-  });
-
-  const result = Object.entries(map).map(([name, value]) => ({
-    name,
-    value,
-  }));
-
-  setChartData(result);
-}, [data, mode]);
-
-
-  // Hitung chartData
+  // ============================
+  // 🔥 LOGIKA CHART NON-ATK
+  // ============================
   useEffect(() => {
     if (mode === "atk") return;
-    if (data.length === 0 || masterCode.length === 0) {
+    if (filteredData.length === 0 || masterCode.length === 0) {
       setChartData([]);
       return;
     }
@@ -123,13 +142,12 @@ export default function Piechart({
       return parseNumber(item[selectedMonth]);
     };
 
+    // Semua kategori
     if (selectedCategory === "ALL") {
       const groupedByCategory = {};
-      masterCode.forEach((m) => {
-        groupedByCategory[m.category] = 0;
-      });
+      masterCode.forEach((m) => (groupedByCategory[m.category] = 0));
 
-      data.forEach((item) => {
+      filteredData.forEach((item) => {
         const match = masterCode.find(
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
@@ -158,7 +176,7 @@ export default function Piechart({
         .filter((m) => m.category === selectedCategory)
         .map((m) => String(m.code).trim());
 
-      const filtered = data.filter((row) =>
+      const filtered = filteredData.filter((row) =>
         codes.includes(String(row.accountCode)?.trim())
       );
 
@@ -182,9 +200,9 @@ export default function Piechart({
 
       setChartData(result);
     }
-  }, [selectedCategory, selectedMonth, data, masterCode, mode]);
+  }, [selectedCategory, selectedMonth, filteredData, masterCode, mode]);
 
-  // Total untuk tampil di bawah chart
+  // Total keseluruhan
   const totalValue = useMemo(() => {
     return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
   }, [chartData]);
@@ -235,7 +253,7 @@ export default function Piechart({
         </div>
       )}
 
-      {/* Chart Container Responsive */}
+      {/* Chart */}
       <div className="w-full h-[300px] sm:h-[400px] md:h-[500px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -245,7 +263,7 @@ export default function Piechart({
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius="70%" // responsive radius
+              outerRadius="70%"
             >
               {chartData.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -258,12 +276,7 @@ export default function Piechart({
               }
             />
 
-            <Legend
-              wrapperStyle={{
-                fontSize: "10px",
-                paddingTop: "10px",
-              }}
-            />
+            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
