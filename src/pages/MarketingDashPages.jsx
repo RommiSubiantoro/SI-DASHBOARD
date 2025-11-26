@@ -1,14 +1,14 @@
 import React, { useEffect } from 'react'
-import GAFSDashboard from '../GaFs/GAFSDashboard'
+import MarketingDashboard from '../marketing/MarketingDashboard';
 
 const AdminDashPage = () => {
     useEffect(() => {
-        document.title = 'GA/FS-Home'
+        document.title = 'Marketing-Home'
     }, [])
 
     return (
         <div>
-            <GAFSDashboard/>
+            <MarketingDashboard/>
 
         </div>
     )

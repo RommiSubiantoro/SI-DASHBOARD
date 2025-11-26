@@ -6,7 +6,9 @@ import AdminDashPages from "./pages/AdminDashPages";
 import ManagerDashPages from "./pages/ManagerDashPages";
 import SupervisorDashPages from "./pages/SupervisorDashPages";
 import UserDashPages from "./pages/UserDashPages";
-import GAFSDashPages from "./pages/GAFSDashPages";
+import MarketingDashPages from "./pages/MarketingDashPages";
+import OperationDashPages from "./pages/OperationDashPages";
+
 
 function App() {
   return (
@@ -59,7 +61,16 @@ function App() {
           path="/marketing"
           element={
             <ProtectedRoute allowedRoles={["marketing"]}>
-              {/* <GAFSDashPages /> */}
+              <MarketingDashPages />
+            </ProtectedRoute>
+          }
+        />
+
+         <Route
+          path="/operation"
+          element={
+            <ProtectedRoute allowedRoles={["operation"]}>
+              <OperationDashPages />
             </ProtectedRoute>
           }
         />
