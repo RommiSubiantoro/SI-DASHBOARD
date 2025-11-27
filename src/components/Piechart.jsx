@@ -45,9 +45,7 @@ export default function Piechart({
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
 
-  // =====================================================================
   // 🔥 MODE DAILY — KHUSUS UNTUK DAILY OB/CS
-  // =====================================================================
   const isDaily = mode === "daily";
 
   useEffect(() => {
@@ -57,12 +55,7 @@ export default function Piechart({
     setChartData(data);
 
   }, [data, mode]);
-  // =====================================================================
-
-
-  // =====================================================================
-  // 🔥 MODE ATK — TIDAK DIUBAH
-  // =====================================================================
+  
   const filteredData = useMemo(() => {
     if (isDaily) return data; // Daily tidak pakai filter
     if (!data || !selectedUnit) return data;
@@ -93,10 +86,7 @@ export default function Piechart({
     });
   }, [data, selectedUnit, mode]);
 
-
-  // =====================================================================
-  // 🔥 FETCH masterCode (mode lama)
-  // =====================================================================
+  // 🔥 FETCH masterCode 
   useEffect(() => {
     if (isDaily || mode === "atk") return;
 
@@ -110,9 +100,7 @@ export default function Piechart({
   }, [selectedYear, data, mode]);
 
 
-  // =====================================================================
-  // 🔥 MODE ATK — chart logic lama (tidak diubah)
-  // =====================================================================
+  // 🔥 MODE ATK — chart logic lama 
   useEffect(() => {
     if (isDaily) return;
     if (mode !== "atk") return;
@@ -135,9 +123,7 @@ export default function Piechart({
   }, [filteredData, mode]);
 
 
-  // =====================================================================
   // 🔥 MODE NON-ATK (versi lama, tidak diubah)
-  // =====================================================================
   useEffect(() => {
     if (isDaily || mode === "atk") return;
     if (filteredData.length === 0 || masterCode.length === 0) {
@@ -213,9 +199,6 @@ export default function Piechart({
   }, [chartData]);
 
 
-  // =====================================================================
-  // 🔥 RENDER
-  // =====================================================================
   return (
     <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
 
