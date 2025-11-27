@@ -226,7 +226,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md w-full max-w-6xl mx-auto mt-10">
+    <div className="p-6 bg-white rounded-xl shadow-md max-w-4xl mx-auto mt-5">
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
         📊 Laporan Unit Bisnis – {selectedMonth} {selectedYear}
       </h2>
