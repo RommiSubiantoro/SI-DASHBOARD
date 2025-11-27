@@ -3,14 +3,9 @@ import * as XLSX from "xlsx";
 import { collection, onSnapshot, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import Header from "../components/Header";
+import Piechart from "../components/Piechart";
 
-const GAFSDaily = ({
-  loading = false,
-  onAdd,
-  onEdit,
-  onDelete,
-  onExport,
-}) => {
+const GAFSDaily = ({ loading = false, onAdd, onEdit, onDelete, onExport }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [fetchedData, setFetchedData] = useState([]);
@@ -35,12 +30,13 @@ const GAFSDaily = ({
     if (!file) return;
 
     const reader = new FileReader();
+
     reader.onload = async (e) => {
       const data = new Uint8Array(e.target.result);
       const workbook = XLSX.read(data, { type: "array" });
 
-      // ✅ Pastikan nama sheet sesuai
       const sheetName = "Daily OBCS";
+
       if (!workbook.Sheets[sheetName]) {
         alert(`❌ Sheet '${sheetName}' tidak ditemukan di file Excel!`);
         return;
@@ -48,7 +44,6 @@ const GAFSDaily = ({
 
       const sheet = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName]);
 
-      // 🔹 Simpan setiap baris ke Firestore
       for (const row of sheet) {
         await addDoc(collection(db, "daily_obcs"), {
           namaPetugas: row["Nama Petugas"] || "",
@@ -59,7 +54,7 @@ const GAFSDaily = ({
         });
       }
 
-      alert("✅ Upload berhasil! Data dari sheet 'Daily OB/CS' telah disimpan.");
+      alert("✅ Upload berhasil! Data tersimpan.");
     };
 
     reader.readAsArrayBuffer(file);
@@ -67,14 +62,32 @@ const GAFSDaily = ({
 
   // 🔍 Filter data berdasarkan pencarian
   const filteredData = useMemo(() => {
-    return fetchedData.filter(
-      (item) =>
-        item.namaPetugas?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.areaTugas?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.checklist?.toLowerCase().includes(searchTerm.toLowerCase())
+    return fetchedData.filter((item) =>
+      [
+        item.namaPetugas,
+        item.areaTugas,
+        item.tanggal,
+        item.checklist,
+      ].some((field) =>
+        field?.toString().toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
   }, [fetchedData, searchTerm]);
+
+  // 📊 Data untuk Piechart
+  const dailyChartData = useMemo(() => {
+    const map = {};
+
+    filteredData.forEach((item) => {
+      const key = item.areaTugas || "Unknown";
+      map[key] = (map[key] || 0) + 1;
+    });
+
+    return Object.entries(map).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  }, [filteredData]);
 
   // 📄 Pagination
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -85,7 +98,7 @@ const GAFSDaily = ({
 
   return (
     <div className="space-y-4">
-      {/* 🔹 Header dengan filter Tahun dan Upload */}
+      {/* Header */}
       <Header
         title="Daily OB/CS Report"
         selectedYear={selectedYear}
@@ -94,7 +107,7 @@ const GAFSDaily = ({
         onUpload={handleUpload}
       />
 
-      {/* 🔹 Input pencarian */}
+      {/* Input Pencarian */}
       <div className="flex justify-end px-4">
         <input
           type="text"
@@ -105,7 +118,20 @@ const GAFSDaily = ({
         />
       </div>
 
-      {/* 🔹 Tabel Data */}
+      {/* Piechart */}
+      <div className="bg-white p-4 rounded-lg shadow border">
+        <h2 className="text-lg font-semibold mb-3">
+          📊 Piechart Daily OB/CS per Area
+        </h2>
+        <Piechart
+          data={dailyChartData}
+          mode="daily"
+          selectedMonth="ALL"
+          selectedUnit="none"
+        />
+      </div>
+
+      {/* Tabel Data */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
         {loading ? (
           <div className="p-6 text-center text-gray-500">Loading...</div>
@@ -121,6 +147,7 @@ const GAFSDaily = ({
                 <th className="px-4 py-2 text-center">Aksi</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-gray-200">
               {paginatedData.length === 0 ? (
                 <tr>
@@ -141,6 +168,7 @@ const GAFSDaily = ({
                     <td className="px-4 py-2">{item.areaTugas || "-"}</td>
                     <td className="px-4 py-2">{item.tanggal || "-"}</td>
                     <td className="px-4 py-2">{item.checklist || "-"}</td>
+
                     <td className="px-4 py-2 flex gap-2 justify-center">
                       <button
                         onClick={() => onEdit && onEdit(item)}
@@ -148,6 +176,7 @@ const GAFSDaily = ({
                       >
                         Edit
                       </button>
+
                       <button
                         onClick={() => onDelete && onDelete(item.id)}
                         className="px-2 py-1 bg-red-100 text-red-700 rounded text-xs hover:bg-red-200"
@@ -163,7 +192,7 @@ const GAFSDaily = ({
         )}
       </div>
 
-      {/* 🔹 Pagination */}
+      {/* Pagination */}
       <div className="flex justify-between items-center px-4 py-2">
         <button
           onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
@@ -172,9 +201,11 @@ const GAFSDaily = ({
         >
           &lt; Prev
         </button>
+
         <span className="text-sm">
           Halaman {currentPage} dari {totalPages || 1}
         </span>
+
         <button
           onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
           disabled={currentPage === totalPages || totalPages === 0}

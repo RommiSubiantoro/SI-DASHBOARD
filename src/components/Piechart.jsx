@@ -11,25 +11,17 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const COLORS = [
-  "#4facfe",
-  "#ff6b6b",
-  "#3ddb97",
-  "#ffa726",
-  "#8b5cf6",
-  "#f59e0b",
-  "#60a5fa",
-  "#ef4444",
-  "#10b981",
-  "#6366f1",
+  "#4facfe", "#ff6b6b", "#3ddb97", "#ffa726", "#8b5cf6",
+  "#f59e0b", "#60a5fa", "#ef4444", "#10b981", "#6366f1",
 ];
 
 const MONTHS = [
-  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+  "Jan","Feb","Mar","Apr","May","Jun",
+  "Jul","Aug","Sep","Oct","Nov","Dec",
 ];
 
 function parseNumber(raw) {
-  if (raw === null || raw === undefined || raw === "") return 0;
+  if (!raw && raw !== 0) return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
   let isNeg = false;
   if (/^\(.+\)$/.test(s)) {
@@ -46,20 +38,36 @@ export default function Piechart({
   selectedYear,
   selectedMonth = "ALL",
   setSelectedMonth,
-  selectedUnit,         // ← DITAMBAHKAN
+  selectedUnit,
   mode = "default",
 }) {
   const [masterCode, setMasterCode] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
 
-  // 🔥 FILTER DATA SESUAI BUSINESS LINE UNIT
+  // =====================================================================
+  // 🔥 MODE DAILY — KHUSUS UNTUK DAILY OB/CS
+  // =====================================================================
+  const isDaily = mode === "daily";
+
+  useEffect(() => {
+    if (!isDaily) return;
+
+    // Data daily sudah berbentuk [{name, value}]
+    setChartData(data);
+
+  }, [data, mode]);
+  // =====================================================================
+
+
+  // =====================================================================
+  // 🔥 MODE ATK — TIDAK DIUBAH
+  // =====================================================================
   const filteredData = useMemo(() => {
+    if (isDaily) return data; // Daily tidak pakai filter
     if (!data || !selectedUnit) return data;
 
     const unitLower = selectedUnit.toLowerCase();
-
     const getBL = (row) =>
       row.businessLine ||
       row["Business Line"] ||
@@ -79,38 +87,38 @@ export default function Piechart({
       );
     }
 
-    // SAI (unit lain) → selain GEN99 dan AGE11
     return data.filter((row) => {
       const bl = String(getBL(row)).trim().toUpperCase();
       return bl !== "GEN99" && bl !== "AGE11";
     });
-  }, [data, selectedUnit]);
+  }, [data, selectedUnit, mode]);
 
-  const formatRupiah = (value) => "Rp " + Number(value).toLocaleString("id-ID");
 
-  // Ambil masterCode
+  // =====================================================================
+  // 🔥 FETCH masterCode (mode lama)
+  // =====================================================================
   useEffect(() => {
-    if (mode === "atk") return;
+    if (isDaily || mode === "atk") return;
+
     const fetchMaster = async () => {
-      try {
-        setIsLoading(true);
-        const snap = await getDocs(collection(db, "masterCode"));
-        const data = snap.docs.map((doc) => doc.data());
-        setMasterCode(data);
-      } catch (error) {
-        console.error("❌ Gagal ambil masterCode:", error);
-      } finally {
-        setIsLoading(false);
-      }
+      const snap = await getDocs(collection(db, "masterCode"));
+      const data = snap.docs.map((doc) => doc.data());
+      setMasterCode(data);
     };
+
     fetchMaster();
   }, [selectedYear, data, mode]);
 
-  // Mode ATK (tidak pakai masterCode)
+
+  // =====================================================================
+  // 🔥 MODE ATK — chart logic lama (tidak diubah)
+  // =====================================================================
   useEffect(() => {
+    if (isDaily) return;
     if (mode !== "atk") return;
 
     const map = {};
+
     filteredData.forEach((item) => {
       const key = item.Barang_yang_Diminta || "Unknown";
       const value = parseInt(item.Jumlah_Diminta) || 0;
@@ -123,13 +131,15 @@ export default function Piechart({
     }));
 
     setChartData(result);
+
   }, [filteredData, mode]);
 
-  // ============================
-  // 🔥 LOGIKA CHART NON-ATK
-  // ============================
+
+  // =====================================================================
+  // 🔥 MODE NON-ATK (versi lama, tidak diubah)
+  // =====================================================================
   useEffect(() => {
-    if (mode === "atk") return;
+    if (isDaily || mode === "atk") return;
     if (filteredData.length === 0 || masterCode.length === 0) {
       setChartData([]);
       return;
@@ -151,9 +161,7 @@ export default function Piechart({
         const match = masterCode.find(
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
-        if (match) {
-          groupedByCategory[match.category] += getValue(item);
-        }
+        if (match) groupedByCategory[match.category] += getValue(item);
       });
 
       const total = Object.values(groupedByCategory).reduce(
@@ -186,10 +194,7 @@ export default function Piechart({
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
         const name =
-          match?.description ||
-          match?.accountName ||
-          item.accountName ||
-          "Unknown";
+          match?.description || match?.accountName || item.accountName || "Unknown";
         const value = getValue(item);
         grouped[name] = (grouped[name] || 0) + value;
       });
@@ -202,18 +207,21 @@ export default function Piechart({
     }
   }, [selectedCategory, selectedMonth, filteredData, masterCode, mode]);
 
-  // Total keseluruhan
+
   const totalValue = useMemo(() => {
     return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
   }, [chartData]);
 
-  const showFilters = mode !== "atk";
 
+  // =====================================================================
+  // 🔥 RENDER
+  // =====================================================================
   return (
     <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
-      {showFilters && (
+
+      {/* DAILY MODE → tidak ada filter */}
+      {!isDaily && mode !== "atk" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-          {/* Kategori */}
           <div>
             <label className="block mb-1 font-medium text-sm sm:text-base">
               Pilih Kategori
@@ -232,7 +240,6 @@ export default function Piechart({
             </select>
           </div>
 
-          {/* Bulan */}
           <div>
             <label className="block mb-1 font-medium text-sm sm:text-base">
               Pilih Bulan
@@ -269,21 +276,18 @@ export default function Piechart({
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
-
-            <Tooltip
-              formatter={(value) =>
-                "Rp " + Number(value).toLocaleString("id-ID")
-              }
-            />
-
-            <Legend wrapperStyle={{ fontSize: "10px", paddingTop: "10px" }} />
+            <Tooltip formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")} />
+            <Legend wrapperStyle={{ fontSize: "10px" }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      <p className="text-center mt-4 font-semibold text-gray-700 text-sm sm:text-base">
-        Total Keseluruhan: Rp {totalValue.toLocaleString("id-ID")}
-      </p>
+      {/* Total */}
+      {!isDaily && (
+        <p className="text-center mt-4 font-semibold text-gray-700 text-sm sm:text-base">
+          Total: Rp {totalValue.toLocaleString("id-ID")}
+        </p>
+      )}
 
       {chartData.length === 0 && (
         <p className="text-gray-500 text-center mt-4 text-sm">

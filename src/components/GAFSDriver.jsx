@@ -2,14 +2,19 @@ import React, { useState, useMemo } from "react";
 import * as XLSX from "xlsx";
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
+import Piechart from "../components/Piechart";
 
 const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [selectedYear, setSelectedYear] = useState(
+    new Date().getFullYear().toString()
+  );
   const itemsPerPage = 10;
 
-  // 🟢 Upload handler dengan tahun
+  // ================================
+  // 🟢 UPLOAD EXCEL
+  // ================================
   const handleUpload = async (event) => {
     const file = event.target.files[0];
     if (!file) return alert("❌ Tidak ada file dipilih.");
@@ -42,7 +47,7 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
             KMAwal: row["KM Awal"] || "",
             KMAkhir: row["KM Akhir"] || "",
             TujuanPerjalanan: row["Tujuan Perjalanan"] || "",
-            Tahun: selectedYear, // ⬅️ Hanya tahun
+            Tahun: selectedYear,
             Catatan: row["Catatan"] || "",
             createdAt: new Date(),
           });
@@ -58,7 +63,9 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
     reader.readAsArrayBuffer(file);
   };
 
-  // 🔍 Filter search
+  // ================================
+  // 🔍 FILTER SEARCH
+  // ================================
   const filteredData = useMemo(() => {
     return data.filter(
       (item) =>
@@ -68,7 +75,26 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
     );
   }, [data, searchTerm]);
 
-  // 📄 Pagination
+  // ================================
+  // 🟣 PIECHART LOGIC (NEW)
+  // ================================
+  const pieChartDriver = useMemo(() => {
+    const map = {};
+
+    filteredData.forEach((row) => {
+      const key = row.Kendaraan || "Unknown";
+      map[key] = (map[key] || 0) + 1; // jumlah trip per kendaraan
+    });
+
+    return Object.entries(map).map(([name, value]) => ({
+      name,
+      value,
+    }));
+  }, [filteredData]);
+
+  // ================================
+  // 📄 PAGINATION
+  // ================================
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const paginatedData = filteredData.slice(
     (currentPage - 1) * itemsPerPage,
@@ -77,7 +103,9 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
 
   return (
     <div className="space-y-4">
+      {/* ============================== */}
       {/* 🔹 Controls (Tahun + Upload + Search) */}
+      {/* ============================== */}
       <div className="flex gap-4 items-center">
         <select
           value={selectedYear}
@@ -117,7 +145,25 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
         />
       </div>
 
-      {/* 🔹 Tabel */}
+      {/* ============================== */}
+      {/* 🟣 PIECHART DRIVER */}
+      {/* ============================== */}
+      <div className="bg-white p-4 rounded-lg shadow border">
+        <h2 className="text-lg font-semibold mb-3">
+          🚗 Piechart Perjalanan Driver per Kendaraan
+        </h2>
+
+        <Piechart
+          data={pieChartDriver}
+          mode="daily"      // agar tidak pakai masterCode
+          selectedMonth="ALL"
+          selectedUnit="none"
+        />
+      </div>
+
+      {/* ============================== */}
+      {/* 🔹 TABEL */}
+      {/* ============================== */}
       <div className="overflow-x-auto bg-white rounded-lg shadow-sm border border-gray-200">
         {loading ? (
           <div className="p-6 text-center text-gray-500">Loading...</div>
@@ -149,7 +195,9 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
               ) : (
                 paginatedData.map((item, idx) => (
                   <tr key={item.id || idx}>
-                    <td className="px-4 py-2">{(currentPage - 1) * itemsPerPage + idx + 1}</td>
+                    <td className="px-4 py-2">
+                      {(currentPage - 1) * itemsPerPage + idx + 1}
+                    </td>
                     <td className="px-4 py-2">{item.NamaDriver || "-"}</td>
                     <td className="px-4 py-2">{item.Kendaraan || "-"}</td>
                     <td className="px-4 py-2">{item.Tanggal || "-"}</td>
@@ -182,7 +230,9 @@ const GAFSDriver = ({ data = [], loading = false, onEdit, onDelete }) => {
         )}
       </div>
 
-      {/* 🔹 Pagination */}
+      {/* ============================== */}
+      {/* 🔹 PAGINATION */}
+      {/* ============================== */}
       <div className="flex justify-between items-center px-4 py-2">
         <button
           onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
