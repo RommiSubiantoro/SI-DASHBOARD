@@ -70,7 +70,7 @@ export default function Piechart({
 
     if (unitLower.includes("samudera agencies indonesia gena")) {
       return data.filter(
-        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE06"
       );
     }
 
@@ -82,7 +82,7 @@ export default function Piechart({
 
     return data.filter((row) => {
       const bl = String(getBL(row)).trim().toUpperCase();
-      return bl !== "GEN99" && bl !== "AGE11";
+      // return bl !== "GEN99" && bl !== "AGE11";
     });
   }, [data, selectedUnit, mode]);
 

@@ -74,14 +74,14 @@ export default function Linechart({
     const unit = selectedUnit.toLowerCase();
 
     // GENA → hanya GEN99
-    if (unit.includes("gena")) {
+    if (unit.includes("samudera agencies indonesia gena")) {
       return data.filter(
-        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE06"
       );
     }
 
     // LOCAL → hanya AGE11
-    if (unit.includes("local")) {
+    if (unit.includes("samudera agencies indonesia local")) {
       return data.filter(
         (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
       );
@@ -90,7 +90,7 @@ export default function Linechart({
     // SAI / lainnya → selain GEN99 & AGE11
     return data.filter((row) => {
       const bl = String(getBL(row)).trim().toUpperCase();
-      return bl !== "GEN99" && bl !== "AGE11";
+      // return bl !== "GEN99" && bl !== "AGE11";
     });
   }, [data, selectedUnit]);
 

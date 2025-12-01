@@ -195,21 +195,14 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     if (isGENA) {
       // hanya ambil GEN99
       filtered = filtered.filter(
-        (row) => String(businessLineField(row)).trim().toUpperCase() === "GEN99"
+        (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE06"
       );
     } else if (isLOCAL) {
       // hanya ambil AGE11
       filtered = filtered.filter(
         (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE11"
       );
-    } else if (isSAI) {
-      // SAI ambil SEMUA kecuali GEN99 & AGE11
-      filtered = filtered.filter((row) => {
-        const bl = String(businessLineField(row)).trim().toUpperCase();
-        return bl !== "GEN99" && bl !== "AGE11";
-      });
     }
-
     return filtered;
   }, [currentData, selectedUnit]);
 

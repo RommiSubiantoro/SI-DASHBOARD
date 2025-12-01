@@ -135,7 +135,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           // Samudera Agencies Indonesia GENA → hanya GEN99
           if (unitName.includes("samudera agencies indonesia gena")) {
             filtered = filtered.filter(
-              (d) => String(getBL(d)).trim().toUpperCase() === "GEN99"
+              (d) => String(getBL(d)).trim().toUpperCase() === "AGE06"
             );
           }
 
@@ -146,13 +146,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             );
           }
 
-          // Unit lain → buang GEN99 dan AGE11
-          else {
-            filtered = filtered.filter((d) => {
-              const bl = String(getBL(d)).trim().toUpperCase();
-              return bl !== "GEN99" && bl !== "AGE11";
-            });
-          }
+         
 
           const perCodeSum = {};
           filtered.forEach((docItem) => {
