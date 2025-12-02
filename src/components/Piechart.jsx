@@ -55,7 +55,7 @@ export default function Piechart({
   data = [],
   selectedYear,
   selectedMonth = "ALL",
-  setSelectedMonth,
+  setSelectedMonth = () => {},
   selectedUnit,
   mode = "default",
 }) {
@@ -63,19 +63,18 @@ export default function Piechart({
   const [selectedCategory, setSelectedCategory] = useState("ALL");
   const [chartData, setChartData] = useState([]);
 
-  // 🔥 MODE DAILY — KHUSUS UNTUK DAILY OB/CS
   const isDaily = mode === "daily";
 
+  // 🔥 MODE DAILY
   useEffect(() => {
     if (!isDaily) return;
+    setChartData(Array.isArray(data) ? data : []);
+  }, [data, mode, isDaily]);
 
-    // Data daily sudah berbentuk [{name, value}]
-    setChartData(data);
-  }, [data, mode]);
-
+  // 🔥 FILTERED DATA
   const filteredData = useMemo(() => {
-    if (isDaily) return data; // Daily tidak pakai filter
-    if (!data || !selectedUnit) return data;
+    if (isDaily) return Array.isArray(data) ? data : [];
+    if (!Array.isArray(data) || !selectedUnit) return [];
 
     const unitLower = selectedUnit.toLowerCase();
     const getBL = (row) =>
@@ -96,34 +95,38 @@ export default function Piechart({
         (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
       );
     }
+
     if (unitLower.includes("samudera agencies indonesia")) {
-      return data.filter(
-        (row) => String(getBL(row)).trim().toUpperCase() !== "" 
-      );
+      return data.filter((row) => String(getBL(row)).trim() !== "");
     }
-  }, [data, selectedUnit, mode]);
+
+    return [];
+  }, [data, selectedUnit, mode, isDaily]);
 
   // 🔥 FETCH masterCode
   useEffect(() => {
     if (isDaily || mode === "atk") return;
 
     const fetchMaster = async () => {
-      const snap = await getDocs(collection(db, "masterCode"));
-      const data = snap.docs.map((doc) => doc.data());
-      setMasterCode(data);
+      try {
+        const snap = await getDocs(collection(db, "masterCode"));
+        const master = snap.docs.map((doc) => doc.data());
+        setMasterCode(Array.isArray(master) ? master : []);
+      } catch (err) {
+        console.error("Error fetching masterCode:", err);
+        setMasterCode([]);
+      }
     };
 
     fetchMaster();
-  }, [selectedYear, data, mode]);
+  }, [selectedYear, data, mode, isDaily]);
 
-  // 🔥 MODE ATK — chart logic lama
+  // 🔥 MODE ATK
   useEffect(() => {
-    if (isDaily) return;
-    if (mode !== "atk") return;
+    if (isDaily || mode !== "atk") return;
 
     const map = {};
-
-    filteredData.forEach((item) => {
+    (Array.isArray(filteredData) ? filteredData : []).forEach((item) => {
       const key = item.Barang_yang_Diminta || "Unknown";
       const value = parseInt(item.Jumlah_Diminta) || 0;
       map[key] = (map[key] || 0) + value;
@@ -131,16 +134,17 @@ export default function Piechart({
 
     const result = Object.entries(map).map(([name, value]) => ({
       name,
-      value,
+      value: Math.abs(value),    // slice pakai absolut
+      originalValue: value,      // simpan nilai asli
     }));
 
     setChartData(result);
-  }, [filteredData, mode]);
+  }, [filteredData, mode, isDaily]);
 
-  // 🔥 MODE NON-ATK (versi lama, tidak diubah)
+  // 🔥 MODE NON-ATK
   useEffect(() => {
     if (isDaily || mode === "atk") return;
-    if (filteredData.length === 0 || masterCode.length === 0) {
+    if (!Array.isArray(filteredData) || !Array.isArray(masterCode)) {
       setChartData([]);
       return;
     }
@@ -152,12 +156,11 @@ export default function Piechart({
       return parseNumber(item[selectedMonth]);
     };
 
-    // Semua kategori
     if (selectedCategory === "ALL") {
       const groupedByCategory = {};
       masterCode.forEach((m) => (groupedByCategory[m.category] = 0));
 
-      filteredData.forEach((item) => {
+      (Array.isArray(filteredData) ? filteredData : []).forEach((item) => {
         const match = masterCode.find(
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
@@ -172,11 +175,11 @@ export default function Piechart({
       const result = Object.entries(groupedByCategory)
         .map(([category, value]) => ({
           name: category,
-          value,
-          percentage:
-            total > 0 ? ((value / total) * 100).toFixed(1) + "%" : "0%",
+          value: Math.abs(value),
+          originalValue: value,
+          percentage: total > 0 ? ((value / total) * 100).toFixed(1) + "%" : "0%",
         }))
-        .filter((d) => d.value > 0);
+        .filter((d) => d.value !== null && d.value !== undefined);
 
       setChartData(result);
     } else {
@@ -184,7 +187,7 @@ export default function Piechart({
         .filter((m) => m.category === selectedCategory)
         .map((m) => String(m.code).trim());
 
-      const filtered = filteredData.filter((row) =>
+      const filtered = (Array.isArray(filteredData) ? filteredData : []).filter((row) =>
         codes.includes(String(row.accountCode)?.trim())
       );
 
@@ -194,29 +197,32 @@ export default function Piechart({
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
         const name =
-          match?.description ||
-          match?.accountName ||
-          item.accountName ||
-          "Unknown";
+          match?.description || match?.accountName || item.accountName || "Unknown";
         const value = getValue(item);
         grouped[name] = (grouped[name] || 0) + value;
       });
 
       const result = Object.entries(grouped)
-        .map(([name, value]) => ({ name, value }))
-        .filter((d) => d.value > 0);
+        .map(([name, value]) => ({
+          name,
+          value: Math.abs(value),
+          originalValue: value,
+        }))
+        .filter((d) => d.value !== null && d.value !== undefined);
 
       setChartData(result);
     }
-  }, [selectedCategory, selectedMonth, filteredData, masterCode, mode]);
+  }, [selectedCategory, selectedMonth, filteredData, masterCode, mode, isDaily]);
 
   const totalValue = useMemo(() => {
-    return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
+    return (Array.isArray(chartData) ? chartData : []).reduce(
+      (sum, item) => sum + (item.originalValue || 0),
+      0
+    );
   }, [chartData]);
 
   return (
     <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
-      {/* DAILY MODE → tidak ada filter */}
       {!isDaily && mode !== "atk" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
           <div>
@@ -229,11 +235,13 @@ export default function Piechart({
               onChange={(e) => setSelectedCategory(e.target.value)}
             >
               <option value="ALL">Semua Kategori</option>
-              {[...new Set(masterCode.map((m) => m.category))].map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat}
-                </option>
-              ))}
+              {[...new Set(masterCode?.map((m) => m.category) || [])].map(
+                (cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                )
+              )}
             </select>
           </div>
 
@@ -257,38 +265,42 @@ export default function Piechart({
         </div>
       )}
 
-      {/* Chart */}
       <div className="w-full h-[300px] sm:h-[400px] md:h-[500px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={chartData}
+              data={Array.isArray(chartData) ? chartData : []}
               dataKey="value"
               nameKey="name"
               cx="50%"
               cy="50%"
               outerRadius="70%"
             >
-              {chartData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
+              {(Array.isArray(chartData) ? chartData : []).map((entry, i) => (
+                <Cell
+                  key={i}
+                  fill={entry.originalValue >= 0 ? COLORS[i % COLORS.length] : "#661011"}
+                />
               ))}
             </Pie>
             <Tooltip
-              formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
+              formatter={(value, name, props) => {
+                const original = props?.payload?.originalValue ?? value;
+                return "Rp " + Number(original).toLocaleString("id-ID");
+              }}
             />
             <Legend wrapperStyle={{ fontSize: "10px" }} />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Total */}
       {!isDaily && (
         <p className="text-center mt-4 font-semibold text-gray-700 text-sm sm:text-base">
           Total: Rp {totalValue.toLocaleString("id-ID")}
         </p>
       )}
 
-      {chartData.length === 0 && (
+      {(Array.isArray(chartData) ? chartData.length : 0) === 0 && (
         <p className="text-gray-500 text-center mt-4 text-sm">
           Tidak ada data untuk pilihan ini.
         </p>
