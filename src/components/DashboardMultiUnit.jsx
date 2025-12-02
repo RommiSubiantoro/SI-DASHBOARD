@@ -30,28 +30,42 @@ const MONTHS = [
   "Nov",
   "Dec",
 ];
+
 const FINAL_ORDER = [
   "Service Revenue",
-  "Cost of Service",
+  "Cost Of Service",
   "Gross Profit",
-  "General & Administration Expenses",
-  "Operation Income",
-  "Other Income/Expense",
+  "General & Administration Expense",
+  "Operating Income",
+  "Other Income (Expense)",
   "NIBT",
   "Pajak",
 ];
+
 const CATEGORY_CANON = {
   "Service Revenue": "Service Revenue",
   "service revenue": "Service Revenue",
-  "Cost Of Service": "Cost of Service",
-  "Cost of Service": "Cost of Service",
-  "General & Administration Expense": "General & Administration Expenses",
-  "General & Administration Expenses": "General & Administration Expenses",
-  "Other Income (Expenses)": "Other Income/Expense",
-  "Other Income/Expense": "Other Income/Expense",
+  "Cost Of Service": "Cost Of Service",
+  "Cost of Service": "Cost Of Service",
+  "General & Administration Expense": "General & Administration Expense",
+  "General & Administration Expenses": "General & Administration Expense",
+  "Other Income (Expense)": "Other Income (Expense)",
+  "Other Income (Expenses)": "Other Income (Expense)",
   Pajak: "Pajak",
+  pajak: "Pajak",
+  PAJAK: "Pajak",
 };
+
 const SUMMARY_CACHE = {};
+
+// Helper: cek apakah category perlu dijadikan positif
+const shouldBePositive = (categoryName) => {
+  const lowerCat = String(categoryName).toLowerCase();
+  return (
+    lowerCat.includes("service revenue") ||
+    lowerCat.includes("other income")
+  );
+};
 
 const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   const [unitList, setUnitList] = useState([]);
@@ -132,21 +146,18 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           // 3. Filter business line berdasarkan nama unit
           const unitName = unit.name.toLowerCase();
 
-          // Samudera Agencies Indonesia GENA → hanya GEN99
+          // Samudera Agencies Indonesia GENA → hanya AGE06
           if (unitName.includes("samudera agencies indonesia gena")) {
             filtered = filtered.filter(
               (d) => String(getBL(d)).trim().toUpperCase() === "AGE06"
             );
           }
-
           // Samudera Agencies Indonesia Local → hanya AGE11
           else if (unitName.includes("samudera agencies indonesia local")) {
             filtered = filtered.filter(
               (d) => String(getBL(d)).trim().toUpperCase() === "AGE11"
             );
           }
-
-         
 
           const perCodeSum = {};
           filtered.forEach((docItem) => {
@@ -158,6 +169,12 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           for (const [cat, codes] of Object.entries(codesByCategory)) {
             let sum = 0;
             codes.forEach((c) => (sum += perCodeSum[c] || 0));
+            
+            // 🔹 Ubah menjadi positif untuk Service Revenue & Other Income
+            if (shouldBePositive(cat)) {
+              sum = Math.abs(sum);
+            }
+            
             if (!catMap[cat]) catMap[cat] = {};
             catMap[cat][unit.name] = (catMap[cat][unit.name] || 0) + sum;
           }
@@ -169,30 +186,30 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
       };
 
       ensure("Service Revenue");
-      ensure("Cost of Service");
-      ensure("General & Administration Expenses");
-      ensure("Other Income/Expense");
+      ensure("Cost Of Service");
+      ensure("General & Administration Expense");
+      ensure("Other Income (Expense)");
       ensure("Pajak");
 
       ensure("Gross Profit");
       unitList.forEach((u) => {
         const r = catMap["Service Revenue"][u.name] || 0;
-        const c = catMap["Cost of Service"][u.name] || 0;
+        const c = catMap["Cost Of Service"][u.name] || 0;
         catMap["Gross Profit"][u.name] = r - c;
       });
 
-      ensure("Operation Income");
+      ensure("Operating Income");
       unitList.forEach((u) => {
         const gp = catMap["Gross Profit"][u.name] || 0;
-        const ga = catMap["General & Administration Expenses"][u.name] || 0;
-        catMap["Operation Income"][u.name] = gp - ga;
+        const ga = catMap["General & Administration Expense"][u.name] || 0;
+        catMap["Operating Income"][u.name] = gp - ga;
       });
 
       ensure("NIBT");
       unitList.forEach((u) => {
-        const op = catMap["Operation Income"][u.name] || 0;
-        const oie = catMap["Other Income/Expense"][u.name] || 0;
-        catMap["NIBT"][u.name] = op - oie;
+        const op = catMap["Operating Income"][u.name] || 0;
+        const oie = catMap["Other Income (Expense)"][u.name] || 0;
+        catMap["NIBT"][u.name] = op + oie;
       });
 
       SUMMARY_CACHE[cacheKey] = catMap;
@@ -220,7 +237,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
   };
 
   return (
-    <div className="p-6 bg-white rounded-xl shadow-md max-w-4xl mx-auto mt-5">
+    <div className="p-6 bg-white rounded-xl shadow-md max-w-4xl mx-auto mt-3">
       <h2 className="text-lg font-semibold mb-4 text-center text-gray-800">
         📊 Laporan Unit Bisnis – {selectedMonth} {selectedYear}
       </h2>
@@ -277,9 +294,11 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
             className="w-full border px-2 py-1.5 rounded-md text-left text-sm bg-white flex justify-between items-center"
             onClick={() => setDropdownOpen(!dropdownOpen)}
           >
-            {selectedCategories.length === FINAL_ORDER.length
-              ? "Semua"
-              : selectedCategories.join(", ")}
+            <span className="truncate">
+              {selectedCategories.length === FINAL_ORDER.length
+                ? "Semua"
+                : `${selectedCategories.length} kategori dipilih`}
+            </span>
             <span>▾</span>
           </button>
 
@@ -296,7 +315,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
               {FINAL_ORDER.map((cat) => (
                 <label
                   key={cat}
-                  className="flex items-center gap-2 text-sm py-1 cursor-pointer"
+                  className="flex items-center gap-2 text-sm py-1 cursor-pointer hover:bg-gray-50"
                 >
                   <input
                     type="checkbox"
@@ -316,11 +335,11 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
       {loading ? (
         <p className="text-center text-gray-500 py-4">⏳ Memuat data...</p>
       ) : (
-        <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full text-sm text-center border-collapse">
+        <div className="overflow-x-auto border rounded-lg ">
+          <table className=" text-[10px] text-center border-collapse">
             <thead>
               <tr className="bg-yellow-400">
-                <th className="border px-3 py-2 text-left" rowSpan="2">
+                <th className="border px-3 py-2 text-left sticky left-0 bg-yellow-400 z-10" rowSpan="2">
                   Description
                 </th>
                 <th colSpan={unitList.length} className="border px-3 py-2">
@@ -332,7 +351,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
               </tr>
               <tr>
                 {unitList.map((u) => (
-                  <th key={u.id} className="border px-3 py-2 bg-cyan-300">
+                  <th key={u.id} className="border px-3 py-2 bg-cyan-300 min-w-[50px]">
                     {u.name}
                   </th>
                 ))}
@@ -343,7 +362,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
                 selectedCategories.includes(cat)
               ).map((cat) => (
                 <tr key={cat} className="hover:bg-gray-50">
-                  <td className="border px-3 py-2 text-left font-semibold">
+                  <td className="border px-3 py-2 text-left font-semibold sticky left-0 bg-white">
                     {cat}
                   </td>
                   {unitList.map((u) => (
@@ -351,7 +370,7 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
                       {getValue(cat, u.name).toLocaleString("id-ID")}
                     </td>
                   ))}
-                  <td className="border px-3 py-2 text-right font-semibold">
+                  <td className="border px-3 py-2 text-right font-semibold bg-gray-50">
                     {getTotal(cat).toLocaleString("id-ID")}
                   </td>
                 </tr>

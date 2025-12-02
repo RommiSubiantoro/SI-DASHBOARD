@@ -59,7 +59,7 @@ function parseNumber(raw) {
 export default function Barchart({
   data = [],
   selectedYear = "2025",
-  selectedUnit = "",   // 🔥 TAMBAHKAN
+  selectedUnit = "", // 🔥 TAMBAHKAN
   setSelectedYear = () => {},
 }) {
   const [masterCode, setMasterCode] = useState([]);
@@ -105,7 +105,7 @@ export default function Barchart({
     // SAI GENA → hanya GEN99
     if (unit.includes("samudera agencies indonesia gena")) {
       return data.filter(
-        (row) => String(getBL(row)).trim().toUpperCase() === "GEN99"
+        (row) => String(getBL(row)).trim().toUpperCase() === "AGE06"
       );
     }
 
@@ -115,12 +115,11 @@ export default function Barchart({
         (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
       );
     }
-
-    // SAI biasa → selain GEN99 & AGE11
-    return data.filter((row) => {
-      const bl = String(getBL(row)).trim().toUpperCase();
-      // return bl !== "GEN99" && bl !== "AGE11";
-    });
+    if (unit.includes("samudera agencies indonesia")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim() !== ""
+      );
+    }
   }, [data, selectedUnit]);
 
   // ------------------------------------------------------------
@@ -136,7 +135,11 @@ export default function Barchart({
   // 🔥 Hitung total nilai per bulan + kategori filter
   // ------------------------------------------------------------
   const chartData = useMemo(() => {
-    if (!Array.isArray(filtered) || filtered.length === 0 || masterCode.length === 0)
+    if (
+      !Array.isArray(filtered) ||
+      filtered.length === 0 ||
+      masterCode.length === 0
+    )
       return [];
 
     const monthTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));

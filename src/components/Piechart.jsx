@@ -11,13 +11,31 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const COLORS = [
-  "#4facfe", "#ff6b6b", "#3ddb97", "#ffa726", "#8b5cf6",
-  "#f59e0b", "#60a5fa", "#ef4444", "#10b981", "#6366f1",
+  "#4facfe",
+  "#ff6b6b",
+  "#3ddb97",
+  "#ffa726",
+  "#8b5cf6",
+  "#f59e0b",
+  "#60a5fa",
+  "#ef4444",
+  "#10b981",
+  "#6366f1",
 ];
 
 const MONTHS = [
-  "Jan","Feb","Mar","Apr","May","Jun",
-  "Jul","Aug","Sep","Oct","Nov","Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 function parseNumber(raw) {
@@ -53,9 +71,8 @@ export default function Piechart({
 
     // Data daily sudah berbentuk [{name, value}]
     setChartData(data);
-
   }, [data, mode]);
-  
+
   const filteredData = useMemo(() => {
     if (isDaily) return data; // Daily tidak pakai filter
     if (!data || !selectedUnit) return data;
@@ -79,14 +96,14 @@ export default function Piechart({
         (row) => String(getBL(row)).trim().toUpperCase() === "AGE11"
       );
     }
-
-    return data.filter((row) => {
-      const bl = String(getBL(row)).trim().toUpperCase();
-      // return bl !== "GEN99" && bl !== "AGE11";
-    });
+    if (unitLower.includes("samudera agencies indonesia")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim().toUpperCase() !== "" 
+      );
+    }
   }, [data, selectedUnit, mode]);
 
-  // 🔥 FETCH masterCode 
+  // 🔥 FETCH masterCode
   useEffect(() => {
     if (isDaily || mode === "atk") return;
 
@@ -99,8 +116,7 @@ export default function Piechart({
     fetchMaster();
   }, [selectedYear, data, mode]);
 
-
-  // 🔥 MODE ATK — chart logic lama 
+  // 🔥 MODE ATK — chart logic lama
   useEffect(() => {
     if (isDaily) return;
     if (mode !== "atk") return;
@@ -119,9 +135,7 @@ export default function Piechart({
     }));
 
     setChartData(result);
-
   }, [filteredData, mode]);
-
 
   // 🔥 MODE NON-ATK (versi lama, tidak diubah)
   useEffect(() => {
@@ -180,7 +194,10 @@ export default function Piechart({
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
         const name =
-          match?.description || match?.accountName || item.accountName || "Unknown";
+          match?.description ||
+          match?.accountName ||
+          item.accountName ||
+          "Unknown";
         const value = getValue(item);
         grouped[name] = (grouped[name] || 0) + value;
       });
@@ -193,15 +210,12 @@ export default function Piechart({
     }
   }, [selectedCategory, selectedMonth, filteredData, masterCode, mode]);
 
-
   const totalValue = useMemo(() => {
     return chartData.reduce((sum, item) => sum + (item.value || 0), 0);
   }, [chartData]);
 
-
   return (
     <div className="p-4 sm:p-6 bg-white rounded-2xl shadow-md w-full max-w-5xl mx-auto">
-
       {/* DAILY MODE → tidak ada filter */}
       {!isDaily && mode !== "atk" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
@@ -259,7 +273,9 @@ export default function Piechart({
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")} />
+            <Tooltip
+              formatter={(v) => "Rp " + Number(v).toLocaleString("id-ID")}
+            />
             <Legend wrapperStyle={{ fontSize: "10px" }} />
           </PieChart>
         </ResponsiveContainer>

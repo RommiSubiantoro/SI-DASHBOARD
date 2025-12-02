@@ -13,8 +13,18 @@ import { db } from "../firebase";
 import { collection, getDocs } from "firebase/firestore";
 
 const MONTHS = [
-  "Jan","Feb","Mar","Apr","May","Jun",
-  "Jul","Aug","Sep","Oct","Nov","Dec",
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
 ];
 
 // 🔹 Helper parsing angka
@@ -34,7 +44,7 @@ function parseNumber(raw) {
 export default function Linechart({
   data = [],
   selectedYear = "2025",
-  selectedUnit = "",        // 🔥 WAJIB
+  selectedUnit = "", // 🔥 WAJIB
   setSelectedYear = () => {},
 }) {
   const [masterCode, setMasterCode] = useState([]);
@@ -87,11 +97,11 @@ export default function Linechart({
       );
     }
 
-    // SAI / lainnya → selain GEN99 & AGE11
-    return data.filter((row) => {
-      const bl = String(getBL(row)).trim().toUpperCase();
-      // return bl !== "GEN99" && bl !== "AGE11";
-    });
+    if (unit.includes("samudera agencies indonesia")) {
+      return data.filter(
+        (row) => String(getBL(row)).trim() !== "" // ambil semua row yang ada BL-nya
+      );
+    }
   }, [data, selectedUnit]);
 
   // 🔹 Kategori unik
@@ -103,7 +113,11 @@ export default function Linechart({
 
   // 🔹 Hitung nilai per bulan
   const chartData = useMemo(() => {
-    if (!Array.isArray(filtered) || filtered.length === 0 || masterCode.length === 0)
+    if (
+      !Array.isArray(filtered) ||
+      filtered.length === 0 ||
+      masterCode.length === 0
+    )
       return [];
 
     const monthlyTotals = Object.fromEntries(MONTHS.map((m) => [m, 0]));
@@ -168,7 +182,9 @@ export default function Linechart({
 
       {/* CONTENT */}
       {loading ? (
-        <p className="text-center text-gray-500">⏳ Memuat data masterCode...</p>
+        <p className="text-center text-gray-500">
+          ⏳ Memuat data masterCode...
+        </p>
       ) : chartData.length > 0 ? (
         <>
           <div className="w-full h-[280px] sm:h-[350px] md:h-[400px] bg-gray-50 rounded-lg p-2 sm:p-4">

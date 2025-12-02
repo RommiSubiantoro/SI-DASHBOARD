@@ -23,7 +23,7 @@ function ManagerDashboard() {
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
   const [loadingUploads, setLoadingUploads] = useState(false);
-  const [selectedUnit, setSelectedUnit] = useState("Samudera Makassar Logistik");
+  const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
   const [currentData, setCurrentData] = useState([]);
   const [showUnitModal, setShowUnitModal] = useState(false);

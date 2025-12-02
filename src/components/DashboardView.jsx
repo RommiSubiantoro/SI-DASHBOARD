@@ -35,13 +35,13 @@ const MONTHS = [
 
 const FINAL_ORDER = [
   "Service Revenue",
-  "Cost of Service",
+  "Cost Of Service",
   "Gross Profit",
-  "General & Administration Expenses",
-  "Operation Income",
-  "Other Income/Expense",
+  "General & Administration Expense",
+  "Operating Income",
+  "Other Income (Expense)",
   "NIBT",
-  "Pajak",
+  "PAJAK",
 ];
 
 const altNames = {
@@ -55,11 +55,9 @@ const altNames = {
   ],
   other: [
     "Other Income (Expenses)",
-    "Other Income/Expense",
-    "other income (expenses)",
-    "other income/expense",
+    "Other Income (Expense)",
   ],
-  pajak: ["Pajak", "pajak"],
+  pajak: ["Pajak", "pajak", "PAJAK"],
 };
 
 const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
@@ -193,7 +191,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     const isSAI = !isGENA && !isLOCAL; // unit utama
 
     if (isGENA) {
-      // hanya ambil GEN99
+      // hanya ambil AGE06
       filtered = filtered.filter(
         (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE06"
       );
@@ -248,6 +246,15 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         ? Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })
         : "-";
 
+    // Helper: cek apakah category perlu dijadikan positif
+    const shouldBePositive = (categoryName) => {
+      const lowerCat = String(categoryName).toLowerCase();
+      return (
+        lowerCat.includes("service revenue") ||
+        lowerCat.includes("other income")
+      );
+    };
+
     // categories could be from masterCode; if empty, rely to-empty array
     const summary = (categories.length ? categories : []).map((cat) => {
       const matchCat = (row) => {
@@ -264,7 +271,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         );
       };
 
-      const totalActPrev = actPrev
+      let totalActPrev = actPrev
         .filter(matchCat)
         .reduce(
           (sum, row) =>
@@ -272,7 +279,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           0
         );
 
-      const totalActNow = filteredData
+      let totalActNow = filteredData
         .filter(matchCat)
         .reduce(
           (sum, row) =>
@@ -280,13 +287,20 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           0
         );
 
-      const totalBdgt = budgetForYear
+      let totalBdgt = budgetForYear
         .filter(matchCat)
         .reduce(
           (sum, row) =>
             sum + parseNumber(row.totalBudget || row.totalbudget || 0),
           0
         );
+
+      // 🔹 Ubah menjadi positif untuk Service Revenue & Other Income
+      if (shouldBePositive(cat)) {
+        totalActPrev = Math.abs(totalActPrev);
+        totalActNow = Math.abs(totalActNow);
+        totalBdgt = Math.abs(totalBdgt);
+      }
 
       const aVsCValue = totalActNow - totalActPrev;
       const bVsCValue = totalActNow - totalBdgt;
@@ -334,7 +348,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       );
     const cost =
       findByPossible(summary, altNames.cost) ||
-      summary.find((s) => String(s.description).toLowerCase().includes("cost"));
+      summary.find((s) => String(s.description).toLowerCase().includes("cost of service"));
     if (service && cost) {
       const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
       const act2024 = num(service.act2024) - num(cost.act2024);
@@ -369,7 +383,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       });
     }
 
-    // Operation Income = Gross Profit - G&A
+    // Operating Income = Gross Profit - G&A
     const gpa = summary.find(
       (r) => String(r.description).toLowerCase() === "gross profit"
     );
@@ -385,7 +399,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       const opIncomeBdgt2025 = num(gpa.bdgt2025) - num(gae.bdgt2025);
 
       summary.push({
-        description: "Operation Income",
+        description: "Operating Income",
         act2024: formatNumber(opIncomeAct2024),
         bdgt2025: formatNumber(opIncomeBdgt2025),
         act2025: formatNumber(opIncomeAct2025),
@@ -415,21 +429,22 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         },
       });
 
-      // NIBT = Operation Income - Other Income/Expense
+      // NIBT = Operating Income - Other Income (Expense)
       const oie =
         findByPossible(summary, altNames.other) ||
-        summary.find((s) =>
-          String(s.description).toLowerCase().includes("other")
-        );
+        summary.find((s) => {
+          const desc = String(s.description).toLowerCase();
+          return desc.includes("other income");
+        });
       if (oie) {
         const nibtAct2024 =
-          opIncomeAct2024 -
+          opIncomeAct2024 +
           (Number(String(oie.act2024).replace(/,/g, "")) || 0);
         const nibtAct2025 =
-          opIncomeAct2025 -
+          opIncomeAct2025 +
           (Number(String(oie.act2025).replace(/,/g, "")) || 0);
         const nibtBdgt2025 =
-          opIncomeBdgt2025 -
+          opIncomeBdgt2025 +
           (Number(String(oie.bdgt2025).replace(/,/g, "")) || 0);
 
         summary.push({
@@ -463,14 +478,31 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
       }
     }
 
-    // Sort - normalize description comparison using FINAL_ORDER lowercased
-    const order = FINAL_ORDER.map((s) => s.toLowerCase());
+    // 🔹 Sort dengan fungsi findOrderIndex yang fleksibel
+    const findOrderIndex = (desc) => {
+      const d = String(desc).toLowerCase().trim();
+      
+      // Cek exact match dulu dengan FINAL_ORDER
+      for (let i = 0; i < FINAL_ORDER.length; i++) {
+        if (d === FINAL_ORDER[i].toLowerCase()) return i;
+      }
+      
+      // Cek partial match untuk variasi nama
+      if (d.includes("service revenue")) return 0;
+      if (d.includes("cost of service") || d.includes("cost of")) return 1;
+      if (d === "gross profit") return 2;
+      if (d.includes("general") && d.includes("administration")) return 3;
+      if (d.includes("operating income") || d.includes("operation income")) return 4;
+      if (d.includes("other income")) return 5;
+      if (d === "nibt") return 6;
+      if (d.includes("pajak")) return 7;
+      
+      return 999; // Tidak ditemukan, taruh di belakang
+    };
+    
     summary.sort((a, b) => {
-      const ia = order.indexOf(String(a.description).toLowerCase());
-      const ib = order.indexOf(String(b.description).toLowerCase());
-      if (ia === -1 && ib === -1) return 0;
-      if (ia === -1) return 1;
-      if (ib === -1) return -1;
+      const ia = findOrderIndex(a.description);
+      const ib = findOrderIndex(b.description);
       return ia - ib;
     });
 
@@ -484,6 +516,7 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
     selectedYear,
     categories,
     codeMap,
+    months,
     reloadKey,
   ]);
 
