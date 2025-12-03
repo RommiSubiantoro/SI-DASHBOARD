@@ -102,6 +102,8 @@ export default function Linechart({
         (row) => String(getBL(row)).trim() !== "" // ambil semua row yang ada BL-nya
       );
     }
+
+    return data.filter((row) => String(getBL(row)).trim() !== "");
   }, [data, selectedUnit]);
 
   // 🔹 Kategori unik

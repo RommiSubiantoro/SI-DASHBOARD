@@ -100,7 +100,7 @@ export default function Piechart({
       return data.filter((row) => String(getBL(row)).trim() !== "");
     }
 
-    return [];
+    return data.filter((row) => String(getBL(row)).trim() !== "");
   }, [data, selectedUnit, mode, isDaily]);
 
   // 🔥 FETCH masterCode
@@ -134,8 +134,8 @@ export default function Piechart({
 
     const result = Object.entries(map).map(([name, value]) => ({
       name,
-      value: Math.abs(value),    // slice pakai absolut
-      originalValue: value,      // simpan nilai asli
+      value: Math.abs(value), // slice pakai absolut
+      originalValue: value, // simpan nilai asli
     }));
 
     setChartData(result);
@@ -177,7 +177,8 @@ export default function Piechart({
           name: category,
           value: Math.abs(value),
           originalValue: value,
-          percentage: total > 0 ? ((value / total) * 100).toFixed(1) + "%" : "0%",
+          percentage:
+            total > 0 ? ((value / total) * 100).toFixed(1) + "%" : "0%",
         }))
         .filter((d) => d.value !== null && d.value !== undefined);
 
@@ -187,8 +188,8 @@ export default function Piechart({
         .filter((m) => m.category === selectedCategory)
         .map((m) => String(m.code).trim());
 
-      const filtered = (Array.isArray(filteredData) ? filteredData : []).filter((row) =>
-        codes.includes(String(row.accountCode)?.trim())
+      const filtered = (Array.isArray(filteredData) ? filteredData : []).filter(
+        (row) => codes.includes(String(row.accountCode)?.trim())
       );
 
       const grouped = {};
@@ -197,7 +198,10 @@ export default function Piechart({
           (m) => String(m.code).trim() === String(item.accountCode).trim()
         );
         const name =
-          match?.description || match?.accountName || item.accountName || "Unknown";
+          match?.description ||
+          match?.accountName ||
+          item.accountName ||
+          "Unknown";
         const value = getValue(item);
         grouped[name] = (grouped[name] || 0) + value;
       });
@@ -212,7 +216,14 @@ export default function Piechart({
 
       setChartData(result);
     }
-  }, [selectedCategory, selectedMonth, filteredData, masterCode, mode, isDaily]);
+  }, [
+    selectedCategory,
+    selectedMonth,
+    filteredData,
+    masterCode,
+    mode,
+    isDaily,
+  ]);
 
   const totalValue = useMemo(() => {
     return (Array.isArray(chartData) ? chartData : []).reduce(
@@ -279,7 +290,11 @@ export default function Piechart({
               {(Array.isArray(chartData) ? chartData : []).map((entry, i) => (
                 <Cell
                   key={i}
-                  fill={entry.originalValue >= 0 ? COLORS[i % COLORS.length] : "#661011"}
+                  fill={
+                    entry.originalValue >= 0
+                      ? COLORS[i % COLORS.length]
+                      : "#661011"
+                  }
                 />
               ))}
             </Pie>

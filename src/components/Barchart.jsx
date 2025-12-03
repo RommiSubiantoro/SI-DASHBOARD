@@ -120,6 +120,8 @@ export default function Barchart({
         (row) => String(getBL(row)).trim() !== ""
       );
     }
+
+    return data.filter((row) => String(getBL(row)).trim() !== "");
   }, [data, selectedUnit]);
 
   // ------------------------------------------------------------
