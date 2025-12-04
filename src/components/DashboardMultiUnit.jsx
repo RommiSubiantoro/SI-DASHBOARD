@@ -132,7 +132,8 @@ const DashboardMultiUnit = ({ selectedYear: initialYear }) => {
           let filtered =
             selectedMonth === "All"
               ? docs
-              : docs.filter((d) => d.month === selectedMonth);
+              : docs.filter((d) => String(d.month).trim().toLowerCase() === String(selectedMonth).trim().toLowerCase());
+
 
           // 2. Helper untuk baca business line dari data item
           const getBL = (row) =>
