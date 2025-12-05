@@ -375,10 +375,10 @@ function ManagerDashboard() {
               />
 
               <DashboardView
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
+                // selectedUnit={selectedUnit}
+                // setSelectedUnit={setSelectedUnit}
+                // selectedYear={selectedYear}
+                // setSelectedYear={setSelectedYear}
                 units={units}
                 currentData={currentData}
                 selectedMonth={selectedMonth}

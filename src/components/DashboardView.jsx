@@ -1,13 +1,15 @@
 // src/components/DashboardView.jsx
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
-import { ArrowUp, ArrowDown, RefreshCcw } from "lucide-react";
+import { ArrowUp, ArrowDown } from "lucide-react";
 
-// Helper parse angka
+/* -------------------------
+   Helper: parseNumber
+   ------------------------- */
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
-  let s = String(raw).replace(/\s+/g, "").replace(/,/g, "");
+  let s = String(raw).replace(/\s+/g, "").replace(/\./g, "").replace(/,/g, "");
   let isNeg = false;
   if (/^\(.+\)$/.test(s)) {
     isNeg = true;
@@ -18,6 +20,9 @@ function parseNumber(raw) {
   return isNeg ? -n : n;
 }
 
+/* -------------------------
+   Config
+   ------------------------- */
 const MONTHS = [
   "Jan",
   "Feb",
@@ -41,526 +46,399 @@ const FINAL_ORDER = [
   "Operating Income",
   "Other Income (Expense)",
   "NIBT",
-  "PAJAK",
+  "Pajak",
 ];
 
-const altNames = {
-  service: ["Service Revenue", "service revenue"],
-  cost: ["Cost Of Service", "Cost of Service", "cost of service"],
-  ga: [
-    "General & Administration Expense",
-    "General & Administration Expenses",
-    "general & administration expense",
-    "general & administration expenses",
-  ],
-  other: [
-    "Other Income (Expenses)",
-    "Other Income (Expense)",
-  ],
-  pajak: ["Pajak", "pajak", "PAJAK"],
+const CATEGORY_CANON = {
+  "Service Revenue": "Service Revenue",
+  "service revenue": "Service Revenue",
+  "Cost Of Service": "Cost Of Service",
+  "Cost of Service": "Cost Of Service",
+  "General & Administration Expense": "General & Administration Expense",
+  "General & Administration Expenses": "General & Administration Expense",
+  "Other Income (Expense)": "Other Income (Expense)",
+  "Other Income (Expenses)": "Other Income (Expense)",
+  Pajak: "Pajak",
+  pajak: "Pajak",
+  PAJAK: "Pajak",
 };
 
-const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
+const shouldBePositive = (cat) => {
+  const low = String(cat).toLowerCase();
+  return low.includes("service revenue") || low.includes("other income");
+};
+
+const cacheKey = (unit, year) => `${unit}#${year}`;
+
+const getBusinessLine = (row) =>
+  row.businessLine ||
+  row["Business Line"] ||
+  row.business_line ||
+  row["BUSINESS LINE"] ||
+  row.BL ||
+  "";
+
+/* -------------------------
+   Component
+   ------------------------- */
+function DashboardView() {
+  const [units, setUnits] = useState([]);
   const [masterCode, setMasterCode] = useState([]);
-  const [summaryData, setSummaryData] = useState([]);
-  const [budgetData, setBudgetData] = useState({});
-  const [actData2024, setActData2024] = useState([]);
-  const [reloadKey, setReloadKey] = useState(0);
-  const [loadingReload, setLoadingReload] = useState(false);
+  const [summary, setSummary] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const months = useMemo(() => MONTHS, []);
+  // caches
+  const [actCache, setActCache] = useState({}); // key: unit#year -> docs[]
+  const [budgetCache, setBudgetCache] = useState({}); // key: unit#year -> { code: totalBudget }
 
-  // Ambil masterCode
+  // selections
+  const [selectedUnit, setSelectedUnit] = useState("");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState("All");
+
+  /* -------------------------
+     Load units
+     ------------------------- */
   useEffect(() => {
-    const fetchMaster = async () => {
+    (async () => {
       try {
-        const snap = await getDocs(collection(db, "masterCode"));
-        const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-        setMasterCode(data);
-      } catch (error) {
-        console.error("❌ Gagal ambil masterCode:", error);
+        const snap = await getDocs(collection(db, "units"));
+        const data = snap.docs.map((d) => d.data());
+        setUnits(data);
+        if (data.length && !selectedUnit) setSelectedUnit(data[0].name);
+      } catch (e) {
+        console.error("Failed to load units", e);
       }
-    };
-    fetchMaster();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // codeMap: normalisasi ke lowercase string
-  const codeMap = useMemo(() => {
-    const map = new Map();
-    masterCode.forEach((m) => {
-      if (m.code) map.set(String(m.code).toLowerCase().trim(), m);
-    });
-    return map;
-  }, [masterCode]);
-
-  const categories = useMemo(
-    () => [...new Set(masterCode.map((item) => item.category).filter(Boolean))],
-    [masterCode]
-  );
-
-  // Ambil budget semua tahun
+  /* -------------------------
+     Load masterCode
+     ------------------------- */
   useEffect(() => {
-    const fetchAllBudgets = async () => {
-      if (!selectedUnit || masterCode.length === 0) return;
-
+    (async () => {
       try {
-        const years = ["2024", "2025"];
-        const validCodes = new Set(
-          masterCode.map((m) => String(m.code).toLowerCase().trim())
+        const snap = await getDocs(collection(db, "masterCode"));
+        setMasterCode(snap.docs.map((d) => d.data()));
+      } catch (e) {
+        console.error("Failed to load masterCode", e);
+      }
+    })();
+  }, []);
+
+  /* -------------------------
+     Load ACT for (unit, year) with cache
+     ------------------------- */
+  const loadActForYear = async (unit, year) => {
+    if (!unit || !year) return [];
+    const key = cacheKey(unit, year);
+    if (actCache[key]) return actCache[key];
+
+    try {
+      const path = `unitData/${unit}/${year}/data/items`;
+      const snap = await getDocs(collection(db, path));
+      const docs = snap.docs.map((d) => d.data());
+      setActCache((prev) => ({ ...prev, [key]: docs }));
+      return docs;
+    } catch (e) {
+      console.error("Failed to load ACT:", unit, year, e);
+      setActCache((prev) => ({ ...prev, [key]: [] }));
+      return [];
+    }
+  };
+
+  /* -------------------------
+     Load BUDGET for (unit, year) with cache
+     ------------------------- */
+  const loadBudgetForYear = async (unit, year) => {
+    if (!unit || !year) return {};
+    const key = cacheKey(unit, year);
+    if (budgetCache[key]) return budgetCache[key];
+
+    try {
+      const path = `unitData/${unit}/${year}/budget/items`;
+      const snap = await getDocs(collection(db, path));
+      const raw = snap.docs.map((d) => d.data() || {});
+      const grouped = {};
+      raw.forEach((r) => {
+        const code = String(
+          r.accountCode || r["ACCOUNT CODE"] || r.Code || ""
+        ).trim();
+        if (!code) return;
+        if (!grouped[code]) grouped[code] = 0;
+        MONTHS.forEach((m) => {
+          grouped[code] += parseNumber(r[m] ?? r[m.toUpperCase()] ?? 0);
+        });
+      });
+      setBudgetCache((prev) => ({ ...prev, [key]: grouped }));
+      return grouped;
+    } catch (e) {
+      console.error("Failed to load budget:", unit, year, e);
+      setBudgetCache((prev) => ({ ...prev, [key]: {} }));
+      return {};
+    }
+  };
+
+  /* -------------------------
+     Apply month and BL filters to docs
+     (We cache raw docs and filter at compute time)
+     ------------------------- */
+  const applyFilters = (
+    docs = [],
+    unit = "",
+    month = "All",
+    limitMonth = "All"
+  ) => {
+    if (!Array.isArray(docs)) return [];
+    let filtered = docs.slice();
+
+    // -----------------------------
+    // YTD FILTER JAN → limitMonth
+    // -----------------------------
+    if (limitMonth && limitMonth !== "All") {
+      const limitIndex = MONTHS.findIndex(
+        (m) => m.toLowerCase() === limitMonth.toLowerCase()
+      );
+
+      filtered = filtered.filter((d) => {
+        const idx = MONTHS.findIndex(
+          (m) => m.toLowerCase() === String(d.month || "").toLowerCase()
         );
+        return idx !== -1 && idx <= limitIndex;
+      });
+    }
 
-        const extractCode = (item) =>
-          String(
-            item.accountCode ||
-              item["ACCOUNT CODE"] ||
-              item["AccountCode"] ||
-              item["account_code"] ||
-              item["Code"] ||
-              ""
-          )
-            .toLowerCase()
-            .trim();
+    // -----------------------------
+    // BUSINESS LINE FILTER
+    // -----------------------------
+    const u = String(unit || "").toLowerCase();
 
-        let allBudgets = {};
-        for (const year of years) {
-          const colRef = collection(
-            db,
-            `unitData/${selectedUnit}/${year}/budget/items`
+    if (u.includes("samudera agencies indonesia gena") || u.includes("gena")) {
+      filtered = filtered.filter(
+        (d) => String(getBusinessLine(d)).trim().toUpperCase() === "AGE06"
+      );
+    } else if (
+      u.includes("samudera agencies indonesia local") ||
+      u.includes("local")
+    ) {
+      filtered = filtered.filter(
+        (d) => String(getBusinessLine(d)).trim().toUpperCase() === "AGE11"
+      );
+    }
+
+    return filtered;
+  };
+
+  /* -------------------------
+     Build summary (uses caches)
+     ------------------------- */
+  useEffect(() => {
+    const build = async () => {
+      if (!selectedUnit || !masterCode.length) {
+        setSummary([]);
+        return;
+      }
+      setLoading(true);
+
+      // Determine previous year (selectedYear - 1)
+      const prevYear = Number(selectedYear) - 1;
+
+      // Ensure caches (load if missing)
+      const docsPrevYear = await loadActForYear(selectedUnit, prevYear);
+      const docsSelectedYear = await loadActForYear(selectedUnit, selectedYear);
+      const budgetForSelected = await loadBudgetForYear(
+        selectedUnit,
+        selectedYear
+      );
+
+      // Apply month & BL filters now
+      let limitMonth = selectedMonth;
+
+      // Jika user memilih ALL → otomatis mengikuti bulan terakhir di ACT tahun ini
+      if (selectedMonth === "All") {
+        const monthsInSelected = docsSelectedYear
+          .map((d) => String(d.month || "").toLowerCase())
+          .filter((m) => MONTHS.map((x) => x.toLowerCase()).includes(m));
+
+        if (monthsInSelected.length > 0) {
+          const lastMonthIndex = Math.max(
+            ...monthsInSelected.map((m) =>
+              MONTHS.findIndex((x) => x.toLowerCase() === m)
+            )
           );
-          const snap = await getDocs(colRef);
-          let data = snap.docs.map((doc) => doc.data());
-          data = data.filter((item) => validCodes.has(extractCode(item)));
+          limitMonth = MONTHS[lastMonthIndex]; // contoh: "Oct"
+        }
+      }
 
-          const grouped = {};
-          data.forEach((item) => {
-            const code = extractCode(item);
-            if (!grouped[code])
-              grouped[code] = { accountCode: code, totalBudget: 0 };
+      const filteredPrev = applyFilters(
+        docsPrevYear,
+        selectedUnit,
+        selectedMonth,
+        limitMonth
+      );
 
-            const monthsUpper = [
-              "JAN",
-              "FEB",
-              "MAR",
-              "APR",
-              "MAY",
-              "JUN",
-              "JUL",
-              "AUG",
-              "SEP",
-              "OCT",
-              "NOV",
-              "DEC",
-            ];
-            grouped[code].totalBudget += monthsUpper.reduce(
-              (sum, m) =>
-                sum + parseNumber(item[m] ?? item[m.toLowerCase()] ?? 0),
-              0
-            );
-          });
+      const filteredSelected = applyFilters(
+        docsSelectedYear,
+        selectedUnit,
+        selectedMonth,
+        limitMonth
+      );
 
-          allBudgets[year] = Object.values(grouped);
+      // Build codesByCategory
+      const codesByCat = {};
+      masterCode.forEach((m) => {
+        const cat = CATEGORY_CANON[m.category] || m.category || "Uncategorized";
+        if (!codesByCat[cat]) codesByCat[cat] = new Set();
+        codesByCat[cat].add(String(m.code || "").trim());
+      });
+
+      // Sum per accountCode
+      const perCodePrev = {};
+      filteredPrev.forEach((r) => {
+        const code = String(r.accountCode || r["ACCOUNT CODE"] || "").trim();
+        if (!code) return;
+        perCodePrev[code] = (perCodePrev[code] || 0) + parseNumber(r.docValue);
+      });
+
+      const perCodeNow = {};
+      filteredSelected.forEach((r) => {
+        const code = String(r.accountCode || r["ACCOUNT CODE"] || "").trim();
+        if (!code) return;
+        perCodeNow[code] = (perCodeNow[code] || 0) + parseNumber(r.docValue);
+      });
+
+      // Build summary rows in FINAL_ORDER
+      const list = FINAL_ORDER.map((cat) => {
+        const codes = Array.from(codesByCat[cat] || []);
+        let actPrev = 0;
+        let actNow = 0;
+        let bdgt = 0;
+
+        codes.forEach((c) => {
+          actPrev += perCodePrev[c] || 0;
+          actNow += perCodeNow[c] || 0;
+          bdgt += budgetForSelected[c] || 0;
+        });
+
+        if (shouldBePositive(cat)) {
+          actPrev = Math.abs(actPrev);
+          actNow = Math.abs(actNow);
+          bdgt = Math.abs(bdgt);
         }
 
-        setBudgetData(allBudgets);
-      } catch (error) {
-        console.error("❌ Gagal ambil data semua tahun:", error);
-      }
-    };
-
-    fetchAllBudgets();
-  }, [selectedUnit, masterCode]);
-
-  // Filter data actual + special business-line logic
-  const filteredData = useMemo(() => {
-    if (!currentData || !currentData.length || !selectedUnit) return [];
-
-    let filtered = currentData.slice();
-
-    const businessLineField = (row) =>
-      row.businessLine ||
-      row["Business Line"] ||
-      row.business_line ||
-      row["BUSINESS LINE"] ||
-      row.BL ||
-      "";
-
-    const unitName = String(selectedUnit).toLowerCase();
-
-    const isGENA = unitName.includes("samudera agencies indonesia gena");
-    const isLOCAL = unitName.includes("samudera agencies indonesia local");
-    const isSAI = !isGENA && !isLOCAL; // unit utama
-
-    if (isGENA) {
-      // hanya ambil AGE06
-      filtered = filtered.filter(
-        (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE06"
-      );
-    } else if (isLOCAL) {
-      // hanya ambil AGE11
-      filtered = filtered.filter(
-        (row) => String(businessLineField(row)).trim().toUpperCase() === "AGE11"
-      );
-    }
-    return filtered;
-  }, [currentData, selectedUnit]);
-
-  useEffect(() => {
-    if (String(selectedYear) === "2024") setActData2024(filteredData);
-  }, [filteredData, selectedYear]);
-
-  // helper: get month value tolerant to key case
-  const getMonthValue = (row, m) => {
-    if (!row) return 0;
-    return (
-      parseNumber(row[m]) ||
-      parseNumber(row[m.toUpperCase()]) ||
-      parseNumber(row[m.toLowerCase()]) ||
-      0
-    );
-  };
-
-  // helper: find summary entry by a set of alternative names (case-insensitive)
-  const findByPossible = (arr, names) => {
-    if (!Array.isArray(arr)) return undefined;
-    return arr.find((r) => {
-      const d = String(r.description || "").toLowerCase();
-      return names.some((n) => d === n.toLowerCase());
-    });
-  };
-
-  // 🔹 Hitung summary
-  useEffect(() => {
-    if (!masterCode.length) {
-      setSummaryData([]);
-      return;
-    }
-    setLoadingReload(true);
-    const timeout = setTimeout(() => setLoadingReload(false), 800);
-
-    const yearKey = String(selectedYear);
-    const budgetForYear = budgetData[yearKey] || [];
-    const actPrev = actData2024 || [];
-
-    const formatNumber = (num) =>
-      num || num === 0
-        ? Number(num).toLocaleString("en-US", { maximumFractionDigits: 0 })
-        : "-";
-
-    // Helper: cek apakah category perlu dijadikan positif
-    const shouldBePositive = (categoryName) => {
-      const lowerCat = String(categoryName).toLowerCase();
-      return (
-        lowerCat.includes("service revenue") ||
-        lowerCat.includes("other income")
-      );
-    };
-
-    // categories could be from masterCode; if empty, rely to-empty array
-    const summary = (categories.length ? categories : []).map((cat) => {
-      const matchCat = (row) => {
-        const rowCode = String(
-          row.accountCode || row.AccountCode || row.Account || ""
-        )
-          .toLowerCase()
-          .trim();
-        const match = codeMap.get(rowCode);
-        return (
-          match &&
-          ((match.category || "").toString() === cat.toString() ||
-            String(match.category).toLowerCase() === String(cat).toLowerCase())
-        );
-      };
-
-      let totalActPrev = actPrev
-        .filter(matchCat)
-        .reduce(
-          (sum, row) =>
-            sum + months.reduce((acc, m) => acc + getMonthValue(row, m), 0),
-          0
-        );
-
-      let totalActNow = filteredData
-        .filter(matchCat)
-        .reduce(
-          (sum, row) =>
-            sum + months.reduce((acc, m) => acc + getMonthValue(row, m), 0),
-          0
-        );
-
-      let totalBdgt = budgetForYear
-        .filter(matchCat)
-        .reduce(
-          (sum, row) =>
-            sum + parseNumber(row.totalBudget || row.totalbudget || 0),
-          0
-        );
-
-      // 🔹 Ubah menjadi positif untuk Service Revenue & Other Income
-      if (shouldBePositive(cat)) {
-        totalActPrev = Math.abs(totalActPrev);
-        totalActNow = Math.abs(totalActNow);
-        totalBdgt = Math.abs(totalBdgt);
-      }
-
-      const aVsCValue = totalActNow - totalActPrev;
-      const bVsCValue = totalActNow - totalBdgt;
-
-      const aVsCPercent = totalActPrev
-        ? (totalActNow / totalActPrev - 1) * 100
-        : null;
-      const bVsCPercent = totalBdgt
-        ? (totalActNow / totalBdgt - 1) * 100
-        : null;
-
-      return {
-        description: String(cat),
-        act2024: formatNumber(totalActPrev),
-        bdgt2025: formatNumber(totalBdgt),
-        act2025: formatNumber(totalActNow),
-        aVsC:
-          aVsCPercent === null
+        const aVsC =
+          actPrev === 0
             ? "-"
             : {
-                value: aVsCValue,
-                percent: aVsCPercent,
-                text: `${aVsCPercent >= 0 ? "+" : ""}${aVsCPercent.toFixed(
-                  1
-                )}% (${formatNumber(aVsCValue)})`,
-              },
-        bVsC:
-          bVsCPercent === null
+                value: actNow - actPrev,
+                percent: actPrev ? (actNow / actPrev - 1) * 100 : 0,
+                text:
+                  ((actNow / actPrev - 1) * 100).toFixed(1) +
+                  "% (" +
+                  (actNow - actPrev).toLocaleString("id-ID") +
+                  ")",
+              };
+
+        const bVsC =
+          bdgt === 0
             ? "-"
             : {
-                value: bVsCValue,
-                percent: bVsCPercent,
-                text: `${bVsCPercent >= 0 ? "+" : ""}${bVsCPercent.toFixed(
-                  1
-                )}% (${formatNumber(bVsCValue)})`,
-              },
-      };
-    });
+                value: actNow - bdgt,
+                percent: bdgt ? (actNow / bdgt - 1) * 100 : 0,
+                text:
+                  ((actNow / bdgt - 1) * 100).toFixed(1) +
+                  "% (" +
+                  (actNow - bdgt).toLocaleString("id-ID") +
+                  ")",
+              };
 
-    // Derived rows -> use tolerant find for needed components
-    const service =
-      findByPossible(summary, altNames.service) ||
-      summary.find((s) =>
-        String(s.description).toLowerCase().includes("service revenue")
-      );
-    const cost =
-      findByPossible(summary, altNames.cost) ||
-      summary.find((s) => String(s.description).toLowerCase().includes("cost of service"));
-    if (service && cost) {
-      const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
-      const act2024 = num(service.act2024) - num(cost.act2024);
-      const act2025 = num(service.act2025) - num(cost.act2025);
-      const bdgt2025 = num(service.bdgt2025) - num(cost.bdgt2025);
-
-      summary.push({
-        description: "Gross Profit",
-        act2024: formatNumber(act2024),
-        bdgt2025: formatNumber(bdgt2025),
-        act2025: formatNumber(act2025),
-        aVsC: {
-          value: act2025 - act2024,
-          percent: act2024 ? (act2025 / act2024 - 1) * 100 : null,
-          text: act2024
-            ? ((act2025 / act2024 - 1) * 100).toFixed(1) +
-              "% (" +
-              formatNumber(act2025 - act2024) +
-              ")"
-            : "-",
-        },
-        bVsC: {
-          value: act2025 - bdgt2025,
-          percent: bdgt2025 ? (act2025 / bdgt2025 - 1) * 100 : null,
-          text: bdgt2025
-            ? ((act2025 / bdgt2025 - 1) * 100).toFixed(1) +
-              "% (" +
-              formatNumber(act2025 - bdgt2025) +
-              ")"
-            : "-",
-        },
-      });
-    }
-
-    // Operating Income = Gross Profit - G&A
-    const gpa = summary.find(
-      (r) => String(r.description).toLowerCase() === "gross profit"
-    );
-    const gae =
-      findByPossible(summary, altNames.ga) ||
-      summary.find((s) =>
-        String(s.description).toLowerCase().includes("general")
-      );
-    if (gpa && gae) {
-      const num = (v) => Number(String(v).replace(/,/g, "")) || 0;
-      const opIncomeAct2024 = num(gpa.act2024) - num(gae.act2024);
-      const opIncomeAct2025 = num(gpa.act2025) - num(gae.act2025);
-      const opIncomeBdgt2025 = num(gpa.bdgt2025) - num(gae.bdgt2025);
-
-      summary.push({
-        description: "Operating Income",
-        act2024: formatNumber(opIncomeAct2024),
-        bdgt2025: formatNumber(opIncomeBdgt2025),
-        act2025: formatNumber(opIncomeAct2025),
-        aVsC: {
-          value: opIncomeAct2025 - opIncomeAct2024,
-          percent: opIncomeAct2024
-            ? (opIncomeAct2025 / opIncomeAct2024 - 1) * 100
-            : null,
-          text: opIncomeAct2024
-            ? ((opIncomeAct2025 / opIncomeAct2024 - 1) * 100).toFixed(1) +
-              "% (" +
-              formatNumber(opIncomeAct2025 - opIncomeAct2024) +
-              ")"
-            : "-",
-        },
-        bVsC: {
-          value: opIncomeAct2025 - opIncomeBdgt2025,
-          percent: opIncomeBdgt2025
-            ? (opIncomeAct2025 / opIncomeBdgt2025 - 1) * 100
-            : null,
-          text: opIncomeBdgt2025
-            ? ((opIncomeAct2025 / opIncomeBdgt2025 - 1) * 100).toFixed(1) +
-              "% (" +
-              formatNumber(opIncomeAct2025 - opIncomeBdgt2025) +
-              ")"
-            : "-",
-        },
+        return {
+          description: cat,
+          // show previous year value and selected year value
+          actPrev: actPrev.toLocaleString("id-ID"),
+          bdgt: bdgt.toLocaleString("id-ID"),
+          actNow: actNow.toLocaleString("id-ID"),
+          aVsC,
+          bVsC,
+        };
       });
 
-      // NIBT = Operating Income - Other Income (Expense)
-      const oie =
-        findByPossible(summary, altNames.other) ||
-        summary.find((s) => {
-          const desc = String(s.description).toLowerCase();
-          return desc.includes("other income");
-        });
-      if (oie) {
-        const nibtAct2024 =
-          opIncomeAct2024 +
-          (Number(String(oie.act2024).replace(/,/g, "")) || 0);
-        const nibtAct2025 =
-          opIncomeAct2025 +
-          (Number(String(oie.act2025).replace(/,/g, "")) || 0);
-        const nibtBdgt2025 =
-          opIncomeBdgt2025 +
-          (Number(String(oie.bdgt2025).replace(/,/g, "")) || 0);
-
-        summary.push({
-          description: "NIBT",
-          act2024: formatNumber(nibtAct2024),
-          bdgt2025: formatNumber(nibtBdgt2025),
-          act2025: formatNumber(nibtAct2025),
-          aVsC: {
-            value: nibtAct2025 - nibtAct2024,
-            percent: nibtAct2024 ? (nibtAct2025 / nibtAct2024 - 1) * 100 : null,
-            text: nibtAct2024
-              ? ((nibtAct2025 / nibtAct2024 - 1) * 100).toFixed(1) +
-                "% (" +
-                formatNumber(nibtAct2025 - nibtAct2024) +
-                ")"
-              : "-",
-          },
-          bVsC: {
-            value: nibtAct2025 - nibtBdgt2025,
-            percent: nibtBdgt2025
-              ? (nibtAct2025 / nibtBdgt2025 - 1) * 100
-              : null,
-            text: nibtBdgt2025
-              ? ((nibtAct2025 / nibtBdgt2025 - 1) * 100).toFixed(1) +
-                "% (" +
-                formatNumber(nibtAct2025 - nibtBdgt2025) +
-                ")"
-              : "-",
-          },
-        });
-      }
-    }
-
-    // 🔹 Sort dengan fungsi findOrderIndex yang fleksibel
-    const findOrderIndex = (desc) => {
-      const d = String(desc).toLowerCase().trim();
-      
-      // Cek exact match dulu dengan FINAL_ORDER
-      for (let i = 0; i < FINAL_ORDER.length; i++) {
-        if (d === FINAL_ORDER[i].toLowerCase()) return i;
-      }
-      
-      // Cek partial match untuk variasi nama
-      if (d.includes("service revenue")) return 0;
-      if (d.includes("cost of service") || d.includes("cost of")) return 1;
-      if (d === "gross profit") return 2;
-      if (d.includes("general") && d.includes("administration")) return 3;
-      if (d.includes("operating income") || d.includes("operation income")) return 4;
-      if (d.includes("other income")) return 5;
-      if (d === "nibt") return 6;
-      if (d.includes("pajak")) return 7;
-      
-      return 999; // Tidak ditemukan, taruh di belakang
+      setSummary(list);
+      setLoading(false);
     };
-    
-    summary.sort((a, b) => {
-      const ia = findOrderIndex(a.description);
-      const ib = findOrderIndex(b.description);
-      return ia - ib;
-    });
 
-    setSummaryData(summary);
-    return () => clearTimeout(timeout);
-  }, [
-    filteredData,
-    budgetData,
-    actData2024,
-    masterCode,
-    selectedYear,
-    categories,
-    codeMap,
-    months,
-    reloadKey,
-  ]);
+    build();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUnit, selectedYear, selectedMonth, masterCode]);
 
-  const totals = useMemo(() => {
-    const sum = { act2024: 0, bdgt2025: 0, act2025: 0 };
-    summaryData.forEach((r) => {
-      const parse = (v) => Number(String(v).replace(/,/g, "")) || 0;
-      sum.act2024 += parse(r.act2024);
-      sum.bdgt2025 += parse(r.bdgt2025);
-      sum.act2025 += parse(r.act2025);
-    });
-    return sum;
-  }, [summaryData]);
+  /* -------------------------
+     Render
+     ------------------------- */
+  const prevYear = Number(selectedYear) - 1;
 
   return (
-    <div className="bg-white p-4 sm:p-6 rounded-xl shadow mt-6 sm:mt-10 w-full">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-        <h2 className="text-base sm:text-lg font-bold">
-          Summary Dashboard —{" "}
-          <span className="text-blue-600">{selectedYear || "Pilih Tahun"}</span>
-        </h2>
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow mt-6 w-full">
+      <h2 className="text-lg font-bold mb-4 text-center">
+        Summary Dashboard — {selectedUnit || "Pilih Unit"}
+      </h2>
 
-        <button
-          onClick={() => setReloadKey(Date.now())}
-          disabled={loadingReload}
-          className={`flex items-center gap-2 px-3 sm:px-4 py-2 rounded-lg text-sm transition ${
-            loadingReload
-              ? "bg-gray-400 cursor-not-allowed text-white"
-              : "bg-blue-600 hover:bg-blue-700 text-white"
-          }`}
-        >
-          <RefreshCcw
-            className={`w-4 h-4 ${loadingReload ? "animate-spin" : ""}`}
-          />
-          {loadingReload ? "Loading..." : "Reload Data"}
-        </button>
+      {/* FILTER */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-4">
+        <div>
+          <label className="block mb-1 text-sm">Unit</label>
+          <select
+            value={selectedUnit}
+            onChange={(e) => setSelectedUnit(e.target.value)}
+            className="border px-2 py-1 rounded w-full"
+          >
+            {units.map((u) => (
+              <option key={u.name}>{u.name}</option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm">Tahun</label>
+          <select
+            value={selectedYear}
+            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            className="border px-2 py-1 rounded w-full"
+          >
+            {[2023, 2024, 2025, 2026].map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block mb-1 text-sm">Bulan</label>
+          <select
+            value={selectedMonth}
+            onChange={(e) => setSelectedMonth(e.target.value)}
+            className="border px-2 py-1 rounded w-full"
+          >
+            <option value="All">Semua Bulan</option>
+            {MONTHS.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
+      {/* TABLE (structure preserved) */}
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-xs sm:text-sm">
           <thead>
             <tr className="bg-red-500 text-left">
               <th className="border p-2 text-white">DESCRIPTION</th>
-              <th className="border p-2 text-right text-white">ACT 2024</th>
+              <th className="border p-2 text-right text-white">
+                ACT {prevYear}
+              </th>
               <th className="border p-2 text-right text-white">
                 BDGT {selectedYear}
               </th>
@@ -573,16 +451,15 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
           </thead>
 
           <tbody>
-            {summaryData.map((row, i) => (
+            {summary.map((row, i) => (
               <tr key={i} className="hover:bg-gray-50">
                 <td className="border p-2">{row.description}</td>
-                <td className="border p-2 text-right">{row.act2024}</td>
-                <td className="border p-2 text-right">{row.bdgt2025}</td>
+                <td className="border p-2 text-right">{row.actPrev}</td>
+                <td className="border p-2 text-right">{row.bdgt}</td>
                 <td className="border p-2 text-right font-bold">
-                  {row.act2025}
+                  {row.actNow}
                 </td>
 
-                {/* A VS C */}
                 <td className="border p-2 text-right">
                   {row.aVsC === "-" ? (
                     "-"
@@ -604,7 +481,6 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
                   )}
                 </td>
 
-                {/* B VS C */}
                 <td className="border p-2 text-right">
                   {row.bVsC === "-" ? (
                     "-"
@@ -631,13 +507,11 @@ const DashboardView = ({ currentData = [], selectedYear, selectedUnit }) => {
         </table>
       </div>
 
-      {summaryData.length === 0 && (
-        <p className="text-center text-gray-500 mt-4">
-          Tidak ada data untuk ditampilkan.
-        </p>
+      {loading && (
+        <p className="text-center text-gray-500 mt-4">⏳ Memuat data…</p>
       )}
     </div>
   );
-};
+}
 
 export default DashboardView;
