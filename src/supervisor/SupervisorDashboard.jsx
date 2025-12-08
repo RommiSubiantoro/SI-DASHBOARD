@@ -1,5 +1,5 @@
 // src/manager/ManagerDashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { db } from "../firebase";
 import { collection, getDocs, onSnapshot, doc } from "firebase/firestore";
 import { getAuth, signOut } from "firebase/auth";
@@ -38,9 +38,9 @@ function SupervisorDashboard() {
   const [budgetData, setBudgetData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("Jan");
   // CACHED DATA (GLOBAL, TIDAK HILANG KETIKA PAGE PINDAH)
-  const cacheCurrentData = {};
-  const cacheViewData = {};
-  const cacheMasterCode = null;
+  const cacheCurrentData = useRef({});
+  const cacheViewData = useRef({});
+  const cacheMasterCode = useRef(null);
 
   const auth = getAuth();
 

@@ -364,6 +364,228 @@ function DashboardView() {
         };
       });
 
+      /* -----------------------------------------------
+   Tambahkan perhitungan otomatis kategori turunan
+   ----------------------------------------------- */
+      const getVal = (label) => {
+        const row = list.find((r) => r.description === label);
+        if (!row) return { actPrev: 0, actNow: 0, bdgt: 0 };
+        return {
+          actPrev: parseNumber(row.actPrev),
+          actNow: parseNumber(row.actNow),
+          bdgt: parseNumber(row.bdgt),
+        };
+      };
+
+      // Ambil nilai dasar
+      const srv = getVal("Service Revenue");
+      const cos = getVal("Cost Of Service");
+      const gna = getVal("General & Administration Expense");
+      const oth = getVal("Other Income (Expense)");
+
+      // ================================
+      // 1. GROSS PROFIT
+      // ================================
+      const grossProfit = {
+        description: "Gross Profit",
+        actPrev: (srv.actPrev - cos.actPrev).toLocaleString("id-ID"),
+        bdgt: (srv.bdgt - cos.bdgt).toLocaleString("id-ID"),
+        actNow: (srv.actNow - cos.actNow).toLocaleString("id-ID"),
+      };
+      grossProfit.aVsC =
+        parseNumber(grossProfit.actPrev) === 0
+          ? "-"
+          : {
+              value:
+                parseNumber(grossProfit.actNow) -
+                parseNumber(grossProfit.actPrev),
+              percent:
+                (parseNumber(grossProfit.actNow) /
+                  parseNumber(grossProfit.actPrev) -
+                  1) *
+                100,
+              text:
+                (
+                  (parseNumber(grossProfit.actNow) /
+                    parseNumber(grossProfit.actPrev) -
+                    1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(grossProfit.actNow) -
+                  parseNumber(grossProfit.actPrev)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      grossProfit.bVsC =
+        parseNumber(grossProfit.bdgt) === 0
+          ? "-"
+          : {
+              value:
+                parseNumber(grossProfit.actNow) - parseNumber(grossProfit.bdgt),
+              percent:
+                (parseNumber(grossProfit.actNow) /
+                  parseNumber(grossProfit.bdgt) -
+                  1) *
+                100,
+              text:
+                (
+                  (parseNumber(grossProfit.actNow) /
+                    parseNumber(grossProfit.bdgt) -
+                    1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(grossProfit.actNow) -
+                  parseNumber(grossProfit.bdgt)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      // Gantikan row Gross Profit di list
+      const idxGP = list.findIndex((r) => r.description === "Gross Profit");
+      if (idxGP !== -1) list[idxGP] = grossProfit;
+
+      // ================================
+      // 2. Operating Income
+      // ================================
+      const operatingIncome = {
+        description: "Operating Income",
+        actPrev: (
+          parseNumber(grossProfit.actPrev) - gna.actPrev
+        ).toLocaleString("id-ID"),
+        bdgt: (parseNumber(grossProfit.bdgt) - gna.bdgt).toLocaleString(
+          "id-ID"
+        ),
+        actNow: (parseNumber(grossProfit.actNow) - gna.actNow).toLocaleString(
+          "id-ID"
+        ),
+      };
+
+      // Hitung rasio
+      operatingIncome.aVsC =
+        parseNumber(operatingIncome.actPrev) === 0
+          ? "-"
+          : {
+              value:
+                parseNumber(operatingIncome.actNow) -
+                parseNumber(operatingIncome.actPrev),
+              percent:
+                (parseNumber(operatingIncome.actNow) /
+                  parseNumber(operatingIncome.actPrev) -
+                  1) *
+                100,
+              text:
+                (
+                  (parseNumber(operatingIncome.actNow) /
+                    parseNumber(operatingIncome.actPrev) -
+                    1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(operatingIncome.actNow) -
+                  parseNumber(operatingIncome.actPrev)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      operatingIncome.bVsC =
+        parseNumber(operatingIncome.bdgt) === 0
+          ? "-"
+          : {
+              value:
+                parseNumber(operatingIncome.actNow) -
+                parseNumber(operatingIncome.bdgt),
+              percent:
+                (parseNumber(operatingIncome.actNow) /
+                  parseNumber(operatingIncome.bdgt) -
+                  1) *
+                100,
+              text:
+                (
+                  (parseNumber(operatingIncome.actNow) /
+                    parseNumber(operatingIncome.bdgt) -
+                    1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(operatingIncome.actNow) -
+                  parseNumber(operatingIncome.bdgt)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      // Replace
+      const idxOP = list.findIndex((r) => r.description === "Operating Income");
+      if (idxOP !== -1) list[idxOP] = operatingIncome;
+
+      // ================================
+      // 3. NIBT
+      // ================================
+      const nibt = {
+        description: "NIBT",
+        actPrev: (
+          parseNumber(operatingIncome.actPrev) - oth.actPrev
+        ).toLocaleString("id-ID"),
+        bdgt: (parseNumber(operatingIncome.bdgt) - oth.bdgt).toLocaleString(
+          "id-ID"
+        ),
+        actNow: (
+          parseNumber(operatingIncome.actNow) - oth.actNow
+        ).toLocaleString("id-ID"),
+      };
+
+      // Rasio
+      nibt.aVsC =
+        parseNumber(nibt.actPrev) === 0
+          ? "-"
+          : {
+              value: parseNumber(nibt.actNow) - parseNumber(nibt.actPrev),
+              percent:
+                (parseNumber(nibt.actNow) / parseNumber(nibt.actPrev) - 1) *
+                100,
+              text:
+                (
+                  (parseNumber(nibt.actNow) / parseNumber(nibt.actPrev) - 1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(nibt.actNow) - parseNumber(nibt.actPrev)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      nibt.bVsC =
+        parseNumber(nibt.bdgt) === 0
+          ? "-"
+          : {
+              value: parseNumber(nibt.actNow) - parseNumber(nibt.bdgt),
+              percent:
+                (parseNumber(nibt.actNow) / parseNumber(nibt.bdgt) - 1) * 100,
+              text:
+                (
+                  (parseNumber(nibt.actNow) / parseNumber(nibt.bdgt) - 1) *
+                  100
+                ).toFixed(1) +
+                "% (" +
+                (
+                  parseNumber(nibt.actNow) - parseNumber(nibt.bdgt)
+                ).toLocaleString("id-ID") +
+                ")",
+            };
+
+      // Replace
+      const idxNIBT = list.findIndex((r) => r.description === "NIBT");
+      if (idxNIBT !== -1) list[idxNIBT] = nibt;
+
+      /* END TAMBAHAN LOGIKA */
+
       setSummary(list);
       setLoading(false);
     };
