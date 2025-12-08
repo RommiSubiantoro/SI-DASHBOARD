@@ -371,11 +371,11 @@ function ManagerDashboard() {
               />
 
               <DashboardView
-                selectedUnit={selectedUnit}
-                setSelectedUnit={setSelectedUnit}
-                selectedYear={selectedYear}
-                setSelectedYear={setSelectedYear}
-                title={`Sumarry Dashboard ${selectedUnit || ""}`}
+                // selectedUnit={selectedUnit}
+                // setSelectedUnit={setSelectedUnit}
+                // selectedYear={selectedYear}
+                // setSelectedYear={setSelectedYear}
+                // // title={`Sumarry Dashboard ${selectedUnit || ""}`}
                 units={units}
                 currentData={currentData}
                 selectedMonth={selectedMonth}
