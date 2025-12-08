@@ -121,36 +121,34 @@ function AdminDashboard() {
 
   // Units
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "units"),
-      (snap) => {
+    const fetchUnits = async () => {
+      try {
+        const snap = await getDocs(collection(db, "units"));
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setUnits(list);
         setLoadingUnits(false);
-      },
-      (err) => {
-        console.error("listen units err:", err);
-        setLoadingUnits(false);
+      } catch (err) {
+        console.error("get units error:", err);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    fetchUnits();
   }, []);
 
   // Users
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "users"),
-      (snap) => {
+    const fetchUsers = async () => {
+      try {
+        const snap = await getDocs(collection(db, "users"));
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setUsers(list);
         setLoadingUsers(false);
-      },
-      (err) => {
-        console.error("listen users err:", err);
-        setLoadingUsers(false);
+      } catch (err) {
+        console.error("get users error:", err);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -190,19 +188,19 @@ function AdminDashboard() {
 
   // Master codes
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "masterCode"),
-      (snap) => {
+    const fetchCodes = async () => {
+      try {
+        const snap = await getDocs(collection(db, "masterCode"));
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setCodes(list);
         setLoadingCodes(false);
-      },
-      (err) => {
-        console.error("listen masterCode err:", err);
+      } catch (err) {
+        console.error("get masterCode error:", err);
         setLoadingCodes(false);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    fetchCodes();
   }, []);
 
   // Unit uploads counts per year

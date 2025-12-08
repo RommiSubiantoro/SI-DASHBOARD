@@ -66,50 +66,46 @@ function SupervisorDashboard() {
 
   // 🟢 Ambil data Units (realtime)
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "units"), (snapshot) => {
-      const unitsList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setUnits(unitsList);
+    const fetchUnits = async () => {
+      const snap = await getDocs(collection(db, "units"));
+      const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setUnits(list);
       setLoadingUnits(false);
 
-      if (unitsList.length > 0 && !selectedUnit) {
-        setSelectedUnit(unitsList[0].name);
+      if (list.length > 0 && !selectedUnit) {
+        setSelectedUnit(list[0].name);
       }
-    });
-    return () => unsubscribe();
+    };
+
+    fetchUnits();
   }, []);
 
   // 🟢 Ambil data Users (realtime)
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "users"), (snapshot) => {
-      const usersList = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      setUsers(usersList);
+    const fetchUsers = async () => {
+      const snap = await getDocs(collection(db, "users"));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      setUsers(list);
       setLoadingUsers(false);
-    });
-    return () => unsubscribe();
+    };
+    fetchUsers();
   }, []);
 
   // 🟢 Ambil masterCode
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "masterCode"),
-      (snap) => {
+    const fetchMasterCode = async () => {
+      try {
+        const snap = await getDocs(collection(db, "masterCode"));
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setCodes(list);
         setMasterCode(list);
         setLoadingCodes(false);
-      },
-      (err) => {
-        console.error("listen masterCode err:", err);
-        setLoadingCodes(false);
+      } catch (err) {
+        console.error("masterCode error:", err);
       }
-    );
-    return () => unsubscribe();
+    };
+
+    fetchMasterCode();
   }, []);
 
   // 🟢 Hitung jumlah upload per unit per tahun

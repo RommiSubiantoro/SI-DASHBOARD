@@ -121,17 +121,17 @@ const UserDashboard = () => {
 
   // Unit listener
   useEffect(() => {
-    const colRef = collection(db, "units");
-    const unsub = onSnapshot(colRef, (snapshot) => {
-      if (!isMountedRef.current) return;
-      setUnits(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    listenersRef.current.unitsListener = unsub;
-
-    return () => {
-      if (listenersRef.current.unitsListener)
-        listenersRef.current.unitsListener();
+    const fetchUnits = async () => {
+      try {
+        const snap = await getDocs(collection(db, "units"));
+        if (!isMountedRef.current) return;
+        setUnits(snap.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      } catch (err) {
+        console.error("fetch units error:", err);
+      }
     };
+
+    fetchUnits();
   }, []);
 
   // Master code fetch
