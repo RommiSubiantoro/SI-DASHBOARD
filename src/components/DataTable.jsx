@@ -163,7 +163,7 @@ const DataTable = ({
       <div className="overflow-x-auto rounded-lg w-4xl">
         <table className="w-2x1 text-sm border-collapse">
           <thead>
-            <tr className="bg-gray-100 text-gray-700 border-b">
+            <tr className="bg-red-600 text-white border-b">
               {Object.keys(data[0] || {}).map((key) => (
                 <th key={key} className="px-3 py-2 border whitespace-nowrap">
                   {key}
