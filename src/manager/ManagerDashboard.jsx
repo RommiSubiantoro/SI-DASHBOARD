@@ -18,25 +18,20 @@ function ManagerDashboard() {
   const [units, setUnits] = useState([]);
   const [users, setUsers] = useState([]);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const [sidebarOpen, setsidebarOpen] = useState(true);
   const [loadingUnits, setLoadingUnits] = useState(true);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [unitUploads, setUnitUploads] = useState({});
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
+   const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [currentData, setCurrentData] = useState([]);
-  const [showUnitModal, setShowUnitModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
-  const [editingUnit, setEditingUnit] = useState(null);
-  const [editingUser, setEditingUser] = useState(null);
   const [codes, setCodes] = useState([]);
   const [loadingCodes, setLoadingCodes] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [viewData, setViewData] = useState([]);
   const [masterCode, setMasterCode] = useState([]);
   const [budgetData, setBudgetData] = useState([]);
-  const [selectedMonth, setSelectedMonth] = useState("Jan");
   // CACHED DATA (GLOBAL, TIDAK HILANG KETIKA PAGE PINDAH)
   const cacheCurrentData = useRef({});
   const cacheViewData = useRef({});
@@ -375,7 +370,6 @@ function ManagerDashboard() {
                 // setSelectedUnit={setSelectedUnit}
                 // selectedYear={selectedYear}
                 // setSelectedYear={setSelectedYear}
-                // // title={`Sumarry Dashboard ${selectedUnit || ""}`}
                 units={units}
                 currentData={currentData}
                 selectedMonth={selectedMonth}

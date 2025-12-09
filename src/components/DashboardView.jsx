@@ -4,9 +4,6 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../firebase";
 import { ArrowUp, ArrowDown } from "lucide-react";
 
-/* -------------------------
-   Helper: parseNumber
-   ------------------------- */
 function parseNumber(raw) {
   if (raw === null || raw === undefined || raw === "") return 0;
   let s = String(raw).replace(/\s+/g, "").replace(/\./g, "").replace(/,/g, "");
@@ -20,9 +17,22 @@ function parseNumber(raw) {
   return isNeg ? -n : n;
 }
 
-/* -------------------------
-   Config
-   ------------------------- */
+// LOCAL CACHE
+const loadCache = (key) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCache = (key, value) => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {}
+};
+
 const MONTHS = [
   "Jan",
   "Feb",
@@ -78,9 +88,7 @@ const getBusinessLine = (row) =>
   row.BL ||
   "";
 
-/* -------------------------
-   Component
-   ------------------------- */
+/* Component */
 function DashboardView() {
   const [units, setUnits] = useState([]);
   const [masterCode, setMasterCode] = useState([]);
@@ -633,7 +641,7 @@ function DashboardView() {
               </option>
             ))}
           </select>
-        </div> 
+        </div>
 
         <div>
           <label className="block mb-1 text-sm">Bulan</label>
