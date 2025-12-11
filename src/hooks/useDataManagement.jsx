@@ -108,7 +108,7 @@ export const useDataManagement = (initialData = {}) => {
       const newDoc = doc(baseRef);
       batch.set(newDoc, {
         accountName: row["Line Desc."] || "-",
-        accountCode: row["Account Code"] || "-",
+        accountCode: row["Account Code"] || row["Element 3"] || "-",
         category: row["El4 short name"] || "-", // pastikan ini konsisten
         area: row["Location"] || "-",
         businessLine: row["Business Line"] || "-",
