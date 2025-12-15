@@ -109,9 +109,9 @@ export const useDataManagement = (initialData = {}) => {
       batch.set(newDoc, {
         accountName: row["Line Desc."] || "-",
         accountCode: row["Account Code"] || row["Element 3"] || "-",
-        category: row["El4 short name"] || "-", // pastikan ini konsisten
-        area: row["Location"] || "-",
-        businessLine: row["Business Line"] || "-",
+        category: row["El4 short name"] || row["Element 5"] || "-", // pastikan ini konsisten
+        area: row["Location"] || row["Element 1"] || "-",
+        businessLine: row["Business Line"] || row["Element 2"] || "-",
         month,
         docValue: cleanValue,
         type: typeValue,
