@@ -31,6 +31,7 @@ function formatNumber(n) {
 function JoEstimasi() {
   const [mode, setMode] = useState("estimasi");
   const [header, setHeader] = useState({
+    CodeJo: "",
     noJobOrder: "",
     namaCustomer: "",
     alamatPrincipal: "",
@@ -241,6 +242,7 @@ function JoEstimasi() {
 
   const resetForm = () => {
     setHeader({
+      CodeJo: "",
       noJobOrder: "",
       namaCustomer: "",
       alamatPrincipal: "",
@@ -410,6 +412,16 @@ function JoEstimasi() {
       <div className="mb-6 border border-gray-400 p-4 bg-gray-50">
         <div className="grid grid-cols-2 gap-4 text-xs">
           <div className="flex">
+            <div className="font-semibold w-32">Code Jo</div>
+            <div className="text-gray-600">:</div>
+            <input
+              type="text"
+              value={header.CodeJo}
+              onChange={(e) => updateHeader("CodeJo", e.target.value)}
+              className="ml-2 flex-1 border border-gray-300 bg-white outline-none px-2 py-1"
+            />
+          </div>
+          <div className="flex">
             <div className="font-semibold w-32">NO. JOB ORDER</div>
             <div className="text-gray-600">:</div>
             <input
@@ -430,7 +442,7 @@ function JoEstimasi() {
             />
           </div>
 
-          <div className="flex col-span-2">
+          <div className="flex">
             <div className="font-semibold w-32">ALAMAT PRINCIPAL</div>
             <div className="text-gray-600">:</div>
             <input
@@ -462,7 +474,7 @@ function JoEstimasi() {
             />
           </div>
 
-          <div className="flex col-span-2">
+          <div className="flex">
             <div className="font-semibold w-32">URAIAN PEKERJAAN</div>
             <div className="text-gray-600">:</div>
             <input

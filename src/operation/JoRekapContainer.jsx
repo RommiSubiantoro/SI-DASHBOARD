@@ -77,6 +77,7 @@ function JoRekapContainer() {
 
         return {
           no: idx + 1,
+          CodeJo: d.header?.CodeJo || "-",
           noJoSheet: d.header?.noJobOrder || "-",
           tglMulai: d.header?.tglMulai || "-",
           tglSelesai: d.header?.tglSelesai || "-",

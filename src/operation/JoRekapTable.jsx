@@ -10,7 +10,7 @@ const JoRekapTable = ({ data = [] }) => {
 
   const mainColumns = [
     { key: "no", label: "NO." },
-    { key: "codeJo", label: "CODE JO" },
+    { key: "CodeJo", label: "CODE JO" },
     { key: "noJoSheet", label: "NO. JO SHEET" },
     { key: "tglMulai", label: "TGL MULAI" },
     { key: "tglSelesai", label: "TGL SELESAI" },
