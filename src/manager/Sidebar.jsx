@@ -5,7 +5,7 @@ const Sidebar = ({ activePage, onChangePage, onLogout, isOpen, onClose }) => {
     { id: "dashboard", label: "📊 Dashboard" },
     { id: "TableView", label: "Table" },
     { id: "Performance", label: "Performance" },
-    { id: "Jo-Report", label: "Jo Report" },
+    // { id: "Jo-Report", label: "Jo Report" },
   ];
 
   return (

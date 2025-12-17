@@ -25,6 +25,7 @@ const monthMap = {
 
 const parseDate = (dateStr) => {
   if (!dateStr || typeof dateStr !== "string") return null;
+
   const parts = dateStr.split("-");
   if (parts.length !== 3) return null;
 
@@ -40,6 +41,8 @@ function JoRekapContainer() {
   const [rekapData, setRekapData] = useState([]);
   const [selectedMonth, setSelectedMonth] = useState("");
   const [selectedYear, setSelectedYear] = useState("");
+  const [selectedUnit, setSelectedUnit] = useState("");
+  const [unitOptions, setUnitOptions] = useState([]);
 
   useEffect(() => {
     let estimasiList = [];
@@ -57,7 +60,9 @@ function JoRekapContainer() {
           const d = doc.data();
           const noJO = d.header?.noJobOrder;
 
-          const volumeItem = d.lineItems?.find((item) => item.mt || item.cbm);
+          const volumeItem = d.lineItems?.find(
+            (item) => item.mt || item.cbm
+          );
 
           if (noJO) {
             map[noJO] = {
@@ -89,7 +94,7 @@ function JoRekapContainer() {
     );
 
     // ===============================
-    // MERGE + FILTER DATA
+    // MERGE + FILTER
     // ===============================
     function mergeData() {
       if (!estimasiList.length) return;
@@ -108,6 +113,9 @@ function JoRekapContainer() {
           tglMulai: d.header?.tglMulai || "-",
           tglSelesai: d.header?.tglSelesai || "-",
           namaPerusahaan: d.header?.namaCustomer || "-",
+
+          unitBisnis: d.header?.unitBisnis || "-",
+
           service: d.header?.service || "-",
           uraianPekerjaan: d.header?.uraianPekerjaan || "-",
           vessel: d.header?.namaKapal || "-",
@@ -130,40 +138,60 @@ function JoRekapContainer() {
       });
 
       // ===============================
-      // FILTER BULAN & TAHUN
+      // AMBIL LIST UNIT BISNIS UNIK
+      // ===============================
+      const units = [
+        ...new Set(
+          merged
+            .map((i) => i.unitBisnis)
+            .filter((u) => u && u !== "-")
+        ),
+      ];
+      setUnitOptions(units);
+
+      // ===============================
+      // FILTER BULAN, TAHUN, UNIT
       // ===============================
       const filtered = merged.filter((item) => {
-        if (!selectedMonth && !selectedYear) return true;
-
+        // BULAN & TAHUN
+        let matchDate = true;
         const parsed = parseDate(item.tglMulai);
 
-        // ✅ JIKA FORMAT TANGGAL TIDAK VALID, JANGAN DIBUANG
-        if (!parsed) return true;
+        if (parsed) {
+          const matchMonth = selectedMonth
+            ? parsed.month === Number(selectedMonth)
+            : true;
+          const matchYear = selectedYear
+            ? parsed.year === Number(selectedYear)
+            : true;
 
-        const matchMonth = selectedMonth
-          ? parsed.month === Number(selectedMonth)
+          matchDate = matchMonth && matchYear;
+        }
+
+        // UNIT BISNIS
+        const matchUnit = selectedUnit
+          ? item.unitBisnis === selectedUnit
           : true;
 
-        const matchYear = selectedYear
-          ? parsed.year === Number(selectedYear)
-          : true;
-
-        return matchMonth && matchYear;
+        return matchDate && matchUnit;
       });
 
       setRekapData(filtered);
     }
 
     return () => {
-      unsubEstimasi();
       unsubActual();
+      unsubEstimasi();
     };
-  }, [selectedMonth, selectedYear]);
+  }, [selectedMonth, selectedYear, selectedUnit]);
 
   return (
     <div>
-      {/* FILTER */}
+      {/* ===============================
+          FILTER DROPDOWN
+      =============================== */}
       <div className="flex gap-3 mb-4">
+        {/* BULAN */}
         <select
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
@@ -184,6 +212,7 @@ function JoRekapContainer() {
           <option value="12">Desember</option>
         </select>
 
+        {/* TAHUN */}
         <select
           value={selectedYear}
           onChange={(e) => setSelectedYear(e.target.value)}
@@ -193,6 +222,20 @@ function JoRekapContainer() {
           <option value="2024">2024</option>
           <option value="2025">2025</option>
           <option value="2026">2026</option>
+        </select>
+
+        {/* UNIT BISNIS */}
+        <select
+          value={selectedUnit}
+          onChange={(e) => setSelectedUnit(e.target.value)}
+          className="border px-2 py-1 rounded min-w-[200px]"
+        >
+          <option value="">Semua Unit Bisnis</option>
+          {unitOptions.map((u) => (
+            <option key={u} value={u}>
+              {u}
+            </option>
+          ))}
         </select>
       </div>
 
