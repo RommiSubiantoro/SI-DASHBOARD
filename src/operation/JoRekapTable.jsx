@@ -43,6 +43,35 @@ const JoRekapTable = ({ data = [] }) => {
     { label: "ESTIMASI COST", key: "estimasiCost" },
   ];
 
+  // ===============================
+  // HITUNG TOTAL
+  // ===============================
+  const totals = data.reduce(
+    (acc, row) => {
+      acc.revenue += Number(row.revenue || 0);
+      acc.tax += Number(row.tax || 0);
+      acc.totalRevenueAfterTax += Number(row.totalRevenueAfterTax || 0);
+      acc.estimasiCost += Number(row.estimasiCost || 0);
+      acc.actualCost += Number(row.actualCost || 0);
+      acc.gpm += Number(row.gpm || 0);
+      return acc;
+    },
+    {
+      revenue: 0,
+      tax: 0,
+      totalRevenueAfterTax: 0,
+      estimasiCost: 0,
+      actualCost: 0,
+      gpm: 0,
+    }
+  );
+  const totalPersentaseGpm =
+    totals.revenue > 0
+      ? (((totals.revenue - totals.actualCost) / totals.revenue) * 100).toFixed(
+          2
+        )
+      : 0;
+
   return (
     <div className="bg-white rounded shadow p-4">
       <div className="overflow-x-auto">
@@ -127,6 +156,39 @@ const JoRekapTable = ({ data = [] }) => {
                 )}
               </React.Fragment>
             ))}
+
+            {/* ===============================
+                BARIS TOTAL DI BAWAH
+            =============================== */}
+            {data.length > 0 && (
+              <tr className="font-bold bg-yellow-100">
+                <td className="border px-2 py-2 text-center" colSpan={15}>
+                  TOTAL
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.revenue)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.tax)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.totalRevenueAfterTax)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.estimasiCost)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.actualCost)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {formatNumber(totals.gpm)}
+                </td>
+                <td className="border px-2 py-2 text-right">
+                  {totalPersentaseGpm}%
+                </td>
+              
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
