@@ -1,10 +1,5 @@
 import React from "react";
-import {
-  LayoutDashboard,
-  FileText,
-  LogOut,
-  Menu,
-} from "lucide-react";
+import { LayoutDashboard, FileText, LogOut, Menu } from "lucide-react";
 
 const Sidebar = ({ activePage, onChangePage, onLogout, isOpen, onClose }) => {
   const menuItems = [
@@ -13,9 +8,14 @@ const Sidebar = ({ activePage, onChangePage, onLogout, isOpen, onClose }) => {
       label: "JO Input",
       icon: <FileText size={18} />,
     },
-     {
+    {
       id: "jo-rekap",
       label: "JO Rekap",
+      icon: <FileText size={18} />,
+    },
+    {
+      id: "jo-volume",
+      label: "JO Volume",
       icon: <FileText size={18} />,
     },
   ];
@@ -61,8 +61,6 @@ const Sidebar = ({ activePage, onChangePage, onLogout, isOpen, onClose }) => {
           </button>
         ))}
       </nav>
-
-      
     </div>
   );
 };

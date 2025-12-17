@@ -12,6 +12,7 @@ import DataTable from "../components/DataTable";
 import Header from "../components/Header";
 import DashboardView from "../components/DashboardView";
 import DashboardMultiUnit from "../components/DashboardMultiUnit";
+import JoRekapContainer from "../operation/JoRekapContainer";
 
 function ManagerDashboard() {
   const [activePage, setActivePage] = useState("dashboard");
@@ -24,7 +25,7 @@ function ManagerDashboard() {
   const [loadingUploads, setLoadingUploads] = useState(false);
   const [selectedUnit, setSelectedUnit] = useState("");
   const [selectedYear, setSelectedYear] = useState("2025");
-   const [selectedMonth, setSelectedMonth] = useState("Jan");
+  const [selectedMonth, setSelectedMonth] = useState("Jan");
   const [currentData, setCurrentData] = useState([]);
   const [codes, setCodes] = useState([]);
   const [loadingCodes, setLoadingCodes] = useState(true);
@@ -389,6 +390,12 @@ function ManagerDashboard() {
                   rowsPerPage={25}
                 />
               </div>
+            </div>
+          )}
+
+          {activePage === "Jo-Report" && (
+            <div className="flex flex-col w-240 overflow-hidden">
+              <div>{activePage === "Jo-Report" && <JoRekapContainer />}</div>
             </div>
           )}
         </div>
