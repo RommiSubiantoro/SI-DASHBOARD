@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { getAuth, signOut } from "firebase/auth";
 
 // Component yang dipakai
@@ -9,11 +9,21 @@ import JoRekapContainer from "./JoRekapContainer";
 import JoVolume from "./JoVolume";
 
 function OperationDashboard() {
-  const [activePage, setActivePage] = useState("jo-estimasi");
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default false untuk mobile
+  // 🟢 Load dari localStorage saat pertama kali
+  const [activePage, setActivePage] = useState(() => {
+    const savedPage = localStorage.getItem("activePage");
+    return savedPage || "jo-estimasi";
+  });
+  
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   const auth = getAuth();
+
+  // 🟢 Simpan ke localStorage setiap kali activePage berubah
+  useEffect(() => {
+    localStorage.setItem("activePage", activePage);
+  }, [activePage]);
 
   // 🔴 Logout
   const handleLogout = async () => {

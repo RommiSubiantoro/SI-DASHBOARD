@@ -1117,7 +1117,7 @@ function JoEstimasi() {
               <tbody>
                 {renderSection(
                   "A",
-                  "A. REVENUE (EXCLUDE PPN )",
+                  "A. REVENUE",
                   "bg-cyan-200",
                   "TOTAL PENERIMAAN",
                   "bg-yellow-100"
@@ -1139,7 +1139,7 @@ function JoEstimasi() {
                 {/* PROFIT ROW */}
                 <tr className="bg-green-200 font-bold text-xs">
                   <td
-                    colSpan={8}
+                    colSpan={7}
                     className="border border-gray-400 p-1 text-center"
                   >
                     PROFIT
