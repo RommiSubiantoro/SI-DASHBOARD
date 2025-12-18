@@ -28,7 +28,7 @@ function JoVolume() {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   
   const [volumeData, setVolumeData] = useState({
-    stevedoring: [
+    SteveDoring: [
       { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
@@ -38,7 +38,7 @@ function JoVolume() {
       { desc: 'Curah', unit: 'Ft', values: Array(12).fill(''), total: '0' },
       { desc: 'Curah', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
     ],
-    cargodoring: [
+    CargoDoring: [
       { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
@@ -46,6 +46,9 @@ function JoVolume() {
       { desc: 'Container 40Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
     ],
     equipmentProvider: [
+      { desc: 'Equipment Provider', unit: '', values: Array(12).fill(''), total: '0' },
+    ],
+    RecevingDelivery: [
       { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
       { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
@@ -104,9 +107,10 @@ function JoVolume() {
     setLoading(true);
     
     const categoryMapping = {
-      "SteveDoring": "stevedoring",
-      "Cargodoring": "cargodoring",
+      "Steve Doring": "SteveDoring",
+      "Cargo Doring": "CargoDoring",
       "Equipment Provider": "equipmentProvider",
+      "Receving & Delivery": "RecevingDelivery",
       "Warehousing": "warehousing",
       "Tally": "tally",
       "Erection On Base": "erection",
@@ -116,16 +120,17 @@ function JoVolume() {
     };
 
     const rowMapping = {
-      stevedoring: {
+      SteveDoring: {
         "Break Bulk-Ton": 0, "Break Bulk-Ft": 1, "Break Bulk-Cbm": 2,
         "Container 20Ft-Boxes": 3, "Container 40Ft-Boxes": 4,
         "Curah-KM": 5, "Curah-Ft": 6, "Curah-Cbm": 7,
       },
-      cargodoring: {
+      CargoDoring: {
         "Break Bulk-Ton": 0, "Break Bulk-Ft": 1, "Break Bulk-Cbm": 2,
         "Container 20Ft-Boxes": 3, "Container 40Ft-Boxes": 4,
       },
-      equipmentProvider: {
+      equipmentProvider: { "Equipment Provider-": 0 },
+      RecevingDelivery: {
         "Break Bulk-Ton": 0, "Break Bulk-Ft": 1, "Break Bulk-Cbm": 2,
         "Container 20Ft-Boxes": 3, "Container 40Ft-Boxes": 4,
       },
@@ -143,7 +148,7 @@ function JoVolume() {
     };
 
     const newVolumeData = {
-      stevedoring: [
+      SteveDoring: [
         { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(0), total: '0' },
@@ -153,14 +158,15 @@ function JoVolume() {
         { desc: 'Curah', unit: 'Ft', values: Array(12).fill(0), total: '0' },
         { desc: 'Curah', unit: 'Cbm', values: Array(12).fill(0), total: '0' },
       ],
-      cargodoring: [
+      CargoDoring: [
         { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(0), total: '0' },
         { desc: 'Container 20Ft', unit: 'Boxes', values: Array(12).fill(0), total: '0' },
         { desc: 'Container 40Ft', unit: 'Boxes', values: Array(12).fill(0), total: '0' },
       ],
-      equipmentProvider: [
+      equipmentProvider: [{ desc: 'Equipment Provider', unit: '', values: Array(12).fill(0), total: '0' }],
+      RecevingDelivery: [
         { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(0), total: '0' },
         { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(0), total: '0' },
@@ -292,9 +298,10 @@ function JoVolume() {
     csvContent += `Tanggal Export: ${new Date().toLocaleString('id-ID')}\n\n`;
 
     const categories = [
-      { key: 'stevedoring', title: 'STEVEDORING' },
-      { key: 'cargodoring', title: 'CARGODORING' },
+      { key: 'SteveDoring', title: 'STEVEDORING' },
+      { key: 'CargoDoring', title: 'CARGODORING' },
       { key: 'equipmentProvider', title: 'EQUIPMENT PROVIDER' },
+      { key: 'RecevingDelivery', title: 'RECEVING & DELIVERY' },
       { key: 'warehousing', title: 'WAREHOUSING' },
       { key: 'tally', title: 'TALLY' },
       { key: 'erection', title: 'ERECTION ON BASE' },
@@ -350,9 +357,10 @@ function JoVolume() {
     `;
 
     const categories = [
-      { key: 'stevedoring', title: '⚓ STEVEDORING' },
-      { key: 'cargodoring', title: '📦 CARGODORING' },
+      { key: 'SteveDoring', title: '⚓ STEVEDORING' },
+      { key: 'CargoDoring', title: '📦 CARGODORING' },
       { key: 'equipmentProvider', title: '🚛 EQUIPMENT PROVIDER' },
+      { key: 'RecevingDelivery', title: '🚛 RECEVING & DELIVERY' },
       { key: 'warehousing', title: '🏭 WAREHOUSING' },
       { key: 'tally', title: '📋 TALLY' },
       { key: 'erection', title: '🏗️ ERECTION ON BASE' },
@@ -571,9 +579,10 @@ function JoVolume() {
         </div>
       </div>
 
-      {renderTable('stevedoring', '⚓ STEVEDORING', 'bg-blue-200')}
-      {renderTable('cargodoring', '📦 CARGODORING', 'bg-green-200')}
+      {renderTable('SteveDoring', '⚓ STEVEDORING', 'bg-blue-200')}
+      {renderTable('CargoDoring', '📦 CARGODORING', 'bg-green-200')}
       {renderTable('equipmentProvider', '🚛 EQUIPMENT PROVIDER', 'bg-purple-200')}
+      {renderTable('RecevingDelivery', '🚛 RECEVING & DELIVERY', 'bg-purple-200')}
       {renderTable('warehousing', '🏭 WAREHOUSING', 'bg-orange-200')}
       {renderTable('tally', '📋 TALLY', 'bg-pink-200')}
       {renderTable('erection', '🏗️ ERECTION ON BASE', 'bg-indigo-200')}

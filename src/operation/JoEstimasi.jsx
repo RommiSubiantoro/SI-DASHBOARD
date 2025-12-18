@@ -54,14 +54,14 @@ function JoEstimasi() {
 
   // Daftar unit bisnis (sama dengan di JoVolume)
   const unitBisnisList = [
-    'PT Makassar Jaya Samudera',
-    'PT Samudera Makassar Logistik',
-    'PT Samudera Agencies Indonesia',
-    'PT Masaji Kargosentra Tama',
-    'PT Kendari Jaya Samudera',
-    'PT Samudera Kendari Logistik',
-    'PT Silkargo Indonesia',
-    'PT Samudera Perdana',
+    "PT Makassar Jaya Samudera",
+    "PT Samudera Makassar Logistik",
+    "PT Samudera Agencies Indonesia",
+    "PT Masaji Kargosentra Tama",
+    "PT Kendari Jaya Samudera",
+    "PT Samudera Kendari Logistik",
+    "PT Silkargo Indonesia",
+    "PT Samudera Perdana",
   ];
 
   // Temporary state untuk form tambah service
@@ -73,7 +73,7 @@ function JoEstimasi() {
   });
 
   const serviceOptions = {
-    "SteveDoring": [
+    "Steve Doring": [
       { label: "Break Bulk - Ton", satuan: "Ton" },
       { label: "Break Bulk - Ft", satuan: "Ft" },
       { label: "Break Bulk - Cbm", satuan: "Cbm" },
@@ -83,37 +83,29 @@ function JoEstimasi() {
       { label: "Curah - Ft", satuan: "Ft" },
       { label: "Curah - Cbm", satuan: "Cbm" },
     ],
-    "Cargodoring": [
+    "Cargo Coring": [
       { label: "Break Bulk - Ton", satuan: "Ton" },
       { label: "Break Bulk - Ft", satuan: "Ft" },
       { label: "Break Bulk - Cbm", satuan: "Cbm" },
       { label: "Container 20Ft", satuan: "Boxes" },
       { label: "Container 40Ft", satuan: "Boxes" },
     ],
-    "Equipment Provider": [
-      { label: "Receving & Delivery", satuan: "" },
+    "Equipment Provider": [{ label: "Equipment Provider", satuan: "" }],
+    "Receving & Delivery": [
       { label: "Break Bulk - Ton", satuan: "Ton" },
       { label: "Break Bulk - Ft", satuan: "Ft" },
       { label: "Break Bulk - Cbm", satuan: "Cbm" },
       { label: "Container 20Ft", satuan: "Boxes" },
       { label: "Container 40Ft", satuan: "Boxes" },
     ],
-    "Warehousing": [
-      { label: "Warehousing", satuan: "Cbm" },
-    ],
-    "Tally": [
-      { label: "Tally", satuan: "" },
-    ],
-    "Erection On Base": [
-      { label: "Erection On Base", satuan: "" },
-    ],
+    "Warehousing": [{ label: "Warehousing", satuan: "Cbm" }],
+    "Tally": [{ label: "Tally", satuan: "" }],
+    "Erection On Base": [{ label: "Erection On Base", satuan: "" }],
     "Container MDF/RPR": [
       { label: "Repair & Cleaning", satuan: "Boxes" },
       { label: "Modifikasi Ctnr", satuan: "Boxes" },
     ],
-    "Stuffing / Stripping": [
-      { label: "Stuffing / Stripping", satuan: "" },
-    ],
+    "Stuffing / Stripping": [{ label: "Stuffing / Stripping", satuan: "" }],
     "Other Service": [
       { label: "Project Logistic", satuan: "" },
       { label: "FCL Shipment", satuan: "" },
@@ -332,9 +324,10 @@ function JoEstimasi() {
     try {
       // Mapping dari kategori service ke kategori di JoVolume
       const categoryMapping = {
-        "SteveDoring": "stevedoring",
-        "Cargodoring": "cargodoring",
+        "Steve Doring": "SteveDoring",
+        "Cargo Doring": "CargoDoring",
         "Equipment Provider": "equipmentProvider",
+        "Receving & Delivery": "RecevingDelivery",
         "Warehousing": "warehousing",
         "Tally": "tally",
         "Erection On Base": "erection",
@@ -345,7 +338,7 @@ function JoEstimasi() {
 
       // Mapping dari detail + satuan ke index row di JoVolume
       const rowMapping = {
-        stevedoring: {
+        SteveDoring: {
           "Break Bulk-Ton": 0,
           "Break Bulk-Ft": 1,
           "Break Bulk-Cbm": 2,
@@ -355,7 +348,14 @@ function JoEstimasi() {
           "Curah-Ft": 6,
           "Curah-Cbm": 7,
         },
-        cargodoring: {
+        CargoDoring: {
+          "Break Bulk-Ton": 0,
+          "Break Bulk-Ft": 1,
+          "Break Bulk-Cbm": 2,
+          "Container 20Ft-Boxes": 3,
+          "Container 40Ft-Boxes": 4,
+        },
+        RecevingDelivery: {
           "Break Bulk-Ton": 0,
           "Break Bulk-Ft": 1,
           "Break Bulk-Cbm": 2,
@@ -363,11 +363,7 @@ function JoEstimasi() {
           "Container 40Ft-Boxes": 4,
         },
         equipmentProvider: {
-          "Break Bulk-Ton": 0,
-          "Break Bulk-Ft": 1,
-          "Break Bulk-Cbm": 2,
-          "Container 20Ft-Boxes": 3,
-          "Container 40Ft-Boxes": 4,
+          "Equipment Provider-": 0,
         },
         warehousing: {
           "Warehousing-Cbm": 0,
@@ -401,10 +397,23 @@ function JoEstimasi() {
       // Ambil bulan dari tanggal mulai
       const tglMulai = header.tglMulai; // Format: DD-Mmm-YY
       let monthIndex = -1;
-      
+
       if (tglMulai) {
-        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const parts = tglMulai.split('-');
+        const monthNames = [
+          "Jan",
+          "Feb",
+          "Mar",
+          "Apr",
+          "May",
+          "Jun",
+          "Jul",
+          "Aug",
+          "Sep",
+          "Oct",
+          "Nov",
+          "Dec",
+        ];
+        const parts = tglMulai.split("-");
         if (parts.length >= 2) {
           monthIndex = monthNames.indexOf(parts[1]);
         }
@@ -417,18 +426,20 @@ function JoEstimasi() {
 
       // Tentukan unit bisnis dan tahun dari header
       const unitBisnis = header.unitBisnis; // Ambil dari pilihan unit bisnis
-      
+
       if (!unitBisnis) {
         console.log("Unit Bisnis belum dipilih");
-        alert("⚠️ Silakan pilih Unit Bisnis terlebih dahulu untuk sync ke JoVolume");
+        alert(
+          "⚠️ Silakan pilih Unit Bisnis terlebih dahulu untuk sync ke JoVolume"
+        );
         return;
       }
-      
+
       const year = new Date().getFullYear().toString();
 
       // Load data JoVolume yang ada
       const docId = `${unitBisnis}_${year}`;
-      const docRef = doc(db, 'jo_volume', docId);
+      const docRef = doc(db, "jo_volume", docId);
       const docSnap = await getDoc(docRef);
 
       let volumeData;
@@ -437,57 +448,220 @@ function JoEstimasi() {
       } else {
         // Inisialisasi struktur data baru jika belum ada
         volumeData = {
-          stevedoring: [
-            { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 20Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 40Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
-            { desc: 'Curah', unit: 'KM', values: Array(12).fill(''), total: '0' },
-            { desc: 'Curah', unit: 'Ft', values: Array(12).fill(''), total: '0' },
-            { desc: 'Curah', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
+          SteveDoring: [
+            {
+              desc: "Break Bulk",
+              unit: "Ton",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Ft",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Cbm",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 20Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 40Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Curah",
+              unit: "KM",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Curah",
+              unit: "Ft",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Curah",
+              unit: "Cbm",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
-          cargodoring: [
-            { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 20Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 40Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
+          CargoDoring: [
+            {
+              desc: "Break Bulk",
+              unit: "Ton",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Ft",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Cbm",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 20Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 40Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           equipmentProvider: [
-            { desc: 'Break Bulk', unit: 'Ton', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Ft', values: Array(12).fill(''), total: '0' },
-            { desc: 'Break Bulk', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 20Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
-            { desc: 'Container 40Ft', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
+            { desc: "Equipment Provider", unit: "", values: Array(12).fill(""), total: "0" },
+          ],
+          RecevingDelivery: [
+            {
+              desc: "Break Bulk",
+              unit: "Ton",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Ft",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Break Bulk",
+              unit: "Cbm",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 20Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Container 40Ft",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           warehousing: [
-            { desc: 'Warehousing', unit: 'Cbm', values: Array(12).fill(''), total: '0' },
+            {
+              desc: "Warehousing",
+              unit: "Cbm",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           tally: [
-            { desc: 'Tally', unit: '', values: Array(12).fill(''), total: '0' },
+            { desc: "Tally", unit: "", values: Array(12).fill(""), total: "0" },
           ],
           erection: [
-            { desc: 'Erection On Base', unit: '', values: Array(12).fill(''), total: '0' },
+            {
+              desc: "Erection On Base",
+              unit: "",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           containerMDF: [
-            { desc: 'Repair&Cleaning', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
-            { desc: 'Modifikasi Ctnr', unit: 'Boxes', values: Array(12).fill(''), total: '0' },
+            {
+              desc: "Repair&Cleaning",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Modifikasi Ctnr",
+              unit: "Boxes",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           stuffing: [
-            { desc: 'Stuffing / Stripping', unit: '', values: Array(12).fill(''), total: '0' },
+            {
+              desc: "Stuffing / Stripping",
+              unit: "",
+              values: Array(12).fill(""),
+              total: "0",
+            },
           ],
           otherService: [
-            { desc: 'Project Logistic', unit: '', values: Array(12).fill(''), total: '0' },
-            { desc: 'FCL Shipment', unit: '', values: Array(12).fill(''), total: '0' },
-            { desc: 'LCL Shipment', unit: 'Kg', values: Array(12).fill(''), total: '0' },
-            { desc: 'Management Fee', unit: 'Doc', values: Array(12).fill(''), total: '0' },
-            { desc: 'Custom Clearance', unit: 'BL/Doc', values: Array(12).fill(''), total: '0' },
-            { desc: 'Handling Supervisi', unit: 'Project', values: Array(12).fill(''), total: '0' },
-            { desc: 'Forklit', unit: 'unit', values: Array(12).fill(''), total: '0' },
-            { desc: 'FCL Shipment', unit: 'Doc', values: Array(12).fill(''), total: '0' },
-            { desc: 'Clearance/Ops Expenses & Agency Fee', unit: 'Doc', values: Array(12).fill(''), total: '0' },
-          ]
+            {
+              desc: "Project Logistic",
+              unit: "",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "FCL Shipment",
+              unit: "",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "LCL Shipment",
+              unit: "Kg",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Management Fee",
+              unit: "Doc",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Custom Clearance",
+              unit: "BL/Doc",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Handling Supervisi",
+              unit: "Project",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Forklit",
+              unit: "unit",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "FCL Shipment",
+              unit: "Doc",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+            {
+              desc: "Clearance/Ops Expenses & Agency Fee",
+              unit: "Doc",
+              values: Array(12).fill(""),
+              total: "0",
+            },
+          ],
         };
       }
 
@@ -501,17 +675,25 @@ function JoEstimasi() {
 
         if (rowIndex !== undefined && volumeData[category][rowIndex]) {
           // Ambil nilai yang ada
-          const currentValue = parseFloat(volumeData[category][rowIndex].values[monthIndex]) || 0;
-          const newValue = parseFloat(serviceItem.jumlah.replace(/,/g, '.')) || 0;
-          
+          const currentValue =
+            parseFloat(volumeData[category][rowIndex].values[monthIndex]) || 0;
+          const newValue =
+            parseFloat(serviceItem.jumlah.replace(/,/g, ".")) || 0;
+
           // Tambahkan nilai baru ke nilai yang ada
-          volumeData[category][rowIndex].values[monthIndex] = (currentValue + newValue).toString();
-          
+          volumeData[category][rowIndex].values[monthIndex] = (
+            currentValue + newValue
+          ).toString();
+
           // Hitung ulang total
-          const total = volumeData[category][rowIndex].values.reduce((sum, val) => {
-            return sum + (parseFloat(val) || 0);
-          }, 0);
-          volumeData[category][rowIndex].total = total > 0 ? total.toFixed(2) : '0';
+          const total = volumeData[category][rowIndex].values.reduce(
+            (sum, val) => {
+              return sum + (parseFloat(val) || 0);
+            },
+            0
+          );
+          volumeData[category][rowIndex].total =
+            total > 0 ? total.toFixed(2) : "0";
         }
       });
 
@@ -520,7 +702,7 @@ function JoEstimasi() {
         unitBisnis: unitBisnis,
         year: year,
         data: volumeData,
-        lastUpdated: new Date().toISOString()
+        lastUpdated: new Date().toISOString(),
       });
 
       console.log("✓ Data JoVolume berhasil diupdate");
@@ -816,7 +998,7 @@ function JoEstimasi() {
               className="ml-2 flex-1 border border-gray-300 bg-white outline-none px-2 py-1"
             />
           </div>
-          
+
           {/* SERVICE - Input manual tetap ada */}
           <div className="flex">
             <div className="font-semibold w-32">SERVICE</div>
@@ -833,7 +1015,7 @@ function JoEstimasi() {
           {/* DROPDOWN SERVICE - Fitur tambahan dengan multiple select */}
           <div className="col-span-2 bg-blue-50 p-3 rounded border border-blue-200">
             <div className="font-semibold text-xs mb-2">PILIH SERVICE</div>
-            
+
             {/* Form Input Service */}
             <div className="grid grid-cols-5 gap-2 mb-3">
               <select
@@ -889,7 +1071,10 @@ function JoEstimasi() {
                     type="text"
                     value={tempService.jumlah}
                     onChange={(e) =>
-                      setTempService((prev) => ({ ...prev, jumlah: e.target.value }))
+                      setTempService((prev) => ({
+                        ...prev,
+                        jumlah: e.target.value,
+                      }))
                     }
                     placeholder="Jumlah"
                     className="border border-gray-300 bg-white outline-none px-2 py-1 text-xs"
@@ -910,22 +1095,38 @@ function JoEstimasi() {
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="bg-gray-200">
-                      <th className="border border-gray-300 p-1 text-left">Kategori</th>
-                      <th className="border border-gray-300 p-1 text-left">Detail</th>
-                      <th className="border border-gray-300 p-1 text-center">Satuan</th>
-                      <th className="border border-gray-300 p-1 text-center">Jumlah</th>
-                      <th className="border border-gray-300 p-1 text-center">Aksi</th>
+                      <th className="border border-gray-300 p-1 text-left">
+                        Kategori
+                      </th>
+                      <th className="border border-gray-300 p-1 text-left">
+                        Detail
+                      </th>
+                      <th className="border border-gray-300 p-1 text-center">
+                        Satuan
+                      </th>
+                      <th className="border border-gray-300 p-1 text-center">
+                        Jumlah
+                      </th>
+                      <th className="border border-gray-300 p-1 text-center">
+                        Aksi
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {header.serviceItems.map((item) => (
                       <tr key={item.id} className="hover:bg-gray-50">
-                        <td className="border border-gray-300 p-1">{item.kategori}</td>
-                        <td className="border border-gray-300 p-1">{item.detail}</td>
+                        <td className="border border-gray-300 p-1">
+                          {item.kategori}
+                        </td>
+                        <td className="border border-gray-300 p-1">
+                          {item.detail}
+                        </td>
                         <td className="border border-gray-300 p-1 text-center font-semibold">
                           {item.satuan || "-"}
                         </td>
-                        <td className="border border-gray-300 p-1 text-center">{item.jumlah}</td>
+                        <td className="border border-gray-300 p-1 text-center">
+                          {item.jumlah}
+                        </td>
                         <td className="border border-gray-300 p-1 text-center">
                           <button
                             onClick={() => removeServiceItem(item.id)}
